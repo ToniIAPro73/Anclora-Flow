@@ -14,6 +14,7 @@
 ## 🚀 Assigned ports (multi-project)
 
 This project uses the "project-three" range:
+
 - Frontend: **3020**
 - Backend/API: **8020**
 - Database: **5452**
@@ -31,11 +32,10 @@ docker-compose up --build
 
 Access services:
 
-Frontend: http://localhost:3020
-Backend: http://localhost:8020
-AI: http://localhost:8021
+Frontend: <http://localhost:3020>
+Backend: <http://localhost:8020>
+AI: <http://localhost:8021>
 DB: port 5452
-
 
 ## 📚 Further Documentation
 
@@ -55,7 +55,6 @@ scripts/
 tests/
 .github/
 PORTS.md (in global workspace)
-
 
 ## 💼 Recommended Tech Stack (Open Source)
 

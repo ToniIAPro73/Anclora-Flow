@@ -20,7 +20,7 @@ Anclora Flow is a modular app designed for deployment with a scalable, portable,
 - AI Services: 8021... (expandable)
 - DB: 5452
 
-*(PORTS.md file is placed in the workspace root to coordinate all active projects.)*
+(PORTS.md file is placed in the workspace root to coordinate all active projects.)
 
 ## 🔹 Auth and roles
 

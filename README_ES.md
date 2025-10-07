@@ -14,6 +14,7 @@
 ## 🚀 Puertos asignados (multi-proyecto)
 
 Este proyecto está configurado en el rango "proyecto-tres":
+
 - Frontend: **3020**
 - Backend/API: **8020**
 - Base de datos: **5452**
@@ -34,9 +35,9 @@ docker-compose up --build
 
 Acceso a los servicios:
 
-Frontend: http://localhost:3020
-Backend: http://localhost:8020
-IA: http://localhost:8021
+Frontend: <http://localhost:3020>
+Backend: <http://localhost:8020>
+IA: <http://localhost:8021>
 DB: puerto: 5452
 
 ## 📚 Documentación adicional

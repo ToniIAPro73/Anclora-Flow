@@ -7,7 +7,7 @@ Welcome to Anclora Flow, the smart fiscal and financial platform for digital fre
 | Step | Action                                   | Result                                      |
 |------|------------------------------------------|---------------------------------------------|
 | 1    | Run `docker-compose up --build`          | Services (frontend, backend, AI, DB) launched on ports 3020/8020/8021/5452 |
-| 2    | Visit http://localhost:3020              | Main dashboard accessible                   |
+| 2    | Visit <http://localhost:3020>              | Main dashboard accessible                   |
 | 3    | Log in using social login (Google/GitHub)| Secure access to the system                 |
 | 4    | Use the left sidebar                     | Access to invoices, expenses, deductions, etc. |
 | 5    | Set your language and theme in the header| Custom UI                                   |

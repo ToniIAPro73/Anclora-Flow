@@ -7,7 +7,7 @@ Bienvenido a Anclora Flow, la plataforma fiscal y financiera para autónomos dig
 | Orden | Paso                                      | Resultado                                 |
 |-------|-------------------------------------------|-------------------------------------------|
 | 1     | Ejecuta `docker-compose up --build`       | Servicios (frontend, backend, IA, DB) activos en puertos 3020/8020/8021/5452 |
-| 2     | Accede a http://localhost:3020            | Dashboard principal accesible             |
+| 2     | Accede a <http://localhost:3020>            | Dashboard principal accesible             |
 | 3     | Realiza el login social (Google/GitHub)   | Acceso seguro al sistema                  |
 | 4     | Navega por el sidebar izquierdo           | Acceso a facturas, gastos, deducciones, etc. |
 | 5     | Configura tu idioma y tema en el header   | Interfaz personalizada                    |
