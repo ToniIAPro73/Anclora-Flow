@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    command: npm run dev
+    ports:
+      - "3020:3020"
+    environment:
+      - PORT=3020
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+
+  backend:
+    build: ./backend
+    command: npm run dev
+    ports:
+      - "8020:8020"
+    environment:
+      - PORT=8020
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+
+  ai-services:
+    build: ./ai-services
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "5452:5432"
+    environment:
+      - PORT=5452  
+    working_dir: /app
+    volumes:
+      - ./ai-services:/app
