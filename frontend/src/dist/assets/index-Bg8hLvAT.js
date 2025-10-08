@@ -42,7 +42,7 @@
         </div>
       </nav>
     </div>
-  `}const ne=[{path:"/dashboard",label:"Dashboard",icon:"⎈"},{path:"/invoices",label:"Ingresos & Facturas",icon:"🧾"},{path:"/expenses",label:"Gastos & Deducciones",icon:"💸"},{path:"/clients",label:"Clientes & Proyectos",icon:"👥"},{path:"/subscriptions",label:"Gestion Suscripciones",icon:"🔁"},{path:"/budget",label:"Presupuesto Inteligente",icon:"📊"},{path:"/calendar",label:"Calendario & Calculadora Fiscal",icon:"📆"},{path:"/reports",label:"Informes & Metricas",icon:"📑"},{path:"/assistant",label:"Asistente IA",icon:"🤖"}];function oe(){const e=ne.map(a=>`
+  `}const ne=[{path:"/dashboard",label:"Dashboard",icon:"⎈"},{path:"/invoices",label:"Ingresos & Facturas",icon:"🧾"},{path:"/expenses",label:"Gastos & Deducciones",icon:"💸"},{path:"/clients",label:"Clientes & Proyectos",icon:"👥"},{path:"/subscriptions",label:"Gestion Suscripciones",icon:"🔁"},{path:"/budget",label:"Presupuesto Inteligente",icon:"📊"},{path:"/calendar",label:"Calendario & Calc. Fiscal",icon:"📆"},{path:"/reports",label:"Informes & Metricas",icon:"📑"},{path:"/assistant",label:"Asistente IA",icon:"🤖"}];function oe(){const e=ne.map(a=>`
         <li>
           <a class="app-sidebar__link" href="#${a.path}" aria-label="${a.label}" title="${a.label}">
             <span class="app-sidebar__glyph" aria-hidden="true">${a.icon}</span>
