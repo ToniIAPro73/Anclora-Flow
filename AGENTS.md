@@ -1,33 +1,22 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `frontend/` holds the Vite app; organize UI into `src/components`, `src/pages`, and keep reusable helpers in `src/utils`.
-- `backend/` exposes the Express API from `src/server.js`; mirror feature modules under `src/` and colocate request fixtures in `tests/`.
-- `ai-services/` contains the FastAPI orchestrator (`main.py`) plus future models and RAG pipelines; manage Python deps through `requirements.txt`.
-- `shared/` stores cross-service constants, types, and utilities; prefer referencing these instead of duplicating values across apps.
-- `infrastructure/`, `scripts/`, and root `docker-compose.yml` centralize deployment, local automation, and multi-service bootstrapping.
+Anclora-Flow is split by service; keep feature code inside the owning folder and use `shared/` for cross-cutting utilities. Place pages in `frontend/src/pages`, reusable UI in `frontend/src/components`, and helpers in `frontend/src/utils`. The Express API runs from `backend/src/server.js`; mirror feature folders inside `backend/src` and keep HTTP fixtures in `backend/tests`. FastAPI lives at `ai-services/main.py`; organize orchestrators, pipelines, and models under `ai-services/src` with matching tests in `ai-services/tests`. Document workflows in `docs/` and store end-to-end flows in the repo-level `tests/` tree.
 
 ## Build, Test, and Development Commands
-- `docker-compose up --build` boots all services with hot reload; match ports with `PUERTOS.md` before exposing new containers.
-- `cd frontend && npm install && npm run dev -- --host 0.0.0.0 --port 3020` starts the SPA locally.
-- `cd backend && npm install && npm run dev` serves the API on `http://localhost:8020`.
-- `cd ai-services && pip install -r requirements.txt && uvicorn main:app --reload --port 8001` runs the AI gateway; ensure Python 3.11+.
+- `docker-compose up --build`: boot all services with hot reload; confirm exposed ports in `PUERTOS.md` first.
+- `cd frontend && npm install && npm run dev -- --host 0.0.0.0 --port 3020`: start the Vite SPA.
+- `cd backend && npm install && npm run dev`: run the Express API on `http://localhost:8020`.
+- `cd ai-services && pip install -r requirements.txt && uvicorn main:app --reload --port 8001`: launch the AI gateway (Python 3.11+).
 
 ## Coding Style & Naming Conventions
-- JavaScript: use 2-space indentation, camelCase for functions, PascalCase for components, and prefer arrow functions for stateless logic.
-- Python: follow PEP 8 with 4-space indentation; snake_case for modules and functions.
-- Keep environment keys uppercased with underscores (see `.env.example` files) and describe non-obvious values in comments.
+JavaScript uses 2-space indentation, camelCase for functions, and PascalCase for components and hooks. Prefer arrow functions for stateless helpers and contain side effects inside service modules. Python follows PEP 8 with 4 spaces, snake_case module names, and docstrings for public endpoints. Treat environment keys as SCREAMING_SNAKE_CASE and centralize shared literals in `shared/`. Comment only when behavior would surprise a new contributor.
 
 ## Testing Guidelines
-- Populate unit tests under each package's `tests/` directory using the `*.test.js` (frontend/backend) and `test_*.py` (AI) naming patterns.
-- Keep integration and end-to-end scenarios under `tests/e2e/` or `tests/performance/`; document heavy data fixtures in `docs/`.
-- Until runners are wired, include the exact test command in your PR (for example `node --test`, `pytest`) and add npm or pip scripts when introducing new suites.
+Place unit tests beside their service in a `tests/` folder, naming frontend and backend specs `*.test.js` and Python suites `test_*.py`. Run Node suites with `node --test` from the service root and FastAPI suites with `pytest`; record the command in your PR. Keep integration or performance suites in `tests/e2e` or `tests/performance` and document heavy fixtures in `docs/`.
 
 ## Commit & Pull Request Guidelines
-- Follow the existing history: concise, present-tense summaries (for example `Add invoice dashboard layout`); scope one concern per commit.
-- Prefix branches with the area (`frontend/feature-...`, `backend/fix-...`) so CI and agents can route reviews quickly.
-- Pull requests must outline context, testing evidence, and linked issues; attach screenshots for UI changes and note env vars or migrations.
+Write present tense, scoped commits and keep unrelated changes out of each diff. Name branches by area such as `frontend/feature-auth-modal` or `backend/fix-cors`. PRs should cover context, testing evidence, linked issues, and UI screenshots where relevant. Call out new env vars, migrations, or manual steps so agents can rehearse them locally.
 
-## Configuration Tips
-- Copy `.env.example` to `.env` in each service and align exposed ports with the workspace registry.
-- Store secrets outside the repo; use Docker overrides or GitHub Actions secrets for shared credentials.
+## Security & Configuration Tips
+Copy `.env.example` into `.env` for each service, keeping secrets outside the repo. Align service ports with `PUERTOS.md` and document any deviations in `docs/`. Prefer Docker overrides or CI secrets for credentials, and review dependencies after upgrades to keep the stack patched.

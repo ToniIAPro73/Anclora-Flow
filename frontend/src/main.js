@@ -1,6 +1,7 @@
 import "./styles/colors.css";
 import renderApp from "./pages/index.js";
 import renderLogin from "./pages/login.js";
+import renderDashboard from "./pages/dashboard.js";
 import renderInvoices from "./pages/invoices.js";
 import renderExpenses from "./pages/expenses.js";
 import renderClients from "./pages/clients.js";
@@ -11,15 +12,8 @@ import renderReports from "./pages/reports.js";
 import renderAssistant from "./pages/assistant.js";
 import renderSettings from "./pages/settings.js";
 
-const defaultDashboard = () => `
-  <section class="module dashboard">
-    <h1>Dashboard</h1>
-    <p>Selecciona una seccion en la barra lateral para comenzar.</p>
-  </section>
-`;
-
 const routes = {
-  "/dashboard": defaultDashboard,
+  "/dashboard": renderDashboard,
   "/invoices": renderInvoices,
   "/expenses": renderExpenses,
   "/clients": renderClients,
@@ -55,7 +49,7 @@ function navigate() {
   }
 
   ensureShell();
-  const pageRenderer = routes[targetRoute] || defaultDashboard;
+  const pageRenderer = routes[targetRoute] || renderDashboard;
   const container = document.getElementById("page-content");
   if (container) {
     container.innerHTML = pageRenderer(demoUser);
