@@ -47,7 +47,7 @@ export function renderDashboard(user = {}) {
       icon: "\uD83E\uDDFE",
       title: "Nueva factura",
       description: "Crear facturas",
-      href: "#/invoices"
+      href: "#/invoices?open=new-invoice"
     },
     {
       icon: "\uD83D\uDCC9",

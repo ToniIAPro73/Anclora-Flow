@@ -1,3 +1,5 @@
+import renderSidebarToggleIcon from "./sidebarToggleIcon.js";
+
 export function renderHeader(user = {}) {
   const { name = "Invitado", avatar = "" } = user;
   const displayName = name || "Invitado";
@@ -13,13 +15,21 @@ export function renderHeader(user = {}) {
     : `<span class="avatar placeholder" aria-hidden="true">${initials}</span>`;
 
   return `
-    <header class="app-header" role="banner">
-      <div class="logo" aria-label="Anclora Flow">
-        <span class="logo__icon" aria-hidden="true"></span>
-        <span class="logo__text">Anclora Flow</span>
+    <div class="app-topbar" role="region" aria-label="Controles de cuenta y preferencias">
+      <div class="app-topbar__start">
+        <button
+          type="button"
+          class="sidebar-toggle sidebar-toggle--ghost"
+          data-sidebar-trigger="topbar"
+          aria-expanded="false"
+          aria-label="Mostrar u ocultar la navegacion"
+          title="Mostrar u ocultar la navegacion"
+        >
+          ${renderSidebarToggleIcon()}
+        </button>
       </div>
-      <nav class="app-header__nav" aria-label="Opciones de la cuenta">
-        <div class="app-header__preferences" aria-label="Preferencias">
+      <nav class="app-topbar__nav" aria-label="Opciones de la cuenta">
+        <div class="app-topbar__preferences" aria-label="Preferencias">
           <div class="theme-switch" role="radiogroup" aria-label="Tema de la interfaz">
             <button type="button" class="theme-switch__btn" data-theme="light" aria-pressed="false" aria-label="Tema claro"></button>
             <button type="button" class="theme-switch__btn" data-theme="dark" aria-pressed="false" aria-label="Tema oscuro"></button>
@@ -40,7 +50,7 @@ export function renderHeader(user = {}) {
           </ul>
         </div>
       </nav>
-    </header>
+    </div>
   `;
 }
 
