@@ -93,17 +93,19 @@
   --gradient-button: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-400) 100%);
 }
 
+* {
+  box-sizing: border-box;
+}
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
+  margin: 0;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  transition: background 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
 }
 
-header,
-aside,
-main,
-section,
-nav,
-.card,
 button,
 input,
 select,
@@ -111,8 +113,9 @@ textarea {
   background-color: var(--bg-secondary);
   color: inherit;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: var(--shadow-sm);
+  padding: 0.55rem 0.8rem;
 }
 
 main {
@@ -534,4 +537,256 @@ a:hover {
     text-decoration: underline;
     text-decoration-thickness: 2px;
   }
+}
+/* Layout estructural */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2rem;
+  gap: 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.app-header .logo {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-header nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-header button,
+.app-header select {
+  border: none;
+  background: rgba(255, 255, 255, 0.16);
+  color: inherit;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.app-header button:hover,
+.app-header select:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-menu .avatar,
+.user-menu .avatar.placeholder {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.user-menu .dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 14px;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.22);
+  min-width: 180px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 20;
+}
+
+.user-menu:hover .dropdown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.user-menu .dropdown li {
+  margin: 0;
+}
+
+.user-menu .dropdown a,
+.user-menu .dropdown button {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.user-menu .dropdown a:hover,
+.user-menu .dropdown button:hover {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.app-main {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: calc(100vh - 96px);
+}
+
+.sidebar {
+  padding: 2.25rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.sidebar nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  color: inherit;
+  font-weight: 600;
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.sidebar nav a span {
+  opacity: 0.78;
+}
+
+.sidebar nav a:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.page-content {
+  padding: 2.5rem 3rem;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.page-content .module {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.quick-access-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+  border-radius: 20px;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.quick-access-card .card-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  font-size: 1.4rem;
+}
+
+.quick-access-card .card-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.quick-access-card .card-arrow {
+  font-size: 1.4rem;
+  opacity: 0.85;
+}
+
+.quick-access-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 42px rgba(15, 23, 42, 0.24);
+}
+
+.kpi-revenue,
+.kpi-expenses,
+.kpi-warning,
+.kpi-taxes {
+  border: none;
+  color: white;
+}
+
+.dashboard {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .app-main {
+    grid-template-columns: 100%;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 1rem 1.5rem;
+  }
+
+  .sidebar nav ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .page-content {
+    padding: 2rem 1.5rem;
+  }
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }

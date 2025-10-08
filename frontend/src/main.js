@@ -1,3 +1,4 @@
+import "./styles/colors.css";
 import renderApp from "./pages/index.js";
 import renderLogin from "./pages/login.js";
 import renderInvoices from "./pages/invoices.js";
