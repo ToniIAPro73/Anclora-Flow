@@ -3,8 +3,8 @@ import renderApp from "./pages/index.js";
 import renderLogin from "./pages/login.js";
 import renderDashboard from "./pages/dashboard.js";
 import renderInvoices from "./pages/invoices.js";
-import renderExpenses from "./pages/expenses.js";
-import renderClients from "./pages/clients.js";
+import renderExpenses, { initExpenses } from "./pages/expenses.js";
+import renderClients, { initClients } from "./pages/clients.js";
 import renderSubscriptions from "./pages/subscriptions.js";
 import renderBudget from "./pages/budget.js";
 import renderCalendar from "./pages/calendar.js";
@@ -556,6 +556,12 @@ function initPage(route, params) {
   switch (route) {
     case "/invoices":
       initInvoicesPage(params);
+      break;
+    case "/expenses":
+      initExpenses();
+      break;
+    case "/clients":
+      initClients();
       break;
     default:
       break;
