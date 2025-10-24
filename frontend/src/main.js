@@ -3,7 +3,7 @@ import "./services/api.js";
 import renderApp from "./pages/index.js";
 import renderLogin from "./pages/login.js";
 import renderDashboard from "./pages/dashboard.js";
-import renderInvoices from "./pages/invoices.js";
+import renderInvoices from "./pages/invoices-with-api.js";
 import renderExpenses, { initExpenses } from "./pages/expenses.js";
 import renderClients, { initClients } from "./pages/clients.js";
 import renderSubscriptions from "./pages/subscriptions.js";
