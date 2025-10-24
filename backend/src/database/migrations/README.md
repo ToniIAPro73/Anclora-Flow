@@ -8,9 +8,12 @@ Este directorio contiene las migraciones de base de datos para el proyecto Anclo
 migrations/
 ├── README.md                           # Este archivo
 ├── 001_add_verifactu_fields.sql       # Migración SQL de Verifactu
-├── run_migration.sh                    # Script para ejecutar migración (local)
-├── run_migration_docker.sh             # Script para ejecutar migración (Docker)
-└── rollback_verifactu.sh               # Script para revertir migración
+├── run_migration.sh                    # Script Bash para ejecución (local) - Linux/Mac
+├── run_migration.ps1                   # Script PowerShell para ejecución (local) - Windows
+├── run_migration_docker.sh             # Script Bash para Docker - Linux/Mac
+├── run_migration_docker.ps1            # Script PowerShell para Docker - Windows
+├── rollback_verifactu.sh               # Script Bash para revertir - Linux/Mac
+└── rollback_verifactu.ps1              # Script PowerShell para revertir - Windows
 ```
 
 ## Migración 001: Verifactu
@@ -75,12 +78,24 @@ Añade soporte completo para el sistema Verifactu de la Agencia Tributaria Espa�
 
 ## Ejecutar la Migración
 
-### Opción 1: Script Automatizado (Recomendado)
+### Opción 1A: Script Automatizado - Linux/Mac (Recomendado)
 
 ```bash
 # Desde el directorio raíz del proyecto
 chmod +x backend/src/database/migrations/run_migration.sh
 ./backend/src/database/migrations/run_migration.sh
+```
+
+### Opción 1B: Script Automatizado - Windows PowerShell (Recomendado)
+
+```powershell
+# Desde el directorio raíz del proyecto en PowerShell
+.\backend\src\database\migrations\run_migration.ps1
+```
+
+**Nota para Windows:** Si obtienes un error de política de ejecución, ejecuta:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 El script:
@@ -91,12 +106,19 @@ El script:
 - ✅ Verifica que todo se haya aplicado correctamente
 - ✅ Muestra un resumen completo
 
-### Opción 2: Con Docker (Si no tienes PostgreSQL instalado)
+### Opción 2A: Con Docker - Linux/Mac (Si no tienes PostgreSQL instalado)
 
 ```bash
 # Desde el directorio raíz del proyecto
 chmod +x backend/src/database/migrations/run_migration_docker.sh
 ./backend/src/database/migrations/run_migration_docker.sh
+```
+
+### Opción 2B: Con Docker - Windows PowerShell (Si no tienes PostgreSQL instalado)
+
+```powershell
+# Desde el directorio raíz del proyecto en PowerShell
+.\backend\src\database\migrations\run_migration_docker.ps1
 ```
 
 El script:
@@ -138,13 +160,20 @@ psql -U postgres -d anclora_flow -c "SELECT * FROM verifactu_config;"
 - La tabla verifactu_logs con todos sus registros
 - La tabla verifactu_config con todas las configuraciones
 
+### Linux/Mac:
 ```bash
 # Desde el directorio raíz del proyecto
 chmod +x backend/src/database/migrations/rollback_verifactu.sh
 ./backend/src/database/migrations/rollback_verifactu.sh
 ```
 
-El script pedirá confirmación antes de ejecutar.
+### Windows PowerShell:
+```powershell
+# Desde el directorio raíz del proyecto
+.\backend\src\database\migrations\rollback_verifactu.ps1
+```
+
+El script pedirá confirmación escribiendo 'SI' antes de ejecutar.
 
 ## Solución de Problemas
 
