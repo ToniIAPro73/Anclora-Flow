@@ -1,419 +1,565 @@
+// Módulo de Facturas con integración completa API y Verifactu
+// Importar servicio API (asegúrate de que esté cargado)
+
+// Estado global del módulo
+let invoicesData = [];
+let isLoading = false;
+let currentFilters = {
+  search: '',
+  status: 'all',
+  client: 'all'
+};
+
+// Formatters
 const currencyFormatter = new Intl.NumberFormat("es-ES", {
   style: "currency",
   currency: "EUR",
   maximumFractionDigits: 2
 });
 
+// Mapeo de estados de factura
 const statusMap = {
-  cobradas: {
-    label: "Cobrada",
-    tone: "paid"
-  },
-  enviadas: {
-    label: "Enviada",
-    tone: "sent"
-  },
-  pendientes: {
-    label: "Pendiente",
-    tone: "pending"
-  },
-  vencidas: {
-    label: "Vencida",
-    tone: "overdue"
-  },
-  borradores: {
-    label: "Borrador",
-    tone: "draft"
-  }
+  paid: { label: "Cobrada", tone: "paid" },
+  sent: { label: "Enviada", tone: "sent" },
+  pending: { label: "Pendiente", tone: "pending" },
+  overdue: { label: "Vencida", tone: "overdue" },
+  draft: { label: "Borrador", tone: "draft" }
 };
 
+// Mapeo de estados de Verifactu
 const verifactuStatusMap = {
-  registered: {
-    label: "Registrada",
-    tone: "success",
-    icon: "✅"
-  },
-  pending: {
-    label: "Pendiente",
-    tone: "warning",
-    icon: "⏳"
-  },
-  error: {
-    label: "Error",
-    tone: "error",
-    icon: "❌"
-  },
-  not_registered: {
-    label: "No registrada",
-    tone: "neutral",
-    icon: "⚪"
-  }
+  registered: { label: "Registrada", tone: "success", icon: "✅" },
+  pending: { label: "Pendiente", tone: "warning", icon: "⏳" },
+  error: { label: "Error", tone: "error", icon: "❌" },
+  not_registered: { label: "No registrada", tone: "neutral", icon: "⚪" }
 };
 
-const invoices = [
-  {
-    number: "F2025-001",
-    client: "TechStart Solutions SL",
-    issueDate: "2025-01-15",
-    dueDate: "2025-02-14",
-    total: 2650,
-    status: statusMap.cobradas,
-    daysLate: "",
-    highlight: true,
-    verifactuStatus: verifactuStatusMap.registered,
-    verifactuCsv: "4A2F9E8B1C6D5A3E",
-    verifactuUrl: "https://sede.agenciatributaria.gob.es/verifactu/test/4a2f9e8b"
-  },
-  {
-    number: "F2025-002",
-    client: "Consultoría Martínez",
-    issueDate: "2025-02-01",
-    dueDate: "2025-03-03",
-    total: 1224,
-    status: statusMap.enviadas,
-    daysLate: "219 días tarde",
-    verifactuStatus: verifactuStatusMap.registered,
-    verifactuCsv: "7B4E1F2A9C8D6E5B",
-    verifactuUrl: "https://sede.agenciatributaria.gob.es/verifactu/test/7b4e1f2a"
-  },
-  {
-    number: "F2025-003",
-    client: "Academia de Idiomas Global",
-    issueDate: "2025-02-15",
-    dueDate: "2025-03-17",
-    total: 648,
-    status: statusMap.pendientes,
-    daysLate: "205 días tarde",
-    verifactuStatus: verifactuStatusMap.pending
-  },
-  {
-    number: "F2025-004",
-    client: "Startup Innovation Hub",
-    issueDate: "2025-03-01",
-    dueDate: "2025-04-14",
-    total: 3710,
-    status: statusMap.vencidas,
-    daysLate: "190 días tarde",
-    verifactuStatus: verifactuStatusMap.error
-  },
-  {
-    number: "F2025-005",
-    client: "Freelancer Network SL",
-    issueDate: "2025-03-15",
-    dueDate: "2025-04-14",
-    total: 1908,
-    status: statusMap.borradores,
-    daysLate: "177 días tarde",
-    verifactuStatus: verifactuStatusMap.not_registered
-  }
-];
+// === UTILIDADES ===
 
-const clientOptions = [...new Set(invoices.map((invoice) => invoice.client))];
-
-const summaryCards = [
-  {
-    id: "total",
-    title: "Facturación Total",
-    hint: "Este mes",
-    value: 8500,
-    badge: "+18.1%",
-    tone: "primary"
-  },
-  {
-    id: "pending",
-    title: "Cobros Pendientes",
-    hint: "4 facturas",
-    value: 4132,
-    action: "Gestionar",
-    tone: "alert"
-  },
-  {
-    id: "average",
-    title: "Facturación Media",
-    hint: "Por cliente",
-    value: 2840,
-    badge: "Por proyecto",
-    tone: "neutral"
-  },
-  {
-    id: "ratio",
-    title: "Ratio de Cobro",
-    hint: "En plazo",
-    value: "82.5%",
-    badge: "Bueno",
-    tone: "success"
-  }
-];
-
-function formatDate(date) {
-  const [year, month, day] = date.split("-").map(Number);
+function formatDate(dateString) {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 }
 
-function renderSummaryCards() {
-  return summaryCards
-    .map((card) => {
-      const amount =
-        typeof card.value === "number" ? currencyFormatter.format(card.value) : card.value;
-      const badgeMarkup = card.badge
-        ? `<span class="invoices-card__badge">${card.badge}</span>`
-        : "";
-      const actionMarkup = card.action
-        ? `<button type="button" class="invoices-card__cta">${card.action}</button>`
-        : "";
+function calculateDaysLate(dueDate, status) {
+  if (status === 'paid' || status === 'draft') return '';
 
-      return `
-        <article class="invoices-card invoices-card--${card.tone}" role="listitem">
-          <div class="invoices-card__content">
-            <header class="invoices-card__header">
-              <p class="invoices-card__title">${card.title}</p>
-              <p class="invoices-card__hint">${card.hint}</p>
-            </header>
-            <p class="invoices-card__value">${amount}</p>
-            <footer class="invoices-card__footer">
-              ${badgeMarkup}
-              ${actionMarkup}
-            </footer>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
+  const due = new Date(dueDate);
+  const today = new Date();
+  const diffTime = today - due;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays > 0) {
+    return `${diffDays} días tarde`;
+  }
+  return '';
 }
 
-function renderInvoiceRows() {
-  return invoices
-    .map((invoice) => {
-      const { number, client, issueDate, dueDate, total, status, daysLate, highlight, verifactuStatus, verifactuCsv } = invoice;
-      const statusLabel = status.label;
-      const statusTone = status.tone;
-      const verifactuLabel = verifactuStatus.label;
-      const verifactuTone = verifactuStatus.tone;
-      const verifactuIcon = verifactuStatus.icon;
+// Mostrar notificación
+function showNotification(message, type = 'info') {
+  // Crear elemento de notificación
+  const notification = document.createElement('div');
+  notification.className = `notification notification--${type}`;
+  notification.innerHTML = `
+    <span>${message}</span>
+    <button onclick="this.parentElement.remove()" class="notification__close">×</button>
+  `;
 
-      // Determine which Verifactu actions to show
-      const verifactuActions = verifactuStatus === verifactuStatusMap.registered
-        ? `
-            <button type="button" class="table-action" title="Ver QR Verifactu" aria-label="Ver QR ${number}">
-              <span aria-hidden="true">🔲</span>
-            </button>
-            <button type="button" class="table-action" title="Ver CSV: ${verifactuCsv}" aria-label="Ver CSV ${number}">
-              <span aria-hidden="true">🔐</span>
-            </button>
-          `
-        : verifactuStatus === verifactuStatusMap.not_registered
-        ? `
-            <button type="button" class="table-action table-action--primary" title="Registrar en Verifactu" aria-label="Registrar ${number} en Verifactu">
-              <span aria-hidden="true">📋</span>
-            </button>
-          `
-        : verifactuStatus === verifactuStatusMap.pending
-        ? `
-            <button type="button" class="table-action" disabled title="Registro pendiente" aria-label="Registro pendiente ${number}">
-              <span aria-hidden="true">⏳</span>
-            </button>
-          `
-        : `
-            <button type="button" class="table-action table-action--retry" title="Reintentar registro" aria-label="Reintentar ${number}">
-              <span aria-hidden="true">🔄</span>
-            </button>
-          `;
+  // Añadir estilos si no existen
+  if (!document.getElementById('notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        min-width: 300px;
+        animation: slideIn 0.3s ease-out;
+      }
+      @keyframes slideIn {
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      .notification--success { background: #c6f6d5; color: #2f855a; border-left: 4px solid #48bb78; }
+      .notification--error { background: #fed7d7; color: #c53030; border-left: 4px solid #f56565; }
+      .notification--info { background: #bee3f8; color: #2c5282; border-left: 4px solid #4299e1; }
+      .notification--warning { background: #feebc8; color: #c05621; border-left: 4px solid #ed8936; }
+      .notification__close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        opacity: 0.7;
+      }
+      .notification__close:hover { opacity: 1; }
+    `;
+    document.head.appendChild(style);
+  }
 
-      return `
-        <tr
-          data-invoice-row
-          data-client="${client.toLowerCase()}"
-          data-status="${statusTone}"
-          data-number="${number.toLowerCase()}"
-          class="${highlight ? "invoices-table__row invoices-table__row--highlight" : "invoices-table__row"}"
-        >
-          <td data-column="Factura">
-            <span class="invoices-table__number">${number}</span>
-          </td>
-          <td data-column="Cliente">
-            <span class="invoices-table__client">${client}</span>
-          </td>
-          <td data-column="Emision">
-            <time datetime="${issueDate}">${formatDate(issueDate)}</time>
-          </td>
-          <td data-column="Vencimiento">
-            <time datetime="${dueDate}">${formatDate(dueDate)}</time>
-          </td>
-          <td data-column="Importe">
-            <span class="invoices-table__amount">${currencyFormatter.format(total)}</span>
-          </td>
-          <td data-column="Estado">
-            <span class="status-pill status-pill--${statusTone}">
-              <span class="status-pill__dot" aria-hidden="true"></span>
-              ${statusLabel}
-            </span>
-          </td>
-          <td data-column="Verifactu">
-            <span class="status-pill status-pill--${verifactuTone}" title="${verifactuLabel}">
-              <span aria-hidden="true">${verifactuIcon}</span>
-              ${verifactuLabel}
-            </span>
-          </td>
-          <td data-column="Dias">
-            <span class="invoices-table__days">${daysLate || "-"}</span>
-          </td>
-          <td data-column="Acciones" class="invoices-table__actions">
-            <button type="button" class="table-action" title="Ver factura" aria-label="Ver ${number}">
-              <span aria-hidden="true">👁️</span>
-            </button>
-            <button type="button" class="table-action" title="Editar factura" aria-label="Editar ${number}">
-              <span aria-hidden="true">✏️</span>
-            </button>
-            <button type="button" class="table-action" title="Descargar PDF" aria-label="Descargar ${number}">
-              <span aria-hidden="true">📄</span>
-            </button>
-            ${verifactuActions}
-            <button type="button" class="table-action" title="Marcar como cobrada" aria-label="Marcar ${number} como cobrada">
-              <span aria-hidden="true">✅</span>
-            </button>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
+  document.body.appendChild(notification);
+
+  // Auto-remover después de 5 segundos
+  setTimeout(() => {
+    notification.remove();
+  }, 5000);
 }
 
-function renderInvoiceModal() {
-  return `
-    <div class="modal" id="invoice-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="invoice-modal-title">
-      <div class="modal__backdrop" data-modal-dismiss></div>
-      <div class="modal__panel" role="document">
+// === FUNCIONES DE API ===
+
+async function loadInvoices() {
+  isLoading = true;
+  renderLoadingState();
+
+  try {
+    // Verificar que api esté disponible
+    if (typeof window.api === 'undefined') {
+      throw new Error('Servicio API no disponible. Asegúrate de que api.js esté cargado.');
+    }
+
+    const response = await window.api.getInvoices();
+    invoicesData = response.invoices || response || [];
+
+    // Mapear datos de API a formato del componente
+    invoicesData = invoicesData.map(invoice => ({
+      id: invoice.id,
+      number: invoice.invoice_number,
+      client: invoice.client_name,
+      clientEmail: invoice.client_email,
+      clientNif: invoice.client_nif,
+      issueDate: invoice.issue_date,
+      dueDate: invoice.due_date,
+      total: invoice.total,
+      subtotal: invoice.subtotal,
+      tax: invoice.tax,
+      status: invoice.status,
+      daysLate: calculateDaysLate(invoice.due_date, invoice.status),
+      verifactuStatus: invoice.verifactu_status || 'not_registered',
+      verifactuCsv: invoice.verifactu_csv,
+      verifactuQrCode: invoice.verifactu_qr_code,
+      verifactuUrl: invoice.verifactu_url,
+      verifactuHash: invoice.verifactu_hash,
+      verifactuError: invoice.verifactu_error_message
+    }));
+
+    renderInvoicesTable();
+    updateSummaryCards();
+
+  } catch (error) {
+    console.error('Error cargando facturas:', error);
+    renderErrorState(error.message);
+    showNotification(error.message || 'Error al cargar facturas', 'error');
+  } finally {
+    isLoading = false;
+  }
+}
+
+// Registrar factura en Verifactu
+async function registerInvoiceVerifactu(invoiceId) {
+  try {
+    showNotification('Registrando factura en Verifactu...', 'info');
+
+    // Actualizar estado a pendiente inmediatamente
+    const invoice = invoicesData.find(inv => inv.id === invoiceId);
+    if (invoice) {
+      invoice.verifactuStatus = 'pending';
+      renderInvoicesTable();
+    }
+
+    const result = await window.api.registerInvoiceVerifactu(invoiceId);
+
+    // Actualizar factura con los datos devueltos
+    if (invoice) {
+      invoice.verifactuStatus = 'registered';
+      invoice.verifactuCsv = result.invoice.verifactu_csv;
+      invoice.verifactuQrCode = result.invoice.verifactu_qr_code;
+      invoice.verifactuUrl = result.invoice.verifactu_url;
+      invoice.verifactuHash = result.invoice.verifactu_hash;
+    }
+
+    renderInvoicesTable();
+    showNotification('Factura registrada en Verifactu correctamente', 'success');
+
+  } catch (error) {
+    console.error('Error registrando en Verifactu:', error);
+
+    // Actualizar estado a error
+    const invoice = invoicesData.find(inv => inv.id === invoiceId);
+    if (invoice) {
+      invoice.verifactuStatus = 'error';
+      invoice.verifactuError = error.message;
+      renderInvoicesTable();
+    }
+
+    showNotification(`Error: ${error.message}`, 'error');
+  }
+}
+
+// === MODALES DE VERIFACTU ===
+
+function showVerifactuQRModal(invoice) {
+  const modalHTML = `
+    <div class="modal modal--open" id="verifactu-qr-modal">
+      <div class="modal__backdrop" onclick="document.getElementById('verifactu-qr-modal').remove()"></div>
+      <div class="modal__panel">
         <header class="modal__head">
           <div>
-            <h2 id="invoice-modal-title">Nueva factura</h2>
-            <p class="modal__subtitle">Completa los datos para generar la factura y enviarla al cliente.</p>
+            <h2>Código QR - Verifactu</h2>
+            <p class="modal__subtitle">Factura ${invoice.number}</p>
           </div>
-          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">
-            <span aria-hidden="true">×</span>
+          <button type="button" class="modal__close" onclick="document.getElementById('verifactu-qr-modal').remove()">
+            <span>×</span>
           </button>
         </header>
-        <form class="invoice-form" novalidate>
-          <section class="invoice-form__section">
-            <h3>Datos del cliente</h3>
-            <div class="invoice-form__grid">
-              <label class="form-field">
-                <span>Cliente</span>
-                <input type="text" name="client" placeholder="Introduce el nombre fiscal" required />
-              </label>
-              <label class="form-field">
-                <span>Email</span>
-                <input type="email" name="clientEmail" placeholder="cliente@empresa.com" />
-              </label>
-              <label class="form-field">
-                <span>NIF / CIF</span>
-                <input type="text" name="clientTaxId" placeholder="B12345678" />
-              </label>
-              <label class="form-field">
-                <span>Dirección</span>
-                <input type="text" name="clientAddress" placeholder="Calle, ciudad, provincia" />
-              </label>
-            </div>
-          </section>
-
-          <section class="invoice-form__section">
-            <h3>Datos de la factura</h3>
-            <div class="invoice-form__grid invoice-form__grid--compact">
-              <label class="form-field">
-                <span>Nº de factura</span>
-                <input type="text" name="invoiceNumber" value="F2025-006" />
-              </label>
-              <label class="form-field">
-                <span>Fecha de emisión</span>
-                <input type="date" name="issueDate" value="2025-10-08" />
-              </label>
-              <label class="form-field">
-                <span>Fecha de vencimiento</span>
-                <input type="date" name="dueDate" value="2025-11-08" />
-              </label>
-              <label class="form-field">
-                <span>Proyecto</span>
-                <input type="text" name="project" placeholder="Nombre del proyecto" />
-              </label>
-            </div>
-          </section>
-
-          <section class="invoice-form__section invoice-form__section--lines">
-            <div class="invoice-form__section-head">
-              <h3>Conceptos</h3>
-              <button type="button" class="invoice-form__add-line">
-                <span aria-hidden="true">＋</span>
-                Añadir línea
-              </button>
-            </div>
-            <div class="invoice-lines">
-              <article class="invoice-line">
-                <div class="invoice-line__desc">
-                  <label class="form-field">
-                    <span>Descripción</span>
-                    <input type="text" name="lineDescription" value="Servicios de consultoría fiscal" />
-                  </label>
-                </div>
-                <div class="invoice-line__meta">
-                  <label class="form-field">
-                    <span>Horas</span>
-                    <input type="number" inputmode="decimal" name="lineQty" value="10" min="0" step="0.5" />
-                  </label>
-                  <label class="form-field">
-                    <span>Tarifa</span>
-                    <input type="number" inputmode="decimal" name="lineRate" value="120" min="0" step="0.01" />
-                  </label>
-                  <label class="form-field">
-                    <span>IVA</span>
-                    <select name="lineVat">
-                      <option value="21" selected>21%</option>
-                      <option value="10">10%</option>
-                      <option value="4">4%</option>
-                      <option value="0">Exento</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="invoice-line__total">
-                  <span class="invoice-line__total-label">Importe estimado</span>
-                  <span class="invoice-line__total-value">${currencyFormatter.format(1452)}</span>
-                </div>
-              </article>
-            </div>
-          </section>
-
-          <section class="invoice-form__section invoice-summary">
-            <h3>Resumen</h3>
-            <dl class="invoice-summary__list">
-              <div class="invoice-summary__row">
-                <dt>Base imponible</dt>
-                <dd>${currencyFormatter.format(1200)}</dd>
-              </div>
-              <div class="invoice-summary__row">
-                <dt>IVA (21%)</dt>
-                <dd>${currencyFormatter.format(252)}</dd>
-              </div>
-              <div class="invoice-summary__row">
-                <dt>Retención IRPF (15%)</dt>
-                <dd>- ${currencyFormatter.format(180)}</dd>
-              </div>
-              <div class="invoice-summary__row invoice-summary__row--total">
-                <dt>Total a cobrar</dt>
-                <dd>${currencyFormatter.format(1272)}</dd>
-              </div>
-            </dl>
-          </section>
-
-          <footer class="invoice-form__footer">
-            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
-            <button type="submit" class="btn-primary">Guardar y enviar</button>
-          </footer>
-        </form>
+        <div class="modal__body" style="padding: 2rem; text-align: center;">
+          <div style="margin-bottom: 1.5rem;">
+            <p><strong>CSV:</strong> <code style="background: #f7fafc; padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">${invoice.verifactuCsv}</code></p>
+          </div>
+          <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
+            <img src="${invoice.verifactuQrCode}" alt="QR Verifactu" style="max-width: 300px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; background: white;">
+          </div>
+          <p style="font-size: 0.9rem; color: #718096;">
+            Escanea este código QR para verificar la factura en la web de la Agencia Tributaria.
+          </p>
+          ${invoice.verifactuUrl ? `<p style="font-size: 0.85rem; margin-top: 1rem;"><a href="${invoice.verifactuUrl}" target="_blank" style="color: #4299e1;">Verificar en AEAT →</a></p>` : ''}
+        </div>
+        <footer class="modal__footer">
+          <button class="btn-secondary" onclick="document.getElementById('verifactu-qr-modal').remove()">Cerrar</button>
+          <a href="${invoice.verifactuQrCode}" download="qr-${invoice.number}.png" class="btn-primary" style="text-decoration: none; display: inline-block;">
+            Descargar QR
+          </a>
+        </footer>
       </div>
     </div>
   `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
+function showVerifactuCSVModal(invoice) {
+  const modalHTML = `
+    <div class="modal modal--open" id="verifactu-csv-modal">
+      <div class="modal__backdrop" onclick="document.getElementById('verifactu-csv-modal').remove()"></div>
+      <div class="modal__panel">
+        <header class="modal__head">
+          <div>
+            <h2>Código Seguro de Verificación (CSV)</h2>
+            <p class="modal__subtitle">Factura ${invoice.number}</p>
+          </div>
+          <button type="button" class="modal__close" onclick="document.getElementById('verifactu-csv-modal').remove()">
+            <span>×</span>
+          </button>
+        </header>
+        <div class="modal__body" style="padding: 2rem;">
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="background: #f7fafc; border: 2px dashed #cbd5e0; padding: 2rem; border-radius: 8px;">
+              <p style="font-size: 0.9rem; color: #718096; margin-bottom: 0.75rem;">Código Seguro de Verificación</p>
+              <p style="font-size: 2rem; font-weight: bold; font-family: monospace; letter-spacing: 4px; color: #2d3748; margin: 0;">
+                ${invoice.verifactuCsv}
+              </p>
+            </div>
+          </div>
+          ${invoice.verifactuHash ? `
+          <div style="margin-top: 1.5rem; font-size: 0.85rem;">
+            <p><strong>Hash SHA-256:</strong></p>
+            <p style="font-family: monospace; background: #f7fafc; padding: 0.5rem; border-radius: 4px; word-break: break-all; color: #4a5568;">
+              ${invoice.verifactuHash}
+            </p>
+          </div>
+          ` : ''}
+          <p style="font-size: 0.9rem; color: #718096; margin-top: 1.5rem;">
+            Este código CSV identifica de forma única esta factura en el sistema Verifactu de la AEAT.
+          </p>
+        </div>
+        <footer class="modal__footer">
+          <button class="btn-secondary" onclick="document.getElementById('verifactu-csv-modal').remove()">Cerrar</button>
+          <button class="btn-primary" onclick="navigator.clipboard.writeText('${invoice.verifactuCsv}').then(() => showNotification('CSV copiado al portapapeles', 'success'))">
+            Copiar CSV
+          </button>
+        </footer>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// === RENDERIZADO ===
+
+function renderLoadingState() {
+  const tbody = document.querySelector('.invoices-table tbody');
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 3rem;">
+          <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #4299e1; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <p style="margin-top: 1rem; color: #718096;">Cargando facturas...</p>
+        </td>
+      </tr>
+    `;
+  }
+
+  // Añadir animación de spinner si no existe
+  if (!document.getElementById('spinner-animation')) {
+    const style = document.createElement('style');
+    style.id = 'spinner-animation';
+    style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+  }
+}
+
+function renderErrorState(message) {
+  const tbody = document.querySelector('.invoices-table tbody');
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 3rem;">
+          <p style="color: #c53030; font-size: 1.1rem; margin-bottom: 1rem;">⚠️ Error al cargar facturas</p>
+          <p style="color: #718096; margin-bottom: 1.5rem;">${message}</p>
+          <button onclick="loadInvoices()" class="btn-primary">Reintentar</button>
+        </td>
+      </tr>
+    `;
+  }
+}
+
+function renderInvoiceRows() {
+  if (!invoicesData || invoicesData.length === 0) {
+    return `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 3rem;">
+          <p style="color: #718096; font-size: 1.1rem;">No hay facturas todavía</p>
+          <p style="color: #a0aec0; margin-top: 0.5rem;">Crea tu primera factura para empezar</p>
+        </td>
+      </tr>
+    `;
+  }
+
+  // Aplicar filtros
+  let filteredInvoices = invoicesData;
+
+  if (currentFilters.search) {
+    const search = currentFilters.search.toLowerCase();
+    filteredInvoices = filteredInvoices.filter(inv =>
+      inv.number.toLowerCase().includes(search) ||
+      inv.client.toLowerCase().includes(search)
+    );
+  }
+
+  if (currentFilters.status !== 'all') {
+    filteredInvoices = filteredInvoices.filter(inv => inv.status === currentFilters.status);
+  }
+
+  if (currentFilters.client !== 'all') {
+    filteredInvoices = filteredInvoices.filter(inv =>
+      inv.client.toLowerCase() === currentFilters.client
+    );
+  }
+
+  if (filteredInvoices.length === 0) {
+    return `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 3rem;">
+          <p style="color: #718096;">No hay facturas que coincidan con los filtros</p>
+        </td>
+      </tr>
+    `;
+  }
+
+  return filteredInvoices.map(invoice => {
+    const statusInfo = statusMap[invoice.status] || statusMap.draft;
+    const verifactuInfo = verifactuStatusMap[invoice.verifactuStatus] || verifactuStatusMap.not_registered;
+
+    // Determinar acciones de Verifactu
+    let verifactuActions = '';
+
+    if (invoice.verifactuStatus === 'registered') {
+      verifactuActions = `
+        <button type="button" class="table-action" title="Ver QR Verifactu" onclick="showVerifactuQRModal(${JSON.stringify(invoice).replace(/"/g, '&quot;')})">
+          <span>🔲</span>
+        </button>
+        <button type="button" class="table-action" title="Ver CSV" onclick="showVerifactuCSVModal(${JSON.stringify(invoice).replace(/"/g, '&quot;')})">
+          <span>🔐</span>
+        </button>
+      `;
+    } else if (invoice.verifactuStatus === 'not_registered') {
+      verifactuActions = `
+        <button type="button" class="table-action table-action--primary" title="Registrar en Verifactu" onclick="registerInvoiceVerifactu('${invoice.id}')">
+          <span>📋</span>
+        </button>
+      `;
+    } else if (invoice.verifactuStatus === 'pending') {
+      verifactuActions = `
+        <button type="button" class="table-action" disabled title="Registro pendiente">
+          <span>⏳</span>
+        </button>
+      `;
+    } else if (invoice.verifactuStatus === 'error') {
+      verifactuActions = `
+        <button type="button" class="table-action table-action--retry" title="Reintentar registro - ${invoice.verifactuError || 'Error desconocido'}" onclick="registerInvoiceVerifactu('${invoice.id}')">
+          <span>🔄</span>
+        </button>
+      `;
+    }
+
+    return `
+      <tr data-invoice-id="${invoice.id}">
+        <td data-column="Factura">
+          <span class="invoices-table__number">${invoice.number}</span>
+        </td>
+        <td data-column="Cliente">
+          <span class="invoices-table__client">${invoice.client}</span>
+        </td>
+        <td data-column="Emision">
+          <time datetime="${invoice.issueDate}">${formatDate(invoice.issueDate)}</time>
+        </td>
+        <td data-column="Vencimiento">
+          <time datetime="${invoice.dueDate}">${formatDate(invoice.dueDate)}</time>
+        </td>
+        <td data-column="Importe">
+          <span class="invoices-table__amount">${currencyFormatter.format(invoice.total)}</span>
+        </td>
+        <td data-column="Estado">
+          <span class="status-pill status-pill--${statusInfo.tone}">
+            <span class="status-pill__dot"></span>
+            ${statusInfo.label}
+          </span>
+        </td>
+        <td data-column="Verifactu">
+          <span class="status-pill status-pill--${verifactuInfo.tone}" title="${verifactuInfo.label}">
+            <span>${verifactuInfo.icon}</span>
+            ${verifactuInfo.label}
+          </span>
+        </td>
+        <td data-column="Dias">
+          <span class="invoices-table__days">${invoice.daysLate || "-"}</span>
+        </td>
+        <td data-column="Acciones" class="invoices-table__actions">
+          <button type="button" class="table-action" title="Ver factura">
+            <span>👁️</span>
+          </button>
+          <button type="button" class="table-action" title="Editar factura">
+            <span>✏️</span>
+          </button>
+          <button type="button" class="table-action" title="Descargar PDF">
+            <span>📄</span>
+          </button>
+          ${verifactuActions}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderInvoicesTable() {
+  const tbody = document.querySelector('.invoices-table tbody');
+  if (tbody) {
+    tbody.innerHTML = renderInvoiceRows();
+  }
+
+  // Actualizar contador
+  updateResultCount();
+}
+
+function updateResultCount() {
+  const countEl = document.querySelector('[data-result-count]');
+  if (countEl && invoicesData) {
+    countEl.textContent = `Mostrando ${invoicesData.length} factura(s)`;
+  }
+}
+
+function updateSummaryCards() {
+  // Calcular estadísticas reales
+  const totalThisMonth = invoicesData
+    .filter(inv => {
+      const issueDate = new Date(inv.issueDate);
+      const now = new Date();
+      return issueDate.getMonth() === now.getMonth() &&
+             issueDate.getFullYear() === now.getFullYear();
+    })
+    .reduce((sum, inv) => sum + inv.total, 0);
+
+  const pendingTotal = invoicesData
+    .filter(inv => inv.status === 'pending' || inv.status === 'sent')
+    .reduce((sum, inv) => sum + inv.total, 0);
+
+  const pendingCount = invoicesData.filter(inv => inv.status === 'pending' || inv.status === 'sent').length;
+
+  const paidCount = invoicesData.filter(inv => inv.status === 'paid').length;
+  const totalCount = invoicesData.length;
+  const paymentRatio = totalCount > 0 ? ((paidCount / totalCount) * 100).toFixed(1) : 0;
+
+  // Puedes actualizar las tarjetas resumen aquí si quieres
+  // Por ahora mantienen sus valores estáticos
+}
+
+// === INICIALIZACIÓN ===
+
+export function initInvoicesPage() {
+  console.log('Inicializando módulo de facturas con API...');
+
+  // Hacer funciones globales para que funcionen los onclick en el HTML
+  window.loadInvoices = loadInvoices;
+  window.registerInvoiceVerifactu = registerInvoiceVerifactu;
+  window.showVerifactuQRModal = showVerifactuQRModal;
+  window.showVerifactuCSVModal = showVerifactuCSVModal;
+  window.showNotification = showNotification;
+
+  // Cargar facturas automáticamente
+  loadInvoices();
+
+  // Configurar filtros
+  setupFilters();
+}
+
+function setupFilters() {
+  // Buscar facturas
+  const searchInput = document.querySelector('[data-invoices-search]');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentFilters.search = e.target.value;
+      renderInvoicesTable();
+    });
+  }
+
+  // Filtro por estado
+  const statusFilter = document.querySelector('[data-invoices-filter="status"]');
+  if (statusFilter) {
+    statusFilter.addEventListener('change', (e) => {
+      currentFilters.status = e.target.value;
+      renderInvoicesTable();
+    });
+  }
+
+  // Filtro por cliente
+  const clientFilter = document.querySelector('[data-invoices-filter="client"]');
+  if (clientFilter) {
+    clientFilter.addEventListener('change', (e) => {
+      currentFilters.client = e.target.value;
+      renderInvoicesTable();
+    });
+  }
+}
+
+// Export para uso en módulos
+export { loadInvoices, registerInvoiceVerifactu, showVerifactuQRModal, showVerifactuCSVModal };
+
+// Mantener la función de render original para compatibilidad
 export function renderInvoices() {
-  return `
+  const html = `
     <section class="invoices" aria-labelledby="invoices-title">
       <header class="invoices__hero">
         <div class="invoices__hero-copy">
@@ -450,18 +596,9 @@ export function renderInvoices() {
           </select>
         </div>
         <div class="invoices__filters-group">
-          <label class="visually-hidden" for="invoice-client">Filtrar por cliente</label>
-          <select id="invoice-client" class="invoices__select" data-invoices-filter="client">
-            <option value="all">Todos los clientes</option>
-            ${clientOptions
-              .map((client) => `<option value="${client.toLowerCase()}">${client}</option>`)
-              .join("")}
-          </select>
-        </div>
-        <div class="invoices__filters-group invoices__filters-group--pinned">
-          <button type="button" class="btn-ghost" data-export-excel>
-            <span aria-hidden="true">📊</span>
-            Exportar Excel
+          <button type="button" class="btn-ghost" onclick="loadInvoices()">
+            <span>🔄</span>
+            Recargar
           </button>
         </div>
       </section>
@@ -483,95 +620,23 @@ export function renderInvoices() {
               </tr>
             </thead>
             <tbody>
-              ${renderInvoiceRows()}
+              <!-- Se llenará dinámicamente -->
             </tbody>
           </table>
-          <div class="invoices-table__empty" hidden>
-            <p>No hay facturas que coincidan con los filtros seleccionados.</p>
-          </div>
         </div>
         <footer class="invoices-table__footer">
-          <p data-result-count>Mostrando 1-5 de ${invoices.length} facturas</p>
-          <div class="invoices-table__pager" role="navigation" aria-label="Paginación">
-            <button type="button" class="pager-btn" disabled aria-disabled="true">Anterior</button>
-            <button type="button" class="pager-btn pager-btn--primary">Siguiente</button>
-          </div>
+          <p data-result-count>Cargando...</p>
         </footer>
       </section>
-
-      <section class="invoices__insights" aria-label="Indicadores clave">
-        <div class="invoices__metrics" role="list">
-          ${renderSummaryCards()}
-        </div>
-
-        <div class="invoices__charts">
-          <article class="chart-card chart-card--line">
-            <div class="chart-card__head">
-              <h3>Evolución mensual - Ingresos</h3>
-              <p>Comparativa de los últimos 12 meses</p>
-            </div>
-            <svg class="chart chart--line" viewBox="0 0 320 180" role="img" aria-label="Gráfico de ingresos">
-              <defs>
-                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="rgba(51,102,255,0.45)"></stop>
-                  <stop offset="100%" stop-color="rgba(51,102,255,0)"></stop>
-                </linearGradient>
-                <linearGradient id="strokeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="var(--secondary-400)"></stop>
-                  <stop offset="100%" stop-color="var(--accent-500)"></stop>
-                </linearGradient>
-              </defs>
-              <polyline
-                fill="url(#lineGradient)"
-                stroke="url(#strokeGradient)"
-                stroke-width="4"
-                stroke-linecap="round"
-                points="10,140 40,120 70,130 100,115 130,118 160,105 190,110 220,108 250,95 280,100 310,70"
-              ></polyline>
-              <g class="chart__axis">
-                <line x1="10" y1="150" x2="310" y2="150"></line>
-                <line x1="10" y1="40" x2="10" y2="150"></line>
-              </g>
-            </svg>
-          </article>
-          <article class="chart-card chart-card--bars">
-            <div class="chart-card__head">
-              <h3>Top 5 clientes</h3>
-              <p>Facturación acumulada anual</p>
-            </div>
-            <svg class="chart chart--bars" viewBox="0 0 320 180" role="img" aria-label="Ranking de clientes">
-              <g>
-                <rect x="40" y="60" width="36" height="100" class="bar bar--1"></rect>
-                <rect x="90" y="80" width="36" height="80" class="bar bar--2"></rect>
-                <rect x="140" y="95" width="36" height="65" class="bar bar--3"></rect>
-                <rect x="190" y="105" width="36" height="55" class="bar bar--4"></rect>
-                <rect x="240" y="120" width="36" height="40" class="bar bar--5"></rect>
-              </g>
-            </svg>
-          </article>
-          <article class="chart-card chart-card--donut">
-            <div class="chart-card__head">
-              <h3>Distribución por servicio</h3>
-              <p>Reparto de facturación por línea</p>
-            </div>
-            <svg class="chart chart--donut" viewBox="0 0 180 180" role="img" aria-label="Distribución por servicio">
-              <circle class="donut-ring" cx="90" cy="90" r="70"></circle>
-              <circle class="donut-segment donut-segment--primary" cx="90" cy="90" r="70" stroke-dasharray="300 440" stroke-dashoffset="0"></circle>
-              <circle class="donut-segment donut-segment--accent" cx="90" cy="90" r="70" stroke-dasharray="220 440" stroke-dashoffset="-300"></circle>
-              <circle class="donut-segment donut-segment--secondary" cx="90" cy="90" r="70" stroke-dasharray="120 440" stroke-dashoffset="-520"></circle>
-            </svg>
-            <ul class="chart-legend">
-              <li><span class="legend-dot legend-dot--primary"></span>Desarrollo web</li>
-              <li><span class="legend-dot legend-dot--accent"></span>Consultoría</li>
-              <li><span class="legend-dot legend-dot--secondary"></span>Enseñanza</li>
-              <li><span class="legend-dot legend-dot--muted"></span>Diseño</li>
-            </ul>
-          </article>
-        </div>
-      </section>
     </section>
-    ${renderInvoiceModal()}
   `;
+
+  // Inicializar después de renderizar
+  setTimeout(() => {
+    initInvoicesPage();
+  }, 100);
+
+  return html;
 }
 
 export default renderInvoices;

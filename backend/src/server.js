@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const passport = require("passport");
@@ -33,7 +33,7 @@ app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
     message: "Anclora Flow API está funcionando",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -52,16 +52,16 @@ app.use((_req, res) => {
 
 // Error handler
 app.use((err, _req, res, _next) => {
-  console.error('Error:', err);
+  console.error("Error:", err);
   res.status(err.status || 500).json({
-    error: err.message || "Error interno del servidor"
+    error: err.message || "Error interno del servidor",
   });
 });
 
 // Initialize database and start server
 const startServer = async () => {
   try {
-    console.log('🔄 Iniciando Anclora Flow Backend...');
+    console.log("🔄 Iniciando Anclora Flow Backend...");
 
     // Initialize database
     await initializeDatabase();
@@ -78,20 +78,20 @@ const startServer = async () => {
       console.log(`✅ Verifactu API: http://localhost:${PORT}/api/verifactu\n`);
     });
   } catch (error) {
-    console.error('❌ Error al iniciar el servidor:', error);
+    console.error("❌ Error al iniciar el servidor:", error);
     process.exit(1);
   }
 };
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('👋 SIGTERM recibido, cerrando servidor...');
+process.on("SIGTERM", async () => {
+  console.log("👋 SIGTERM recibido, cerrando servidor...");
   await closePool();
   process.exit(0);
 });
 
-process.on('SIGINT', async () => {
-  console.log('👋 SIGINT recibido, cerrando servidor...');
+process.on("SIGINT", async () => {
+  console.log("👋 SIGINT recibido, cerrando servidor...");
   await closePool();
   process.exit(0);
 });

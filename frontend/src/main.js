@@ -1,4 +1,5 @@
 import "./styles/colors.css";
+import "./services/api.js";
 import renderApp from "./pages/index.js";
 import renderLogin from "./pages/login.js";
 import renderDashboard from "./pages/dashboard.js";
@@ -22,20 +23,20 @@ const routes = {
   "/calendar": renderCalendar,
   "/reports": renderReports,
   "/assistant": renderAssistant,
-  "/settings": renderSettings
+  "/settings": renderSettings,
 };
 
 const demoUser = {
   name: "Demo",
   email: "demo@demo.com",
   avatar: "",
-  authProvider: "local"
+  authProvider: "local",
 };
 
 const STORAGE_KEYS = {
   theme: "anclora-theme",
   language: "anclora-language",
-  sidebar: "anclora-sidebar"
+  sidebar: "anclora-sidebar",
 };
 
 const root = document.documentElement;
@@ -45,7 +46,7 @@ let preferencesInitialized = false;
 let userMenuInitialized = false;
 const SIDEBAR_STATE = {
   COLLAPSED: "collapsed",
-  EXPANDED: "expanded"
+  EXPANDED: "expanded",
 };
 const SIDEBAR_BREAKPOINT = 960;
 const sidebarMedia = window.matchMedia(`(max-width: ${SIDEBAR_BREAKPOINT}px)`);
@@ -71,13 +72,17 @@ let invoiceModalLastFocus = null;
 let isInvoiceModalOpen = false;
 
 function getDefaultTheme() {
-  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  if (
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
     return "dark";
   }
   return "light";
 }
 
-let currentTheme = localStorage.getItem(STORAGE_KEYS.theme) || getDefaultTheme();
+let currentTheme =
+  localStorage.getItem(STORAGE_KEYS.theme) || getDefaultTheme();
 let currentLanguage = localStorage.getItem(STORAGE_KEYS.language) || "es";
 
 function updateToggleState(buttons = [], datasetKey, value) {
@@ -108,8 +113,12 @@ applyTheme(currentTheme);
 applyLanguage(currentLanguage);
 
 function initPreferencesControls() {
-  const themeButtons = Array.from(document.querySelectorAll(".theme-switch__btn"));
-  const langButtons = Array.from(document.querySelectorAll(".lang-switch__btn"));
+  const themeButtons = Array.from(
+    document.querySelectorAll(".theme-switch__btn")
+  );
+  const langButtons = Array.from(
+    document.querySelectorAll(".lang-switch__btn")
+  );
 
   if (!themeButtons.length || !langButtons.length) {
     return;
@@ -208,8 +217,11 @@ function trapInvoiceModalFocus(event) {
     return;
   }
 
-  const focusable = Array.from(modal.querySelectorAll(modalFocusableSelectors)).filter(
-    (node) => !node.hasAttribute("disabled") && node.getAttribute("tabindex") !== "-1"
+  const focusable = Array.from(
+    modal.querySelectorAll(modalFocusableSelectors)
+  ).filter(
+    (node) =>
+      !node.hasAttribute("disabled") && node.getAttribute("tabindex") !== "-1"
   );
 
   if (!focusable.length) {
@@ -244,7 +256,10 @@ function closeInvoiceModal() {
 
   modal.removeEventListener("keydown", handleInvoiceModalKeydown);
 
-  if (invoiceModalLastFocus && typeof invoiceModalLastFocus.focus === "function") {
+  if (
+    invoiceModalLastFocus &&
+    typeof invoiceModalLastFocus.focus === "function"
+  ) {
     invoiceModalLastFocus.focus();
   }
   invoiceModalLastFocus = null;
@@ -273,8 +288,11 @@ function openInvoiceModal() {
 
   modal.addEventListener("keydown", handleInvoiceModalKeydown);
 
-  const focusable = Array.from(modal.querySelectorAll(modalFocusableSelectors)).filter(
-    (node) => !node.hasAttribute("disabled") && node.getAttribute("tabindex") !== "-1"
+  const focusable = Array.from(
+    modal.querySelectorAll(modalFocusableSelectors)
+  ).filter(
+    (node) =>
+      !node.hasAttribute("disabled") && node.getAttribute("tabindex") !== "-1"
   );
   const firstFocusable = focusable[0];
   if (firstFocusable) {
@@ -344,7 +362,9 @@ function applySidebarState(collapsed, options = {}) {
 
   toggles.forEach((toggle) => {
     const expanded = !collapsed;
-    const label = expanded ? "Contraer la navegacion" : "Expandir la navegacion";
+    const label = expanded
+      ? "Contraer la navegacion"
+      : "Expandir la navegacion";
     toggle.setAttribute("aria-expanded", String(expanded));
     toggle.setAttribute("aria-label", label);
     toggle.setAttribute("title", label);
@@ -387,7 +407,11 @@ function handleSidebarGlobalClick(event) {
 }
 
 function handleSidebarGlobalKey(event) {
-  if (event.key !== "Escape" || event.defaultPrevented || !sidebarMedia.matches) {
+  if (
+    event.key !== "Escape" ||
+    event.defaultPrevented ||
+    !sidebarMedia.matches
+  ) {
     return;
   }
 
@@ -480,8 +504,12 @@ function initInvoicesPage(params) {
   });
 
   const searchInput = document.querySelector("[data-invoices-search]");
-  const statusSelect = document.querySelector('[data-invoices-filter="status"]');
-  const clientSelect = document.querySelector('[data-invoices-filter="client"]');
+  const statusSelect = document.querySelector(
+    '[data-invoices-filter="status"]'
+  );
+  const clientSelect = document.querySelector(
+    '[data-invoices-filter="client"]'
+  );
   const rows = Array.from(document.querySelectorAll("[data-invoice-row]"));
   const emptyState = document.querySelector(".invoices-table__empty");
   const resultCount = document.querySelector("[data-result-count]");
@@ -499,10 +527,14 @@ function initInvoicesPage(params) {
         !searchTerm ||
         row.dataset.number?.includes(searchTerm) ||
         row.dataset.client?.includes(searchTerm);
-      const matchesStatus = statusFilter === "all" || row.dataset.status === statusFilter;
-      const matchesClient = clientFilter === "all" || row.dataset.client === clientFilter;
+      const matchesStatus =
+        statusFilter === "all" || row.dataset.status === statusFilter;
+      const matchesClient =
+        clientFilter === "all" || row.dataset.client === clientFilter;
 
-      const isVisible = Boolean(matchesSearch && matchesStatus && matchesClient);
+      const isVisible = Boolean(
+        matchesSearch && matchesStatus && matchesClient
+      );
       row.hidden = !isVisible;
       if (isVisible) {
         visibleRows += 1;
@@ -536,7 +568,9 @@ function initInvoicesPage(params) {
 
   applyFilters();
 
-  const pendingButton = document.querySelector('[data-feature-pending="add-payment"]');
+  const pendingButton = document.querySelector(
+    '[data-feature-pending="add-payment"]'
+  );
   if (pendingButton && pendingButton.dataset.pendingBound !== "true") {
     pendingButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -618,7 +652,9 @@ function ensureShell() {
   }
 
   if (!shellHydrated) {
-    const initialCollapsed = sidebarMedia.matches ? true : preferredDesktopSidebarCollapsed;
+    const initialCollapsed = sidebarMedia.matches
+      ? true
+      : preferredDesktopSidebarCollapsed;
     applySidebarState(initialCollapsed, { persist: false });
     shellHydrated = true;
   }
