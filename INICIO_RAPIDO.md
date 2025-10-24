@@ -2,6 +2,8 @@
 
 Esta guía te ayudará a poner en marcha Anclora Flow con todas sus funcionalidades en pocos minutos.
 
+> **💻 ¿Usas Windows?** Ve a [INICIO_RAPIDO_WINDOWS.md](./INICIO_RAPIDO_WINDOWS.md) para instrucciones específicas de PowerShell.
+
 ## 📋 Requisitos Previos
 
 - Node.js 20+ instalado
@@ -21,6 +23,7 @@ cd Anclora-Flow
 
 #### Opción A: Usar Docker (Recomendado)
 
+**Linux/Mac:**
 ```bash
 # Iniciar PostgreSQL en Docker
 docker run -d \
@@ -33,6 +36,21 @@ docker run -d \
 
 # Verificar que está corriendo
 docker ps | grep anclora-postgres
+```
+
+**Windows (PowerShell):**
+```powershell
+# Iniciar PostgreSQL en Docker (nota el backtick ` para continuar líneas)
+docker run -d `
+  --name anclora-postgres `
+  -e POSTGRES_USER=postgres `
+  -e POSTGRES_PASSWORD=postgres `
+  -e POSTGRES_DB=anclora_flow `
+  -p 5452:5432 `
+  postgres:13
+
+# Verificar que está corriendo
+docker ps | Select-String anclora-postgres
 ```
 
 #### Opción B: PostgreSQL Local
