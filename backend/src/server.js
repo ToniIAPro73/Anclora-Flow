@@ -9,7 +9,11 @@ const PORT = process.env.BACKEND_PORT || process.env.PORT || 8020;
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3020',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3020',
+    'http://localhost:5173',  // Vite dev server
+    'http://localhost:3020',  // Frontend build
+  ],
   credentials: true
 }));
 app.use(express.json());
