@@ -27,6 +27,29 @@ const statusMap = {
   }
 };
 
+const verifactuStatusMap = {
+  registered: {
+    label: "Registrada",
+    tone: "success",
+    icon: "✅"
+  },
+  pending: {
+    label: "Pendiente",
+    tone: "warning",
+    icon: "⏳"
+  },
+  error: {
+    label: "Error",
+    tone: "error",
+    icon: "❌"
+  },
+  not_registered: {
+    label: "No registrada",
+    tone: "neutral",
+    icon: "⚪"
+  }
+};
+
 const invoices = [
   {
     number: "F2025-001",
@@ -36,7 +59,10 @@ const invoices = [
     total: 2650,
     status: statusMap.cobradas,
     daysLate: "",
-    highlight: true
+    highlight: true,
+    verifactuStatus: verifactuStatusMap.registered,
+    verifactuCsv: "4A2F9E8B1C6D5A3E",
+    verifactuUrl: "https://sede.agenciatributaria.gob.es/verifactu/test/4a2f9e8b"
   },
   {
     number: "F2025-002",
@@ -45,7 +71,10 @@ const invoices = [
     dueDate: "2025-03-03",
     total: 1224,
     status: statusMap.enviadas,
-    daysLate: "219 días tarde"
+    daysLate: "219 días tarde",
+    verifactuStatus: verifactuStatusMap.registered,
+    verifactuCsv: "7B4E1F2A9C8D6E5B",
+    verifactuUrl: "https://sede.agenciatributaria.gob.es/verifactu/test/7b4e1f2a"
   },
   {
     number: "F2025-003",
@@ -54,7 +83,8 @@ const invoices = [
     dueDate: "2025-03-17",
     total: 648,
     status: statusMap.pendientes,
-    daysLate: "205 días tarde"
+    daysLate: "205 días tarde",
+    verifactuStatus: verifactuStatusMap.pending
   },
   {
     number: "F2025-004",
@@ -63,7 +93,8 @@ const invoices = [
     dueDate: "2025-04-14",
     total: 3710,
     status: statusMap.vencidas,
-    daysLate: "190 días tarde"
+    daysLate: "190 días tarde",
+    verifactuStatus: verifactuStatusMap.error
   },
   {
     number: "F2025-005",
@@ -72,7 +103,8 @@ const invoices = [
     dueDate: "2025-04-14",
     total: 1908,
     status: statusMap.borradores,
-    daysLate: "177 días tarde"
+    daysLate: "177 días tarde",
+    verifactuStatus: verifactuStatusMap.not_registered
   }
 ];
 
@@ -152,9 +184,40 @@ function renderSummaryCards() {
 function renderInvoiceRows() {
   return invoices
     .map((invoice) => {
-      const { number, client, issueDate, dueDate, total, status, daysLate, highlight } = invoice;
+      const { number, client, issueDate, dueDate, total, status, daysLate, highlight, verifactuStatus, verifactuCsv } = invoice;
       const statusLabel = status.label;
       const statusTone = status.tone;
+      const verifactuLabel = verifactuStatus.label;
+      const verifactuTone = verifactuStatus.tone;
+      const verifactuIcon = verifactuStatus.icon;
+
+      // Determine which Verifactu actions to show
+      const verifactuActions = verifactuStatus === verifactuStatusMap.registered
+        ? `
+            <button type="button" class="table-action" title="Ver QR Verifactu" aria-label="Ver QR ${number}">
+              <span aria-hidden="true">🔲</span>
+            </button>
+            <button type="button" class="table-action" title="Ver CSV: ${verifactuCsv}" aria-label="Ver CSV ${number}">
+              <span aria-hidden="true">🔐</span>
+            </button>
+          `
+        : verifactuStatus === verifactuStatusMap.not_registered
+        ? `
+            <button type="button" class="table-action table-action--primary" title="Registrar en Verifactu" aria-label="Registrar ${number} en Verifactu">
+              <span aria-hidden="true">📋</span>
+            </button>
+          `
+        : verifactuStatus === verifactuStatusMap.pending
+        ? `
+            <button type="button" class="table-action" disabled title="Registro pendiente" aria-label="Registro pendiente ${number}">
+              <span aria-hidden="true">⏳</span>
+            </button>
+          `
+        : `
+            <button type="button" class="table-action table-action--retry" title="Reintentar registro" aria-label="Reintentar ${number}">
+              <span aria-hidden="true">🔄</span>
+            </button>
+          `;
 
       return `
         <tr
@@ -185,6 +248,12 @@ function renderInvoiceRows() {
               ${statusLabel}
             </span>
           </td>
+          <td data-column="Verifactu">
+            <span class="status-pill status-pill--${verifactuTone}" title="${verifactuLabel}">
+              <span aria-hidden="true">${verifactuIcon}</span>
+              ${verifactuLabel}
+            </span>
+          </td>
           <td data-column="Dias">
             <span class="invoices-table__days">${daysLate || "-"}</span>
           </td>
@@ -198,6 +267,7 @@ function renderInvoiceRows() {
             <button type="button" class="table-action" title="Descargar PDF" aria-label="Descargar ${number}">
               <span aria-hidden="true">📄</span>
             </button>
+            ${verifactuActions}
             <button type="button" class="table-action" title="Marcar como cobrada" aria-label="Marcar ${number} como cobrada">
               <span aria-hidden="true">✅</span>
             </button>
@@ -407,6 +477,7 @@ export function renderInvoices() {
                 <th scope="col">Fecha Vencimiento</th>
                 <th scope="col">Importe Total</th>
                 <th scope="col">Estado</th>
+                <th scope="col">Verifactu</th>
                 <th scope="col">Días</th>
                 <th scope="col"><span class="visually-hidden">Acciones</span></th>
               </tr>

@@ -372,6 +372,132 @@ class Invoice {
     const result = await query(sql, [userId]);
     return result.rows;
   }
+
+  // Get invoice with Verifactu data
+  static async findByIdWithVerifactu(id, userId) {
+    const sql = `
+      SELECT
+        i.*,
+        c.name as client_name,
+        c.email as client_email,
+        c.nif_cif as client_nif
+      FROM invoices i
+      LEFT JOIN clients c ON i.client_id = c.id
+      WHERE i.id = $1 AND i.user_id = $2
+    `;
+
+    const invoiceResult = await query(sql, [id, userId]);
+
+    if (invoiceResult.rows.length === 0) {
+      return null;
+    }
+
+    const invoice = invoiceResult.rows[0];
+
+    // Get invoice items
+    const itemsSql = 'SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY created_at';
+    const itemsResult = await query(itemsSql, [id]);
+    invoice.items = itemsResult.rows;
+
+    return invoice;
+  }
+
+  // Get Verifactu status
+  static async getVerifactuStatus(id, userId) {
+    const sql = `
+      SELECT
+        verifactu_enabled,
+        verifactu_status,
+        verifactu_id,
+        verifactu_csv,
+        verifactu_qr_code,
+        verifactu_hash,
+        verifactu_chain_index,
+        verifactu_registered_at,
+        verifactu_error_message,
+        verifactu_url
+      FROM invoices
+      WHERE id = $1 AND user_id = $2
+    `;
+
+    const result = await query(sql, [id, userId]);
+    return result.rows[0];
+  }
+
+  // Update Verifactu status
+  static async updateVerifactuStatus(id, userId, status, errorMessage = null) {
+    const sql = `
+      UPDATE invoices
+      SET verifactu_status = $1,
+          verifactu_error_message = $2
+      WHERE id = $3 AND user_id = $4
+      RETURNING *
+    `;
+
+    const result = await query(sql, [status, errorMessage, id, userId]);
+    return result.rows[0];
+  }
+
+  // Get invoices pending Verifactu registration
+  static async findPendingVerifactu(userId) {
+    const sql = `
+      SELECT i.*, c.name as client_name
+      FROM invoices i
+      LEFT JOIN clients c ON i.client_id = c.id
+      WHERE i.user_id = $1
+        AND i.verifactu_enabled = true
+        AND i.verifactu_status = 'pending'
+        AND i.status NOT IN ('draft', 'cancelled')
+      ORDER BY i.issue_date ASC
+    `;
+
+    const result = await query(sql, [userId]);
+    return result.rows;
+  }
+
+  // Get invoices registered in Verifactu
+  static async findRegisteredVerifactu(userId, limit = 100) {
+    const sql = `
+      SELECT
+        i.id,
+        i.invoice_number,
+        i.issue_date,
+        i.total,
+        i.verifactu_status,
+        i.verifactu_id,
+        i.verifactu_csv,
+        i.verifactu_chain_index,
+        i.verifactu_registered_at,
+        c.name as client_name
+      FROM invoices i
+      LEFT JOIN clients c ON i.client_id = c.id
+      WHERE i.user_id = $1
+        AND i.verifactu_status = 'registered'
+      ORDER BY i.verifactu_chain_index DESC
+      LIMIT $2
+    `;
+
+    const result = await query(sql, [userId, limit]);
+    return result.rows;
+  }
+
+  // Get Verifactu statistics
+  static async getVerifactuStatistics(userId) {
+    const sql = `
+      SELECT
+        COUNT(*) FILTER (WHERE verifactu_enabled = true) as total_enabled,
+        COUNT(*) FILTER (WHERE verifactu_status = 'registered') as total_registered,
+        COUNT(*) FILTER (WHERE verifactu_status = 'pending') as total_pending,
+        COUNT(*) FILTER (WHERE verifactu_status = 'error') as total_errors,
+        MAX(verifactu_chain_index) as last_chain_index,
+        MAX(verifactu_registered_at) as last_registration
+      FROM invoices
+      WHERE user_id = $1
+    `;
+
+    const result = await query(sql, [userId]);
+    return result.rows[0];
+  }
 }
 
 module.exports = Invoice;

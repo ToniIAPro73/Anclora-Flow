@@ -22,6 +22,7 @@ const invoiceRoutes = require("./api/invoices/routes");
 const expenseRoutes = require("./api/expenses/routes");
 const clientRoutes = require("./api/clients/routes");
 const projectRoutes = require("./api/projects/routes");
+const verifactuRoutes = require("./api/verifactu/routes");
 
 // Health check
 app.get("/api/health", (_req, res) => {
@@ -38,6 +39,7 @@ app.use("/api/invoices", invoiceRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/verifactu", verifactuRoutes);
 
 // 404 handler
 app.use((_req, res) => {
@@ -68,7 +70,8 @@ const startServer = async () => {
       console.log(`📄 Invoices API: http://localhost:${PORT}/api/invoices`);
       console.log(`💰 Expenses API: http://localhost:${PORT}/api/expenses`);
       console.log(`👥 Clients API: http://localhost:${PORT}/api/clients`);
-      console.log(`📁 Projects API: http://localhost:${PORT}/api/projects\n`);
+      console.log(`📁 Projects API: http://localhost:${PORT}/api/projects`);
+      console.log(`✅ Verifactu API: http://localhost:${PORT}/api/verifactu\n`);
     });
   } catch (error) {
     console.error('❌ Error al iniciar el servidor:', error);
