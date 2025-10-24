@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const passport = require("passport");
@@ -8,10 +8,27 @@ const app = express();
 const PORT = process.env.BACKEND_PORT || process.env.PORT || 8020;
 
 // Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3020',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      // Allow localhost on any port for development
+      if (origin.match(/^https?:\/\/localhost(:\d+)?$/)) {
+        return callback(null, true);
+      }
+
+      // Otherwise, check against environment variable
+      if (origin === (process.env.FRONTEND_URL || "http://localhost:3020")) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
@@ -29,7 +46,7 @@ app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
     message: "Anclora Flow API está funcionando",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -48,16 +65,16 @@ app.use((_req, res) => {
 
 // Error handler
 app.use((err, _req, res, _next) => {
-  console.error('Error:', err);
+  console.error("Error:", err);
   res.status(err.status || 500).json({
-    error: err.message || "Error interno del servidor"
+    error: err.message || "Error interno del servidor",
   });
 });
 
 // Initialize database and start server
 const startServer = async () => {
   try {
-    console.log('🔄 Iniciando Anclora Flow Backend...');
+    console.log("🔄 Iniciando Anclora Flow Backend...");
 
     // Initialize database
     await initializeDatabase();
@@ -74,20 +91,20 @@ const startServer = async () => {
       console.log(`✅ Verifactu API: http://localhost:${PORT}/api/verifactu\n`);
     });
   } catch (error) {
-    console.error('❌ Error al iniciar el servidor:', error);
+    console.error("❌ Error al iniciar el servidor:", error);
     process.exit(1);
   }
 };
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('👋 SIGTERM recibido, cerrando servidor...');
+process.on("SIGTERM", async () => {
+  console.log("👋 SIGTERM recibido, cerrando servidor...");
   await closePool();
   process.exit(0);
 });
 
-process.on('SIGINT', async () => {
-  console.log('👋 SIGINT recibido, cerrando servidor...');
+process.on("SIGINT", async () => {
+  console.log("👋 SIGINT recibido, cerrando servidor...");
   await closePool();
   process.exit(0);
 });
