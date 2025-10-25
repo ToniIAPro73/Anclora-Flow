@@ -10,6 +10,13 @@ let currentFilters = {
   client: 'all'
 };
 
+// Estado temporal para formularios de edición/creación
+let invoiceEditState = null;
+const invoiceItemEditors = {
+  edit: null,
+  create: null
+};
+
 // Formatters
 const currencyFormatter = new Intl.NumberFormat("es-ES", {
   style: "currency",
@@ -35,6 +42,585 @@ const verifactuStatusMap = {
 };
 
 // === UTILIDADES ===
+
+function formatDateForInput(dateValue) {
+  if (!dateValue) return '';
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+  return parsed.toISOString().split('T')[0];
+}
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizeNumber(value, fallback = 0) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function formatCurrency(value) {
+  return currencyFormatter.format(sanitizeNumber(value, 0));
+}
+
+function calculateLineTotals(item = {}) {
+  const quantity = sanitizeNumber(item.quantity, 0);
+  const unitPrice = sanitizeNumber(item.unitPrice, 0);
+  const vatPercentage = sanitizeNumber(item.vatPercentage, 0);
+  const base = quantity * unitPrice;
+  const vatAmount = base * (vatPercentage / 100);
+  const total = base + vatAmount;
+  return {
+    base: Number(base.toFixed(2)),
+    vatAmount: Number(vatAmount.toFixed(2)),
+    total: Number(total.toFixed(2))
+  };
+}
+
+function normalizeInvoiceItem(item = {}) {
+  const normalized = {
+    id: item.id || null,
+    description: item.description || '',
+    quantity: sanitizeNumber(item.quantity ?? item.qty, 1) || 1,
+    unitType: item.unit_type || item.unitType || 'unidad',
+    unitPrice: sanitizeNumber(item.unit_price ?? item.unitPrice, 0),
+    vatPercentage: sanitizeNumber(item.vat_percentage ?? item.vatPercentage, 21),
+    amount: 0
+  };
+  const totals = calculateLineTotals(normalized);
+  normalized.amount = totals.total;
+  return normalized;
+}
+
+function calculateInvoiceTotals(items = [], irpfPercentage = 0) {
+  const subtotal = items.reduce((sum, item) => {
+    return sum + sanitizeNumber(item.quantity, 0) * sanitizeNumber(item.unitPrice, 0);
+  }, 0);
+
+  const vatAmount = items.reduce((sum, item) => {
+    const base = sanitizeNumber(item.quantity, 0) * sanitizeNumber(item.unitPrice, 0);
+    return sum + base * (sanitizeNumber(item.vatPercentage, 0) / 100);
+  }, 0);
+
+  const roundedSubtotal = Number(subtotal.toFixed(2));
+  const roundedVat = Number(vatAmount.toFixed(2));
+  const irpfPct = sanitizeNumber(irpfPercentage, 0);
+  const irpfAmount = Number((roundedSubtotal * (irpfPct / 100)).toFixed(2));
+  const total = Number((roundedSubtotal + roundedVat - irpfAmount).toFixed(2));
+  const vatPct = roundedSubtotal > 0 ? Number(((roundedVat / roundedSubtotal) * 100).toFixed(2)) : 0;
+
+  return {
+    subtotal: roundedSubtotal,
+    vatAmount: roundedVat,
+    vatPercentage: vatPct,
+    irpfPercentage: irpfPct,
+    irpfAmount,
+    total
+  };
+}
+
+function resolveVerifactuVerificationUrl(invoice = {}) {
+  if (invoice.verifactuUrl) return invoice.verifactuUrl;
+  if (invoice.verifactuHash) {
+    return `https://sede.agenciatributaria.gob.es/verifactu?id=${invoice.verifactuHash}`;
+  }
+  if (invoice.verifactuCsv) {
+    return `https://sede.agenciatributaria.gob.es/verifactu?csv=${invoice.verifactuCsv}`;
+  }
+  return '';
+}
+
+function isPlaceholderVerifactuQr(dataUrl) {
+  if (!dataUrl) return false;
+  if (dataUrl.startsWith('data:image/svg+xml;base64,')) {
+    try {
+      const decoded = atob(dataUrl.split(',')[1]);
+      return decoded.includes('QR:');
+    } catch (error) {
+      return false;
+    }
+  }
+  if (dataUrl.startsWith('<svg')) {
+    return dataUrl.includes('QR:');
+  }
+  return false;
+}
+
+function buildQrFallbackSource(url) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(url)}`;
+}
+
+function renderVerifactuQrImage(invoice, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = '<p style="font-size: 0.9rem; color: var(--text-secondary);">Generando codigo QR...</p>';
+
+  const qrSource = invoice.verifactuQrCode;
+  if (qrSource && !isPlaceholderVerifactuQr(qrSource)) {
+    const img = document.createElement('img');
+    img.alt = 'QR Verifactu';
+    img.style.width = '280px';
+    img.style.height = '280px';
+    img.style.display = 'block';
+    img.style.borderRadius = '8px';
+    img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+    img.onload = () => {
+      container.innerHTML = '';
+      container.appendChild(img);
+    };
+    img.onerror = () => {
+      console.warn('Fallback QR para factura Verifactu');
+      renderQrFallback(invoice, container);
+    };
+    img.src = qrSource;
+    return;
+  }
+
+  renderQrFallback(invoice, container);
+}
+
+function renderQrFallback(invoice, container) {
+  const verificationUrl = resolveVerifactuVerificationUrl(invoice);
+  if (!verificationUrl) {
+    container.innerHTML = '<p style="color: #c53030; font-size: 0.9rem;">No se pudo generar el codigo QR.</p>';
+    return;
+  }
+
+  const img = document.createElement('img');
+  img.alt = 'QR Verifactu generado';
+  img.style.width = '280px';
+  img.style.height = '280px';
+  img.style.display = 'block';
+  img.style.borderRadius = '8px';
+  img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+  img.onload = () => {
+    container.innerHTML = '';
+    container.appendChild(img);
+  };
+  img.onerror = () => {
+    container.innerHTML = '<p style="color: #c53030; font-size: 0.9rem;">Error al generar el codigo QR.</p>';
+  };
+  img.src = buildQrFallbackSource(verificationUrl);
+}
+
+function resolveQrDownloadSource(invoice) {
+  if (!invoice) return '';
+  if (invoice.verifactuQrCode && !isPlaceholderVerifactuQr(invoice.verifactuQrCode)) {
+    return invoice.verifactuQrCode;
+  }
+  const verificationUrl = resolveVerifactuVerificationUrl(invoice);
+  return verificationUrl ? buildQrFallbackSource(verificationUrl) : '';
+}
+
+function setupItemsEditor({
+  editorKey,
+  containerId,
+  totalsId,
+  addButtonId,
+  initialItems = [],
+  editable = true,
+  allowIrpfEdit = true,
+  defaultUnitType = 'unidad',
+  irpfPercentage = 0
+}) {
+  const items = initialItems && initialItems.length > 0
+    ? initialItems.map(normalizeInvoiceItem)
+    : [normalizeInvoiceItem({ unitType: defaultUnitType })];
+
+  invoiceItemEditors[editorKey] = {
+    key: editorKey,
+    containerId,
+    totalsId,
+    addButtonId,
+    items,
+    editable,
+    baseAllowIrpfEdit: allowIrpfEdit,
+    allowIrpfEdit: editable ? allowIrpfEdit : false,
+    defaultUnitType,
+    irpfPercentage: sanitizeNumber(irpfPercentage, 0),
+    eventsAttached: false,
+    latestTotals: calculateInvoiceTotals(items, irpfPercentage)
+  };
+
+  renderItemsEditor(editorKey);
+  attachItemsEditorEvents(editorKey);
+  updateEditorControlsState(invoiceItemEditors[editorKey]);
+}
+
+function attachItemsEditorEvents(editorKey) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state || state.eventsAttached) return;
+
+  const container = document.getElementById(state.containerId);
+  if (container) {
+    container.dataset.editorKey = editorKey;
+    container.addEventListener('input', handleItemEditorInput);
+    container.addEventListener('change', handleItemEditorInput);
+    container.addEventListener('click', handleItemEditorClick);
+  }
+
+  const totalsEl = document.getElementById(state.totalsId);
+  if (totalsEl) {
+    totalsEl.dataset.editorKey = editorKey;
+    totalsEl.addEventListener('input', handleTotalsInput);
+  }
+
+  if (state.addButtonId) {
+    const addBtn = document.getElementById(state.addButtonId);
+    if (addBtn) {
+      addBtn.dataset.editorKey = editorKey;
+      addBtn.addEventListener('click', handleAddItem);
+    }
+  }
+
+  state.eventsAttached = true;
+}
+
+function renderItemsEditor(editorKey) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  const container = document.getElementById(state.containerId);
+  if (container) {
+    if (!state.items || state.items.length === 0) {
+      container.innerHTML = state.editable
+        ? '<p style="font-size: 0.9rem; color: var(--text-secondary);">Anade lineas para esta factura.</p>'
+        : '<p style="font-size: 0.9rem; color: var(--text-secondary);">Sin lineas disponibles.</p>';
+    } else {
+      container.innerHTML = state.items
+        .map((item, index) => getItemRowMarkup(item, index, state.editable))
+        .join('');
+    }
+  }
+
+  updateTotalsDisplay(editorKey);
+}
+
+function getItemRowMarkup(item, index, editable) {
+  return `
+    <div class="invoice-item-row" data-index="${index}" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1rem; align-items: end;">
+      <div style="grid-column: span 2;">
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Concepto</label>
+        <input
+          type="text"
+          class="form-input"
+          data-field="description"
+          value="${escapeHtml(item.description)}"
+          ${editable ? '' : 'disabled'}
+          placeholder="Servicio o producto"
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Unidad</label>
+        <input
+          type="text"
+          class="form-input"
+          data-field="unitType"
+          value="${escapeHtml(item.unitType)}"
+          ${editable ? '' : 'disabled'}
+          placeholder="unidad"
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Cantidad</label>
+        <input
+          type="number"
+          class="form-input"
+          data-field="quantity"
+          value="${sanitizeNumber(item.quantity, 1)}"
+          step="0.01"
+          min="0"
+          ${editable ? '' : 'disabled'}
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Precio unitario</label>
+        <input
+          type="number"
+          class="form-input"
+          data-field="unitPrice"
+          value="${sanitizeNumber(item.unitPrice, 0)}"
+          step="0.01"
+          min="0"
+          ${editable ? '' : 'disabled'}
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">IVA (%)</label>
+        <input
+          type="number"
+          class="form-input"
+          data-field="vatPercentage"
+          value="${sanitizeNumber(item.vatPercentage, 21)}"
+          step="0.1"
+          min="0"
+          max="100"
+          ${editable ? '' : 'disabled'}
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Importe</label>
+        <div
+          data-field="line-total"
+          style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary); font-weight: 600; color: var(--text-primary);"
+        >
+          ${formatCurrency(item.amount)}
+        </div>
+      </div>
+      ${editable ? `
+        <div style="grid-column: span 6; display: flex; justify-content: flex-end;">
+          <button type="button" class="btn-ghost" data-action="remove-item" aria-label="Eliminar linea">Eliminar linea</button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function updateTotalsDisplay(editorKey) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  const totals = calculateInvoiceTotals(state.items, state.irpfPercentage);
+  state.latestTotals = totals;
+
+  const totalsEl = document.getElementById(state.totalsId);
+  if (!totalsEl) return;
+
+  const irpfFieldId = `${editorKey}-irpf-percentage`;
+
+  totalsEl.innerHTML = `
+    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+      <span>Subtotal</span>
+      <strong>${formatCurrency(totals.subtotal)}</strong>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+      <span>IVA estimado (${totals.vatPercentage.toFixed(2)}%)</span>
+      <strong>${formatCurrency(totals.vatAmount)}</strong>
+    </div>
+    ${state.allowIrpfEdit
+      ? `
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+          <label for="${irpfFieldId}" style="font-weight: 600; color: var(--text-secondary);">IRPF (%)</label>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input
+              id="${irpfFieldId}"
+              type="number"
+              class="form-input"
+              style="width: 110px;"
+              min="0"
+              max="100"
+              step="0.1"
+              value="${state.irpfPercentage}"
+              data-totals-field="irpfPercentage"
+            />
+            <span style="font-weight: 600; color: var(--text-secondary);">${formatCurrency(totals.irpfAmount)}</span>
+          </div>
+        </div>
+      `
+      : `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <span>IRPF (${state.irpfPercentage}%)</span>
+          <strong>${formatCurrency(totals.irpfAmount)}</strong>
+        </div>
+      `}
+    <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+      <span>Total</span>
+      <strong>${formatCurrency(totals.total)}</strong>
+    </div>
+  `;
+}
+
+function updateEditorControlsState(state) {
+  if (!state) return;
+
+  const addBtn = state.addButtonId ? document.getElementById(state.addButtonId) : null;
+  if (addBtn) {
+    addBtn.disabled = !state.editable;
+    addBtn.style.display = state.editable ? 'inline-flex' : 'none';
+  }
+
+  const container = document.getElementById(state.containerId);
+  if (container) {
+    container.classList.toggle('is-locked', !state.editable);
+  }
+}
+
+function handleItemEditorInput(event) {
+  const target = event.target;
+  const field = target.dataset.field;
+  if (!field) return;
+
+  const parent = target.closest('[data-editor-key]');
+  if (!parent) return;
+
+  const editorKey = parent.dataset.editorKey;
+  const state = invoiceItemEditors[editorKey];
+  if (!state || !state.editable) return;
+
+  const row = target.closest('.invoice-item-row');
+  if (!row) return;
+
+  const index = Number.parseInt(row.dataset.index, 10);
+  if (Number.isNaN(index) || !state.items[index]) return;
+
+  if (field === 'description') {
+    state.items[index].description = target.value;
+  } else if (field === 'unitType') {
+    state.items[index].unitType = target.value;
+  } else {
+    const fallback = field === 'quantity' ? 1 : 0;
+    const numericValue = sanitizeNumber(target.value, fallback);
+    state.items[index][field] = numericValue;
+    target.value = numericValue;
+  }
+
+  const totals = calculateLineTotals(state.items[index]);
+  state.items[index].amount = totals.total;
+
+  const lineTotalEl = row.querySelector('[data-field="line-total"]');
+  if (lineTotalEl) {
+    lineTotalEl.textContent = formatCurrency(state.items[index].amount);
+  }
+
+  updateTotalsDisplay(editorKey);
+}
+
+function handleItemEditorClick(event) {
+  const action = event.target.dataset.action;
+  if (action !== 'remove-item') return;
+
+  const parent = event.target.closest('[data-editor-key]');
+  if (!parent) return;
+
+  const editorKey = parent.dataset.editorKey;
+  const state = invoiceItemEditors[editorKey];
+  if (!state || !state.editable) return;
+
+  const row = event.target.closest('.invoice-item-row');
+  if (!row) return;
+
+  const index = Number.parseInt(row.dataset.index, 10);
+  if (Number.isNaN(index)) return;
+
+  state.items.splice(index, 1);
+  renderItemsEditor(editorKey);
+  updateEditorControlsState(state);
+}
+
+function handleTotalsInput(event) {
+  const target = event.target;
+  const field = target.dataset.totalsField;
+  if (!field) return;
+
+  const parent = target.closest('[data-editor-key]');
+  if (!parent) return;
+
+  const editorKey = parent.dataset.editorKey;
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  if (field === 'irpfPercentage') {
+    const sanitized = Math.max(0, Math.min(100, sanitizeNumber(target.value, 0)));
+    state.irpfPercentage = sanitized;
+    target.value = sanitized;
+    updateTotalsDisplay(editorKey);
+  }
+}
+
+function handleAddItem(event) {
+  const editorKey = event.currentTarget.dataset.editorKey;
+  const state = invoiceItemEditors[editorKey];
+  if (!state || !state.editable) return;
+
+  state.items.push(normalizeInvoiceItem({ unitType: state.defaultUnitType }));
+  renderItemsEditor(editorKey);
+  updateEditorControlsState(state);
+}
+
+function setItemsEditorEditable(editorKey, editable) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  state.editable = editable;
+  state.allowIrpfEdit = editable ? state.baseAllowIrpfEdit : false;
+
+  if (editable && (!state.items || state.items.length === 0)) {
+    state.items = [normalizeInvoiceItem({ unitType: state.defaultUnitType })];
+  }
+
+  renderItemsEditor(editorKey);
+  updateEditorControlsState(state);
+}
+
+function destroyItemsEditor(editorKey) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  const container = document.getElementById(state.containerId);
+  if (container) {
+    container.removeEventListener('input', handleItemEditorInput);
+    container.removeEventListener('change', handleItemEditorInput);
+    container.removeEventListener('click', handleItemEditorClick);
+    container.innerHTML = '';
+  }
+
+  const totalsEl = document.getElementById(state.totalsId);
+  if (totalsEl) {
+    totalsEl.removeEventListener('input', handleTotalsInput);
+    totalsEl.innerHTML = '';
+  }
+
+  if (state.addButtonId) {
+    const addBtn = document.getElementById(state.addButtonId);
+    if (addBtn) {
+      addBtn.removeEventListener('click', handleAddItem);
+    }
+  }
+
+  invoiceItemEditors[editorKey] = null;
+}
+
+function getItemsEditorState(editorKey) {
+  return invoiceItemEditors[editorKey] || null;
+}
+
+function configurePaymentDateField({ statusSelectId, containerId, inputId, initialStatus, initialPaymentDate }) {
+  const statusSelect = document.getElementById(statusSelectId);
+  const container = document.getElementById(containerId);
+  const input = document.getElementById(inputId);
+
+  const toggle = (status) => {
+    if (!container) return;
+    if (status === 'paid') {
+      container.style.display = 'block';
+      if (input && !input.value) {
+        const value = initialPaymentDate || new Date();
+        input.value = formatDateForInput(value);
+      }
+    } else {
+      container.style.display = 'none';
+      if (input) {
+        input.value = '';
+      }
+    }
+  };
+
+  toggle(initialStatus);
+
+  if (statusSelect) {
+    statusSelect.addEventListener('change', (event) => {
+      toggle(event.target.value);
+    });
+  }
+}
 
 function formatDate(dateString) {
   if (!dateString) return '-';
@@ -220,10 +806,9 @@ async function registerInvoiceVerifactu(invoiceId) {
 // === MODALES DE VERIFACTU ===
 
 function showVerifactuQRModal(invoiceId) {
-  // Buscar la factura en los datos cargados
   const invoice = invoicesData.find(inv => inv.id === invoiceId);
   if (!invoice) {
-    showNotification('No se encontró la factura', 'error');
+    showNotification('No se encontro la factura', 'error');
     return;
   }
 
@@ -235,10 +820,15 @@ function showVerifactuQRModal(invoiceId) {
     qrCodePreview: invoice.verifactuQrCode ? invoice.verifactuQrCode.substring(0, 50) + '...' : 'sin datos'
   });
 
-  if (!invoice.verifactuQrCode || !invoice.verifactuCsv) {
-    showNotification('Esta factura no tiene datos de Verifactu. Registra la factura primero.', 'warning');
+  const verificationUrl = resolveVerifactuVerificationUrl(invoice);
+  const qrDownloadSrc = resolveQrDownloadSource(invoice);
+
+  if (!invoice.verifactuCsv && !verificationUrl) {
+    showNotification('Esta factura no tiene datos de Verifactu todavia.', 'warning');
     return;
   }
+
+  const isTestUrl = invoice.verifactuUrl && invoice.verifactuUrl.includes('/test/');
 
   const modalHTML = `
     <div class="modal is-open" id="verifactu-qr-modal">
@@ -246,55 +836,65 @@ function showVerifactuQRModal(invoiceId) {
       <div class="modal__panel" style="max-width: 600px;">
         <header class="modal__head">
           <div>
-            <h2 class="modal__title">Código QR - Verifactu</h2>
+            <h2 class="modal__title">Codigo QR - Verifactu</h2>
             <p class="modal__subtitle">Factura ${invoice.number}</p>
           </div>
-          <button type="button" class="modal__close" onclick="document.getElementById('verifactu-qr-modal').remove()">×</button>
+          <button type="button" class="modal__close" onclick="document.getElementById('verifactu-qr-modal').remove()">&times;</button>
         </header>
         <div class="modal__body" style="padding: 2rem;">
-          <div style="text-align: center; margin-bottom: 2rem;">
-            <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">Código Seguro de Verificación</p>
-            <p style="color: var(--text-primary); font-size: 1.125rem; font-weight: 600;">
-              <code style="background: var(--bg-secondary); padding: 0.5rem 1rem; border-radius: 6px; font-family: monospace; color: var(--text-primary); letter-spacing: 1px;">
-                ${invoice.verifactuCsv}
-              </code>
-            </p>
-          </div>
-          <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
-            <div style="padding: 1.5rem; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-              <img src="${invoice.verifactuQrCode}" alt="QR Verifactu" style="width: 280px; height: 280px; display: block;" onerror="console.error('Error cargando QR:', this.src); this.style.display='none'; this.parentElement.innerHTML='<p style=color:red>Error al cargar el código QR</p>'">
-            </div>
-          </div>
-          <p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center;">
-            Escanea este código QR para verificar la factura en la web de la Agencia Tributaria.
-          </p>
-          ${invoice.verifactuUrl && !invoice.verifactuUrl.includes('/test/') ? `
-            <div style="text-align: center; margin-top: 1rem;">
-              <a href="${invoice.verifactuUrl}" target="_blank" class="btn-secondary" style="text-decoration: none; display: inline-block;">
-                🔗 Verificar en web AEAT
-              </a>
-            </div>
-          ` : invoice.verifactuUrl ? `
-            <div style="text-align: center; margin-top: 1rem;">
-              <p style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
-                ℹ️ Modo test - La verificación en AEAT no está disponible
+          ${invoice.verifactuCsv ? `
+            <div style="text-align: center; margin-bottom: 2rem;">
+              <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">Codigo Seguro de Verificacion</p>
+              <p style="color: var(--text-primary); font-size: 1.125rem; font-weight: 600;">
+                <code style="background: var(--bg-secondary); padding: 0.5rem 1rem; border-radius: 6px; font-family: monospace; color: var(--text-primary); letter-spacing: 1px;">
+                  ${invoice.verifactuCsv}
+                </code>
               </p>
             </div>
           ` : ''}
+          <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
+            <div id="verifactu-qr-image" style="padding: 1.5rem; background: var(--bg-primary, #ffffff); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.08);">
+            </div>
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center;">
+            Escanea este codigo QR para verificar la factura.
+          </p>
+          ${verificationUrl ? `
+            <div style="text-align: center; margin-top: 1rem;">
+              ${isTestUrl ? `
+                <p style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
+                  Enlace de modo test. La verificacion oficial puede no estar disponible.
+                </p>
+              ` : `
+                <a href="${verificationUrl}" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration: none; display: inline-block;">
+                  Abrir enlace AEAT
+                </a>
+              `}
+            </div>
+          ` : `
+            <div style="text-align: center; margin-top: 1rem;">
+              <p style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
+                Todavia no hay un enlace publico disponible.
+              </p>
+            </div>
+          `}
         </div>
         <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
-          <button class="btn-secondary" onclick="document.getElementById('verifactu-qr-modal').remove()" style="flex: 1;">
-            Cerrar
-          </button>
-          <a href="${invoice.verifactuQrCode}" download="verifactu-qr-${invoice.number}.png" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; flex: 1; padding: 0.75rem 1.5rem; font-size: 1rem;">
-            📥 Descargar QR
-          </a>
+          <button class="btn-secondary" style="flex: 1;" onclick="document.getElementById('verifactu-qr-modal').remove()">Cerrar</button>
+          ${qrDownloadSrc ? `
+            <a href="${qrDownloadSrc}" download="verifactu-qr-${invoice.number}.png" class="btn-primary" style="flex: 1; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+              Descargar QR
+            </a>
+          ` : `
+            <button class="btn-primary" style="flex: 1;" disabled>QR no disponible</button>
+          `}
         </footer>
       </div>
     </div>
   `;
 
   document.body.insertAdjacentHTML('beforeend', modalHTML);
+  renderVerifactuQrImage(invoice, 'verifactu-qr-image');
 }
 
 function showVerifactuCSVModal(invoiceId) {
@@ -494,136 +1094,76 @@ async function editInvoice(invoiceId) {
   try {
     showNotification('Cargando factura...', 'info');
 
-    // Obtener detalles completos de la factura
     const invoice = await window.api.getInvoice(invoiceId);
 
-    // Formatear fechas para input type="date" (YYYY-MM-DD)
-    const formatDateForInput = (dateString) => {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toISOString().split('T')[0];
-    };
+    const issueDateValue = formatDateForInput(invoice.issue_date);
+    const dueDateValue = formatDateForInput(invoice.due_date);
+    const paymentDateValue = formatDateForInput(invoice.payment_date);
 
     const modalHTML = `
       <div class="modal is-open" id="edit-invoice-modal">
-        <div class="modal__backdrop" onclick="document.getElementById('edit-invoice-modal').remove()"></div>
-        <div class="modal__panel" style="max-width: 600px;">
+        <div class="modal__backdrop" onclick="closeEditInvoiceModal()"></div>
+        <div class="modal__panel" style="max-width: 720px;">
           <header class="modal__head">
             <div>
-              <h2 class="modal__title">Editar Factura ${invoice.invoice_number}</h2>
-              <p class="modal__subtitle">Modificar datos de la factura</p>
+              <h2 class="modal__title">Editar factura ${invoice.invoice_number}</h2>
+              <p class="modal__subtitle">Actualiza datos y conceptos</p>
             </div>
-            <button type="button" class="modal__close" onclick="document.getElementById('edit-invoice-modal').remove()">×</button>
+            <button type="button" class="modal__close" onclick="closeEditInvoiceModal()">&times;</button>
           </header>
           <div class="modal__body">
             <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
-
-              <!-- Estado -->
-              <div>
-                <label for="edit-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                  Estado
-                </label>
-                <select
-                  id="edit-status"
-                  name="status"
-                  class="form-input"
-                  style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);"
-                >
-                  <option value="draft" ${invoice.status === 'draft' ? 'selected' : ''}>Borrador</option>
-                  <option value="pending" ${invoice.status === 'pending' ? 'selected' : ''}>Pendiente</option>
-                  <option value="sent" ${invoice.status === 'sent' ? 'selected' : ''}>Enviada</option>
-                  <option value="paid" ${invoice.status === 'paid' ? 'selected' : ''}>Cobrada</option>
-                  <option value="overdue" ${invoice.status === 'overdue' ? 'selected' : ''}>Vencida</option>
-                </select>
-              </div>
-
-              <!-- Fechas -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div>
-                  <label for="edit-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                    Fecha de emisión
-                  </label>
-                  <input
-                    type="date"
-                    id="edit-issue-date"
-                    name="issue_date"
-                    value="${formatDateForInput(invoice.issue_date)}"
-                    class="form-input"
-                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);"
-                  />
-                </div>
-                <div>
-                  <label for="edit-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                    Fecha de vencimiento
-                  </label>
-                  <input
-                    type="date"
-                    id="edit-due-date"
-                    name="due_date"
-                    value="${formatDateForInput(invoice.due_date)}"
-                    class="form-input"
-                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);"
-                  />
-                </div>
-              </div>
-
-              <!-- Fecha de pago (solo si está pagada) -->
-              <div id="payment-date-container" style="display: ${invoice.status === 'paid' ? 'block' : 'none'};">
-                <label for="edit-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                  Fecha de pago
-                </label>
-                <input
-                  type="date"
-                  id="edit-payment-date"
-                  name="payment_date"
-                  value="${invoice.payment_date ? formatDateForInput(invoice.payment_date) : ''}"
-                  class="form-input"
-                  style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);"
-                />
-              </div>
-
-              <!-- Notas -->
-              <div>
-                <label for="edit-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                  Notas
-                </label>
-                <textarea
-                  id="edit-notes"
-                  name="notes"
-                  rows="4"
-                  class="form-input"
-                  style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); resize: vertical;"
-                  placeholder="Añade notas adicionales..."
-                >${invoice.notes || ''}</textarea>
-              </div>
-
-              <!-- Info de Verifactu -->
               ${invoice.verifactu_status === 'registered' ? `
-                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 6px; border-left: 4px solid #48bb78;">
-                  <p style="color: var(--text-secondary); font-size: 0.875rem; margin: 0;">
-                    ⚠️ Esta factura está registrada en Verifactu. Los cambios no afectarán el registro.
+                <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                  <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
+                    Esta factura esta registrada en Verifactu. Los cambios no afectan al registro enviado.
                   </p>
                 </div>
               ` : ''}
+              <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label for="edit-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Estado</label>
+                  <select id="edit-status" name="status" class="form-input">
+                    <option value="draft" ${invoice.status === 'draft' ? 'selected' : ''}>Borrador</option>
+                    <option value="pending" ${invoice.status === 'pending' ? 'selected' : ''}>Pendiente</option>
+                    <option value="sent" ${invoice.status === 'sent' ? 'selected' : ''}>Enviada</option>
+                    <option value="paid" ${invoice.status === 'paid' ? 'selected' : ''}>Cobrada</option>
+                    <option value="overdue" ${invoice.status === 'overdue' ? 'selected' : ''}>Vencida</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="edit-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de emision</label>
+                  <input type="date" id="edit-issue-date" name="issue_date" class="form-input" value="${issueDateValue || ''}" />
+                </div>
+                <div>
+                  <label for="edit-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de vencimiento</label>
+                  <input type="date" id="edit-due-date" name="due_date" class="form-input" value="${dueDateValue || ''}" />
+                </div>
+                <div id="payment-date-container" style="display: ${invoice.status === 'paid' ? 'block' : 'none'};">
+                  <label for="edit-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de pago</label>
+                  <input type="date" id="edit-payment-date" name="payment_date" class="form-input" value="${paymentDateValue || ''}" />
+                </div>
+              </div>
+              <div>
+                <label for="edit-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Notas</label>
+                <textarea id="edit-notes" name="notes" rows="4" class="form-input" style="resize: vertical;">${invoice.notes || ''}</textarea>
+              </div>
+              <div id="edit-lock-message" style="display: ${invoice.status === 'draft' ? 'none' : 'flex'}; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); font-size: 0.9rem; color: var(--text-secondary);">
+                Para editar conceptos e importes cambia el estado a Borrador.
+              </div>
+              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: var(--bg-secondary);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Conceptos facturados</h3>
+                  <button type="button" class="btn-secondary" id="add-edit-invoice-item">Anadir linea</button>
+                </div>
+                <div id="edit-invoice-items"></div>
+                <div id="edit-invoice-totals" style="margin-top: 1.5rem;"></div>
+              </section>
             </form>
           </div>
           <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
-            <button
-              type="button"
-              class="btn-secondary"
-              onclick="document.getElementById('edit-invoice-modal').remove()"
-              style="flex: 1;"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              class="btn-primary"
-              onclick="saveInvoiceChanges('${invoice.id}')"
-              style="flex: 1;"
-            >
-              Guardar cambios
-            </button>
+            <button class="btn-secondary" style="flex: 1;" onclick="closeEditInvoiceModal()">Cancelar</button>
+            <button type="button" class="btn-primary" style="flex: 1;" onclick="saveInvoiceChanges('${invoice.id}')">Guardar cambios</button>
           </footer>
         </div>
       </div>
@@ -631,24 +1171,271 @@ async function editInvoice(invoiceId) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Añadir listener para mostrar/ocultar fecha de pago
-    const statusSelect = document.getElementById('edit-status');
-    const paymentDateContainer = document.getElementById('payment-date-container');
+    setupInvoiceEditForm(invoice);
 
-    statusSelect.addEventListener('change', (e) => {
-      paymentDateContainer.style.display = e.target.value === 'paid' ? 'block' : 'none';
-      if (e.target.value === 'paid' && !document.getElementById('edit-payment-date').value) {
-        document.getElementById('edit-payment-date').value = formatDateForInput(new Date());
-      }
-    });
-
-    // Remover notificaciones de carga
     const notifications = document.querySelectorAll('.notification--info');
     notifications.forEach(n => n.remove());
-
   } catch (error) {
     console.error('Error loading invoice for edit:', error);
     showNotification(`Error al cargar la factura: ${error.message}`, 'error');
+  }
+}
+
+function setupInvoiceEditForm(invoice) {
+  invoiceEditState = { invoiceId: invoice.id };
+
+  setupItemsEditor({
+    editorKey: 'edit',
+    containerId: 'edit-invoice-items',
+    totalsId: 'edit-invoice-totals',
+    addButtonId: 'add-edit-invoice-item',
+    initialItems: invoice.items || [],
+    editable: invoice.status === 'draft',
+    allowIrpfEdit: true,
+    defaultUnitType: 'unidad',
+    irpfPercentage: invoice.irpf_percentage || 0
+  });
+
+  configurePaymentDateField({
+    statusSelectId: 'edit-status',
+    containerId: 'payment-date-container',
+    inputId: 'edit-payment-date',
+    initialStatus: invoice.status,
+    initialPaymentDate: invoice.payment_date
+  });
+
+  const statusSelect = document.getElementById('edit-status');
+  const lockMessage = document.getElementById('edit-lock-message');
+
+  if (statusSelect) {
+    statusSelect.addEventListener('change', (event) => {
+      const isDraft = event.target.value === 'draft';
+      setItemsEditorEditable('edit', isDraft);
+      if (lockMessage) {
+        lockMessage.style.display = isDraft ? 'none' : 'flex';
+      }
+    });
+  }
+}
+
+function closeEditInvoiceModal() {
+  destroyItemsEditor('edit');
+  invoiceEditState = null;
+  const modal = document.getElementById('edit-invoice-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+async function openNewInvoiceModal() {
+  try {
+    showNotification('Preparando formulario de factura...', 'info');
+
+    let clients = [];
+    try {
+      const clientsResponse = await window.api.getClients();
+      clients = clientsResponse?.clients || clientsResponse || [];
+    } catch (clientError) {
+      console.warn('No se pudieron cargar los clientes:', clientError);
+    }
+
+    const today = formatDateForInput(new Date());
+    const dueDefaultDate = formatDateForInput(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+
+    const modalHTML = `
+      <div class="modal is-open" id="new-invoice-modal">
+        <div class="modal__backdrop" onclick="closeNewInvoiceModal()"></div>
+        <div class="modal__panel" style="max-width: 720px;">
+          <header class="modal__head">
+            <div>
+              <h2 class="modal__title">Nueva factura</h2>
+              <p class="modal__subtitle">Completa los datos y conceptos para generar la factura</p>
+            </div>
+            <button type="button" class="modal__close" onclick="closeNewInvoiceModal()">&times;</button>
+          </header>
+          <div class="modal__body">
+            <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
+              <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
+                <div>
+                  <label for="new-invoice-number" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Numero de factura</label>
+                  <input type="text" id="new-invoice-number" name="invoice_number" class="form-input" placeholder="EJ: 2024-001" required />
+                </div>
+                <div>
+                  <label for="new-invoice-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Estado</label>
+                  <select id="new-invoice-status" name="status" class="form-input">
+                    <option value="draft" selected>Borrador</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="sent">Enviada</option>
+                    <option value="paid">Cobrada</option>
+                    <option value="overdue">Vencida</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="new-invoice-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de emision</label>
+                  <input type="date" id="new-invoice-issue-date" name="issue_date" class="form-input" value="${today}" required />
+                </div>
+                <div>
+                  <label for="new-invoice-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de vencimiento</label>
+                  <input type="date" id="new-invoice-due-date" name="due_date" class="form-input" value="${dueDefaultDate}" required />
+                </div>
+                <div id="new-payment-date-container" style="display: none;">
+                  <label for="new-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de pago</label>
+                  <input type="date" id="new-payment-date" name="payment_date" class="form-input" />
+                </div>
+                <div>
+                  <label for="new-invoice-client" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Cliente</label>
+                  <select id="new-invoice-client" name="client_id" class="form-input">
+                    <option value="">Sin cliente asignado</option>
+                    ${clients.map(client => `<option value="${client.id}">${client.name || client.business_name || 'Cliente sin nombre'}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label for="new-invoice-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Notas</label>
+                <textarea id="new-invoice-notes" name="notes" rows="4" class="form-input" style="resize: vertical;" placeholder="Observaciones internas o para el cliente"></textarea>
+              </div>
+              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: var(--bg-secondary);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Conceptos facturados</h3>
+                  <button type="button" class="btn-secondary" id="add-new-invoice-item">Anadir linea</button>
+                </div>
+                <div id="new-invoice-items"></div>
+                <div id="new-invoice-totals" style="margin-top: 1.5rem;"></div>
+              </section>
+            </form>
+          </div>
+          <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
+            <button class="btn-secondary" style="flex: 1;" onclick="closeNewInvoiceModal()">Cancelar</button>
+            <button type="button" class="btn-primary" style="flex: 1;" onclick="submitNewInvoice()">Crear factura</button>
+          </footer>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    setupItemsEditor({
+      editorKey: 'create',
+      containerId: 'new-invoice-items',
+      totalsId: 'new-invoice-totals',
+      addButtonId: 'add-new-invoice-item',
+      initialItems: [],
+      editable: true,
+      allowIrpfEdit: true,
+      defaultUnitType: 'unidad',
+      irpfPercentage: 0
+    });
+
+    configurePaymentDateField({
+      statusSelectId: 'new-invoice-status',
+      containerId: 'new-payment-date-container',
+      inputId: 'new-payment-date',
+      initialStatus: 'draft',
+      initialPaymentDate: null
+    });
+
+    const notifications = document.querySelectorAll('.notification--info');
+    notifications.forEach(n => n.remove());
+  } catch (error) {
+    console.error('Error opening new invoice modal:', error);
+    showNotification(`Error al preparar la factura: ${error.message}`, 'error');
+  }
+}
+
+function closeNewInvoiceModal() {
+  destroyItemsEditor('create');
+  const modal = document.getElementById('new-invoice-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+async function submitNewInvoice() {
+  try {
+    const form = document.getElementById('new-invoice-form');
+    if (!form) {
+      showNotification('No se encontro el formulario de nueva factura.', 'error');
+      return;
+    }
+
+    const formData = new FormData(form);
+    const invoiceNumber = (formData.get('invoice_number') || '').trim();
+    const issueDate = formData.get('issue_date');
+    const dueDate = formData.get('due_date');
+    const status = formData.get('status') || 'draft';
+    const clientId = formData.get('client_id') || null;
+    const notes = (formData.get('notes') || '').trim();
+
+    if (!invoiceNumber) {
+      showNotification('El numero de factura es obligatorio.', 'warning');
+      return;
+    }
+
+    if (!issueDate || !dueDate) {
+      showNotification('Las fechas de emision y vencimiento son obligatorias.', 'warning');
+      return;
+    }
+
+    const editorState = getItemsEditorState('create');
+    if (!editorState || !editorState.items || editorState.items.length === 0) {
+      showNotification('Anade al menos una linea de concepto antes de crear la factura.', 'warning');
+      return;
+    }
+
+    const items = editorState.items
+      .map((item) => {
+        const quantity = sanitizeNumber(item.quantity, 0);
+        const unitPrice = sanitizeNumber(item.unitPrice, 0);
+        const vatPercentage = sanitizeNumber(item.vatPercentage, 0);
+        const description = (item.description || '').trim();
+        const totals = calculateLineTotals({ quantity, unitPrice, vatPercentage });
+        return {
+          description,
+          quantity,
+          unitType: item.unitType || 'unidad',
+          unitPrice,
+          vatPercentage,
+          amount: totals.total
+        };
+      })
+      .filter(item => item.description.length > 0);
+
+    if (items.length === 0) {
+      showNotification('Anade al menos una linea con descripcion para crear la factura.', 'warning');
+      return;
+    }
+
+    const totals = calculateInvoiceTotals(items, editorState.irpfPercentage);
+
+    const payload = {
+      invoiceNumber,
+      issueDate,
+      dueDate,
+      status,
+      notes: notes || null,
+      subtotal: totals.subtotal,
+      vatPercentage: totals.vatPercentage,
+      vatAmount: totals.vatAmount,
+      irpfPercentage: totals.irpfPercentage,
+      irpfAmount: totals.irpfAmount,
+      total: totals.total,
+      items
+    };
+
+    if (clientId) {
+      payload.clientId = clientId;
+    }
+
+    showNotification('Creando factura...', 'info');
+
+    await window.api.createInvoice(payload);
+    await loadInvoices();
+    closeNewInvoiceModal();
+
+    showNotification('Factura creada correctamente', 'success');
+  } catch (error) {
+    console.error('Error creating invoice:', error);
+    showNotification(`Error al crear la factura: ${error.message}`, 'error');
   }
 }
 
@@ -656,34 +1443,72 @@ async function editInvoice(invoiceId) {
 async function saveInvoiceChanges(invoiceId) {
   try {
     const form = document.getElementById('edit-invoice-form');
+    if (!form) {
+      showNotification('No se encontro el formulario de edicion.', 'error');
+      return;
+    }
+
     const formData = new FormData(form);
 
     const updates = {
-      status: formData.get('status'),
-      issue_date: formData.get('issue_date'),
-      due_date: formData.get('due_date'),
-      notes: formData.get('notes') || null
+      status: formData.get('status') || 'draft',
+      issue_date: formData.get('issue_date') || null,
+      due_date: formData.get('due_date') || null,
+      notes: (formData.get('notes') || '').trim() || null
     };
 
-    // Solo incluir payment_date si el estado es 'paid'
     if (updates.status === 'paid') {
-      updates.payment_date = formData.get('payment_date') || new Date().toISOString().split('T')[0];
+      const paymentDate = formData.get('payment_date');
+      updates.payment_date = paymentDate && paymentDate.length > 0
+        ? paymentDate
+        : new Date().toISOString().split('T')[0];
     } else {
       updates.payment_date = null;
+    }
+
+    const editorState = getItemsEditorState('edit');
+
+    if (editorState) {
+      const preparedItems = editorState.items
+        .map((item) => {
+          const quantity = sanitizeNumber(item.quantity, 0);
+          const unitPrice = sanitizeNumber(item.unitPrice, 0);
+          const vatPercentage = sanitizeNumber(item.vatPercentage, 0);
+          const description = (item.description || '').trim();
+          const totals = calculateLineTotals({ quantity, unitPrice, vatPercentage });
+          return {
+            description,
+            quantity,
+            unitType: item.unitType || 'unidad',
+            unitPrice,
+            vatPercentage,
+            amount: totals.total
+          };
+        })
+        .filter(item => item.description.length > 0);
+
+      if (preparedItems.length === 0) {
+        showNotification('Anade al menos una linea con descripcion para guardar la factura.', 'warning');
+        return;
+      }
+
+      const totals = calculateInvoiceTotals(preparedItems, editorState.irpfPercentage);
+      updates.items = preparedItems;
+      updates.subtotal = totals.subtotal;
+      updates.vat_percentage = totals.vatPercentage;
+      updates.vat_amount = totals.vatAmount;
+      updates.irpf_percentage = totals.irpfPercentage;
+      updates.irpf_amount = totals.irpfAmount;
+      updates.total = totals.total;
     }
 
     showNotification('Guardando cambios...', 'info');
 
     await window.api.updateInvoice(invoiceId, updates);
-
-    // Actualizar los datos locales
     await loadInvoices();
-
-    // Cerrar modal
-    document.getElementById('edit-invoice-modal').remove();
+    closeEditInvoiceModal();
 
     showNotification('Factura actualizada correctamente', 'success');
-
   } catch (error) {
     console.error('Error saving invoice:', error);
     showNotification(`Error al guardar: ${error.message}`, 'error');
@@ -1133,13 +1958,22 @@ export function initInvoicesPage() {
   window.viewInvoice = viewInvoice;
   window.editInvoice = editInvoice;
   window.saveInvoiceChanges = saveInvoiceChanges;
+  window.closeEditInvoiceModal = closeEditInvoiceModal;
   window.downloadInvoicePDF = downloadInvoicePDF;
+  window.openNewInvoiceModal = openNewInvoiceModal;
+  window.submitNewInvoice = submitNewInvoice;
+  window.closeNewInvoiceModal = closeNewInvoiceModal;
 
   // Cargar facturas automáticamente
   loadInvoices();
 
   // Configurar filtros
   setupFilters();
+
+  const newInvoiceButton = document.querySelector('[data-modal-open=\"invoice\"]');
+  if (newInvoiceButton) {
+    newInvoiceButton.addEventListener('click', openNewInvoiceModal);
+  }
 }
 
 function setupFilters() {
