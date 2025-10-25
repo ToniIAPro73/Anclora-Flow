@@ -214,7 +214,7 @@ async function registerInvoiceVerifactu(invoiceId) {
 
 function showVerifactuQRModal(invoice) {
   const modalHTML = `
-    <div class="modal modal--open" id="verifactu-qr-modal">
+    <div class="modal is-open" id="verifactu-qr-modal">
       <div class="modal__backdrop" onclick="document.getElementById('verifactu-qr-modal').remove()"></div>
       <div class="modal__panel">
         <header class="modal__head">
@@ -253,7 +253,7 @@ function showVerifactuQRModal(invoice) {
 
 function showVerifactuCSVModal(invoice) {
   const modalHTML = `
-    <div class="modal modal--open" id="verifactu-csv-modal">
+    <div class="modal is-open" id="verifactu-csv-modal">
       <div class="modal__backdrop" onclick="document.getElementById('verifactu-csv-modal').remove()"></div>
       <div class="modal__panel">
         <header class="modal__head">
@@ -313,7 +313,7 @@ async function viewInvoice(invoiceId) {
     const itemsSubtotal = invoice.items ? invoice.items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0) : 0;
 
     const modalHTML = `
-      <div class="modal modal--open" id="view-invoice-modal">
+      <div class="modal is-open" id="view-invoice-modal">
         <div class="modal__backdrop" onclick="document.getElementById('view-invoice-modal').remove()"></div>
         <div class="modal__panel" style="max-width: 800px;">
           <header class="modal__head">
