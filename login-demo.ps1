@@ -59,24 +59,28 @@ try {
     Write-Host "   $token" -ForegroundColor Gray
     Write-Host ""
     Write-Host "═══════════════════════════════════════════" -ForegroundColor Green
-    Write-Host "  ✅ Token guardado en el portapapeles" -ForegroundColor Green
+    Write-Host "  ✅ Comando copiado al portapapeles" -ForegroundColor Green
     Write-Host "═══════════════════════════════════════════" -ForegroundColor Green
     Write-Host ""
     Write-Host "📝 Próximos pasos:" -ForegroundColor Yellow
     Write-Host "   1. Abre el navegador en http://localhost:5173" -ForegroundColor White
     Write-Host "   2. Abre DevTools (F12) > Console" -ForegroundColor White
-    Write-Host "   3. Pega este comando:" -ForegroundColor White
+    Write-Host "   3. Pega el comando (Ctrl+V) y presiona Enter" -ForegroundColor White
+    Write-Host "   4. La página se recargará automáticamente" -ForegroundColor White
     Write-Host ""
-    Write-Host "   localStorage.setItem('auth_token', '$token');" -ForegroundColor Cyan
-    Write-Host "   localStorage.setItem('user_data', JSON.stringify(" + ($user | ConvertTo-Json -Compress) + "));" -ForegroundColor Cyan
-    Write-Host "   location.reload();" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "   O simplemente recarga la página y ya estarás logueado." -ForegroundColor White
+    Write-Host "📋 Comando a pegar:" -ForegroundColor Cyan
     Write-Host ""
 
-    # Copiar token al portapapeles
-    $token | Set-Clipboard
-    Write-Host "✅ Token copiado al portapapeles" -ForegroundColor Green
+    # Crear comando en una sola línea para facilitar el copy/paste
+    $userJson = $user | ConvertTo-Json -Compress
+    $command = "localStorage.setItem('auth_token', '$token'); localStorage.setItem('user_data', JSON.stringify($userJson)); location.reload(); console.log('✅ Autenticado correctamente');"
+
+    Write-Host "   $command" -ForegroundColor Gray
+    Write-Host ""
+
+    # Copiar comando completo al portapapeles
+    $command | Set-Clipboard
+    Write-Host "✅ Comando copiado al portapapeles - solo pégalo en la consola" -ForegroundColor Green
 
 } catch {
     Write-Host "❌ Error al hacer login:" -ForegroundColor Red
