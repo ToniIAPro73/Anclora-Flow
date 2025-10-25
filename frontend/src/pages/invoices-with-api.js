@@ -1103,7 +1103,7 @@ async function editInvoice(invoiceId) {
     const modalHTML = `
       <div class="modal is-open" id="edit-invoice-modal">
         <div class="modal__backdrop" onclick="closeEditInvoiceModal()"></div>
-        <div class="modal__panel" style="max-width: 720px;">
+        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px;">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Editar factura ${invoice.invoice_number}</h2>
@@ -1245,7 +1245,7 @@ async function openNewInvoiceModal() {
     const modalHTML = `
       <div class="modal is-open" id="new-invoice-modal">
         <div class="modal__backdrop" onclick="closeNewInvoiceModal()"></div>
-        <div class="modal__panel" style="max-width: 720px;">
+        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px;">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Nueva factura</h2>
@@ -1450,25 +1450,39 @@ async function saveInvoiceChanges(invoiceId) {
 
     const formData = new FormData(form);
 
+    const status = formData.get('status') || 'draft';
+    const issueDate = formData.get('issue_date');
+    const dueDate = formData.get('due_date');
+    const rawNotes = (formData.get('notes') || '').trim();
+    const paymentDateFromForm = formData.get('payment_date');
+
     const updates = {
-      status: formData.get('status') || 'draft',
-      issue_date: formData.get('issue_date') || null,
-      due_date: formData.get('due_date') || null,
-      notes: (formData.get('notes') || '').trim() || null
+      status,
     };
 
-    if (updates.status === 'paid') {
-      const paymentDate = formData.get('payment_date');
-      updates.payment_date = paymentDate && paymentDate.length > 0
-        ? paymentDate
+    if (issueDate) {
+      updates.issueDate = issueDate;
+    }
+
+    if (dueDate) {
+      updates.dueDate = dueDate;
+    }
+
+    if (rawNotes.length > 0) {
+      updates.notes = rawNotes;
+    }
+
+    if (status === 'paid') {
+      updates.paymentDate = paymentDateFromForm && paymentDateFromForm.length > 0
+        ? paymentDateFromForm
         : new Date().toISOString().split('T')[0];
     } else {
-      updates.payment_date = null;
+      updates.paymentDate = undefined;
     }
 
     const editorState = getItemsEditorState('edit');
 
-    if (editorState) {
+    if (editorState && status === 'draft') {
       const preparedItems = editorState.items
         .map((item) => {
           const quantity = sanitizeNumber(item.quantity, 0);
@@ -1495,11 +1509,15 @@ async function saveInvoiceChanges(invoiceId) {
       const totals = calculateInvoiceTotals(preparedItems, editorState.irpfPercentage);
       updates.items = preparedItems;
       updates.subtotal = totals.subtotal;
-      updates.vat_percentage = totals.vatPercentage;
-      updates.vat_amount = totals.vatAmount;
-      updates.irpf_percentage = totals.irpfPercentage;
-      updates.irpf_amount = totals.irpfAmount;
+      updates.vatPercentage = totals.vatPercentage;
+      updates.vatAmount = totals.vatAmount;
+      updates.irpfPercentage = totals.irpfPercentage;
+      updates.irpfAmount = totals.irpfAmount;
       updates.total = totals.total;
+    }
+
+    if (updates.paymentDate === undefined) {
+      delete updates.paymentDate;
     }
 
     showNotification('Guardando cambios...', 'info');

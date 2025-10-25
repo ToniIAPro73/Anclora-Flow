@@ -28,3 +28,10 @@ coverage/
 *.tmp
 temp/
 .cache/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.svg
