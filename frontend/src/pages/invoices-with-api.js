@@ -179,17 +179,24 @@ async function registerInvoiceVerifactu(invoiceId) {
       renderInvoicesTable();
     }
 
-    const result = await window.api.registerInvoiceVerifactu(invoiceId);
+    await window.api.registerInvoiceVerifactu(invoiceId);
 
-    // Actualizar factura con los datos devueltos
-    if (invoice && result) {
-      invoice.verifactuStatus = 'registered';
-      // result puede ser el invoice directamente o tener un campo invoice
-      const invoiceData = result.invoice || result;
-      invoice.verifactuCsv = invoiceData.verifactu_csv;
-      invoice.verifactuQrCode = invoiceData.verifactu_qr_code;
-      invoice.verifactuUrl = invoiceData.verifactu_url;
-      invoice.verifactuHash = invoiceData.verifactu_hash;
+    // Recargar la factura completa desde el backend para obtener todos los datos actualizados
+    const updatedInvoice = await window.api.getInvoice(invoiceId);
+
+    // Actualizar factura con los datos completos desde el backend
+    if (invoice && updatedInvoice) {
+      invoice.verifactuStatus = updatedInvoice.verifactu_status || 'registered';
+      invoice.verifactuCsv = updatedInvoice.verifactu_csv;
+      invoice.verifactuQrCode = updatedInvoice.verifactu_qr_code;
+      invoice.verifactuUrl = updatedInvoice.verifactu_url;
+      invoice.verifactuHash = updatedInvoice.verifactu_hash;
+
+      console.log('Datos Verifactu actualizados:', {
+        csv: invoice.verifactuCsv,
+        qrCode: invoice.verifactuQrCode ? 'presente' : 'ausente',
+        url: invoice.verifactuUrl
+      });
     }
 
     renderInvoicesTable();
@@ -220,40 +227,61 @@ function showVerifactuQRModal(invoiceId) {
     return;
   }
 
+  console.log('Mostrando modal QR para factura:', {
+    id: invoice.id,
+    number: invoice.number,
+    csv: invoice.verifactuCsv,
+    hasQrCode: !!invoice.verifactuQrCode,
+    qrCodePreview: invoice.verifactuQrCode ? invoice.verifactuQrCode.substring(0, 50) + '...' : 'sin datos'
+  });
+
   if (!invoice.verifactuQrCode || !invoice.verifactuCsv) {
-    showNotification('Esta factura no tiene datos de Verifactu', 'warning');
+    showNotification('Esta factura no tiene datos de Verifactu. Registra la factura primero.', 'warning');
     return;
   }
 
   const modalHTML = `
     <div class="modal is-open" id="verifactu-qr-modal">
       <div class="modal__backdrop" onclick="document.getElementById('verifactu-qr-modal').remove()"></div>
-      <div class="modal__panel">
+      <div class="modal__panel" style="max-width: 600px;">
         <header class="modal__head">
           <div>
-            <h2>Código QR - Verifactu</h2>
+            <h2 class="modal__title">Código QR - Verifactu</h2>
             <p class="modal__subtitle">Factura ${invoice.number}</p>
           </div>
-          <button type="button" class="modal__close" onclick="document.getElementById('verifactu-qr-modal').remove()">
-            <span>×</span>
-          </button>
+          <button type="button" class="modal__close" onclick="document.getElementById('verifactu-qr-modal').remove()">×</button>
         </header>
-        <div class="modal__body" style="padding: 2rem; text-align: center;">
-          <div style="margin-bottom: 1.5rem;">
-            <p style="color: var(--text-primary);"><strong>CSV:</strong> <code style="background: var(--bg-secondary); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace; color: var(--text-primary);">${invoice.verifactuCsv}</code></p>
+        <div class="modal__body" style="padding: 2rem;">
+          <div style="text-align: center; margin-bottom: 2rem;">
+            <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">Código Seguro de Verificación</p>
+            <p style="color: var(--text-primary); font-size: 1.125rem; font-weight: 600;">
+              <code style="background: var(--bg-secondary); padding: 0.5rem 1rem; border-radius: 6px; font-family: monospace; color: var(--text-primary); letter-spacing: 1px;">
+                ${invoice.verifactuCsv}
+              </code>
+            </p>
           </div>
-          <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
-            <img src="${invoice.verifactuQrCode}" alt="QR Verifactu" style="max-width: 300px; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; background: white;">
+          <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
+            <div style="padding: 1.5rem; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <img src="${invoice.verifactuQrCode}" alt="QR Verifactu" style="width: 280px; height: 280px; display: block;" onerror="console.error('Error cargando QR:', this.src); this.style.display='none'; this.parentElement.innerHTML='<p style=color:red>Error al cargar el código QR</p>'">
+            </div>
           </div>
-          <p style="font-size: 0.9rem; color: var(--text-secondary);">
+          <p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center;">
             Escanea este código QR para verificar la factura en la web de la Agencia Tributaria.
           </p>
-          ${invoice.verifactuUrl ? `<p style="font-size: 0.85rem; margin-top: 1rem;"><a href="${invoice.verifactuUrl}" target="_blank" style="color: var(--color-primary);">Verificar en AEAT →</a></p>` : ''}
+          ${invoice.verifactuUrl ? `
+            <div style="text-align: center; margin-top: 1rem;">
+              <a href="${invoice.verifactuUrl}" target="_blank" class="btn-secondary" style="text-decoration: none; display: inline-block;">
+                🔗 Verificar en web AEAT
+              </a>
+            </div>
+          ` : ''}
         </div>
-        <footer class="modal__footer">
-          <button class="btn-secondary" onclick="document.getElementById('verifactu-qr-modal').remove()">Cerrar</button>
-          <a href="${invoice.verifactuQrCode}" download="qr-${invoice.number}.png" class="btn-primary" style="text-decoration: none; display: inline-block;">
-            Descargar QR
+        <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
+          <button class="btn-secondary" onclick="document.getElementById('verifactu-qr-modal').remove()" style="flex: 1;">
+            Cerrar
+          </button>
+          <a href="${invoice.verifactuQrCode}" download="verifactu-qr-${invoice.number}.png" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; flex: 1; padding: 0.75rem 1.5rem; font-size: 1rem;">
+            📥 Descargar QR
           </a>
         </footer>
       </div>
