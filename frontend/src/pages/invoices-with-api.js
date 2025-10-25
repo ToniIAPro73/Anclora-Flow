@@ -876,6 +876,9 @@ export function initInvoicesPage() {
   window.showVerifactuQRModal = showVerifactuQRModal;
   window.showVerifactuCSVModal = showVerifactuCSVModal;
   window.showNotification = showNotification;
+  window.viewInvoice = viewInvoice;
+  window.editInvoice = editInvoice;
+  window.downloadInvoicePDF = downloadInvoicePDF;
 
   // Cargar facturas automáticamente
   loadInvoices();
