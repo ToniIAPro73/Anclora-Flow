@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255),
+    nif VARCHAR(20),
     avatar_url TEXT,
     auth_provider VARCHAR(50) DEFAULT 'local', -- 'local', 'google', 'github'
     auth_provider_id VARCHAR(255),
@@ -235,6 +236,22 @@ CREATE TRIGGER update_budgets_updated_at BEFORE UPDATE ON budgets FOR EACH ROW E
 
 -- Insert sample data for development (optional)
 -- This can be removed in production
-INSERT INTO users (id, email, name, auth_provider, language, theme)
-VALUES ('00000000-0000-0000-0000-000000000001', 'demo@ancloraflow.com', 'Usuario Demo', 'local', 'es', 'light')
-ON CONFLICT (email) DO NOTHING;
+
+-- Usuario de prueba
+-- Email: demo@ancloraflow.com
+-- Contraseña: demo123
+-- NIF: 12345678A
+INSERT INTO users (id, email, name, password_hash, nif, auth_provider, language, theme)
+VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    'demo@ancloraflow.com',
+    'Usuario Demo',
+    '$2b$10$f84.n1jsCMZnFHRBU8uXXueQxu0TNT1Sm9HN8EyerXUQ2XQWY58ii',
+    '12345678A',
+    'local',
+    'es',
+    'light'
+)
+ON CONFLICT (email) DO UPDATE SET
+    password_hash = EXCLUDED.password_hash,
+    nif = EXCLUDED.nif;
