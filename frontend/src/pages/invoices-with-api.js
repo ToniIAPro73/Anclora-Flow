@@ -297,6 +297,365 @@ function showVerifactuCSVModal(invoice) {
   document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
+// === ACCIONES DE FACTURA ===
+
+// Ver detalles de factura
+async function viewInvoice(invoiceId) {
+  try {
+    showNotification('Cargando detalles de la factura...', 'info');
+
+    // Obtener detalles completos de la factura con items
+    const invoice = await window.api.getInvoice(invoiceId);
+
+    // Calcular subtotal de items
+    const itemsSubtotal = invoice.items ? invoice.items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0) : 0;
+
+    const modalHTML = `
+      <div class="modal modal--open" id="view-invoice-modal">
+        <div class="modal__backdrop" onclick="document.getElementById('view-invoice-modal').remove()"></div>
+        <div class="modal__panel" style="max-width: 800px;">
+          <header class="modal__head">
+            <div>
+              <h2 class="modal__title">Factura ${invoice.invoice_number}</h2>
+              <p class="modal__subtitle">Detalles completos de la factura</p>
+            </div>
+            <button type="button" class="modal__close" onclick="document.getElementById('view-invoice-modal').remove()">×</button>
+          </header>
+          <div class="modal__body">
+            <!-- Información general -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+              <div>
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Cliente</h3>
+                <p style="font-size: 1rem; color: #1a202c;">${invoice.client?.name || invoice.client_name || 'Sin cliente'}</p>
+                ${invoice.client?.email ? `<p style="font-size: 0.875rem; color: #718096;">${invoice.client.email}</p>` : ''}
+              </div>
+              <div>
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Estado</h3>
+                <span class="badge badge--${statusMap[invoice.status]?.tone || 'neutral'}">
+                  ${statusMap[invoice.status]?.label || invoice.status}
+                </span>
+              </div>
+              <div>
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Fecha emisión</h3>
+                <p style="font-size: 1rem; color: #1a202c;">${formatDate(invoice.issue_date)}</p>
+              </div>
+              <div>
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Fecha vencimiento</h3>
+                <p style="font-size: 1rem; color: #1a202c;">${formatDate(invoice.due_date)}</p>
+              </div>
+            </div>
+
+            <!-- Líneas de factura -->
+            ${invoice.items && invoice.items.length > 0 ? `
+              <div style="margin-bottom: 2rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; color: #1a202c; margin-bottom: 1rem;">Conceptos</h3>
+                <div style="overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr style="background-color: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 0.75rem; text-align: left; font-size: 0.875rem; color: #4a5568;">Descripción</th>
+                        <th style="padding: 0.75rem; text-align: center; font-size: 0.875rem; color: #4a5568;">Cantidad</th>
+                        <th style="padding: 0.75rem; text-align: right; font-size: 0.875rem; color: #4a5568;">P. Unitario</th>
+                        <th style="padding: 0.75rem; text-align: right; font-size: 0.875rem; color: #4a5568;">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${invoice.items.map(item => `
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                          <td style="padding: 0.75rem; color: #1a202c;">${item.description}</td>
+                          <td style="padding: 0.75rem; text-align: center; color: #718096;">${item.quantity} ${item.unit_type || ''}</td>
+                          <td style="padding: 0.75rem; text-align: right; color: #718096;">${currencyFormatter.format(item.unit_price)}</td>
+                          <td style="padding: 0.75rem; text-align: right; font-weight: 600; color: #1a202c;">${currencyFormatter.format(item.amount)}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Totales -->
+            <div style="border-top: 2px solid #e2e8f0; padding-top: 1.5rem;">
+              <div style="display: flex; justify-content: flex-end;">
+                <div style="width: 300px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: #718096;">Subtotal:</span>
+                    <span style="color: #1a202c; font-weight: 500;">${currencyFormatter.format(invoice.subtotal)}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: #718096;">IVA (${invoice.vat_percentage}%):</span>
+                    <span style="color: #1a202c; font-weight: 500;">${currencyFormatter.format(invoice.vat_amount)}</span>
+                  </div>
+                  ${invoice.irpf_amount > 0 ? `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                      <span style="color: #718096;">IRPF (${invoice.irpf_percentage}%):</span>
+                      <span style="color: #c53030; font-weight: 500;">-${currencyFormatter.format(invoice.irpf_amount)}</span>
+                    </div>
+                  ` : ''}
+                  <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 2px solid #e2e8f0; margin-top: 0.75rem;">
+                    <span style="color: #1a202c; font-weight: 700; font-size: 1.125rem;">Total:</span>
+                    <span style="color: #1a202c; font-weight: 700; font-size: 1.125rem;">${currencyFormatter.format(invoice.total)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            ${invoice.notes ? `
+              <div style="margin-top: 1.5rem; padding: 1rem; background-color: #f7fafc; border-radius: 0.5rem;">
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Notas</h3>
+                <p style="color: #718096; white-space: pre-wrap;">${invoice.notes}</p>
+              </div>
+            ` : ''}
+          </div>
+          <footer class="modal__footer">
+            <button class="btn-secondary" onclick="document.getElementById('view-invoice-modal').remove()">Cerrar</button>
+            <button class="btn-primary" onclick="downloadInvoicePDF('${invoice.id}')">
+              Descargar PDF
+            </button>
+          </footer>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Remover notificación de carga
+    const notifications = document.querySelectorAll('.notification--info');
+    notifications.forEach(n => n.remove());
+
+  } catch (error) {
+    console.error('Error viewing invoice:', error);
+    showNotification(`Error al cargar la factura: ${error.message}`, 'error');
+  }
+}
+
+// Editar factura
+function editInvoice(invoiceId) {
+  showNotification('Función de edición en desarrollo', 'info');
+  // TODO: Implementar modal de edición completo
+  console.log('Edit invoice:', invoiceId);
+}
+
+// Descargar PDF de factura
+async function downloadInvoicePDF(invoiceId) {
+  try {
+    showNotification('Generando PDF...', 'info');
+
+    // Obtener detalles completos de la factura
+    const invoice = await window.api.getInvoice(invoiceId);
+
+    // Generar HTML para PDF
+    const pdfHTML = generateInvoicePDFHTML(invoice);
+
+    // Crear un iframe oculto para imprimir
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = 'none';
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow.document;
+    doc.open();
+    doc.write(pdfHTML);
+    doc.close();
+
+    // Esperar a que se cargue
+    printFrame.onload = function() {
+      setTimeout(() => {
+        printFrame.contentWindow.print();
+        // Limpiar después de imprimir
+        setTimeout(() => document.body.removeChild(printFrame), 1000);
+      }, 250);
+    };
+
+    showNotification('Abriendo diálogo de impresión...', 'success');
+
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    showNotification(`Error al generar PDF: ${error.message}`, 'error');
+  }
+}
+
+// Generar HTML para PDF
+function generateInvoicePDFHTML(invoice) {
+  const now = new Date().toLocaleDateString('es-ES');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Factura ${invoice.invoice_number}</title>
+      <style>
+        @page { margin: 2cm; }
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 12pt;
+          line-height: 1.6;
+          color: #333;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          padding-bottom: 20px;
+          border-bottom: 2px solid #4299e1;
+        }
+        .header h1 {
+          color: #2c5282;
+          margin: 0 0 10px 0;
+        }
+        .info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 30px;
+        }
+        .info-box {
+          padding: 15px;
+          background-color: #f7fafc;
+          border-radius: 5px;
+        }
+        .info-box h3 {
+          margin: 0 0 10px 0;
+          color: #2c5282;
+          font-size: 14pt;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 30px;
+        }
+        th {
+          background-color: #2c5282;
+          color: white;
+          padding: 12px;
+          text-align: left;
+        }
+        td {
+          padding: 10px 12px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .totals {
+          margin-left: auto;
+          width: 300px;
+        }
+        .totals-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+        }
+        .totals-row.final {
+          border-top: 2px solid #2c5282;
+          font-weight: bold;
+          font-size: 14pt;
+          margin-top: 10px;
+          padding-top: 10px;
+        }
+        .notes {
+          margin-top: 30px;
+          padding: 15px;
+          background-color: #f7fafc;
+          border-left: 4px solid #4299e1;
+        }
+        .footer {
+          margin-top: 50px;
+          padding-top: 20px;
+          border-top: 1px solid #e2e8f0;
+          font-size: 10pt;
+          color: #718096;
+          text-align: center;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>FACTURA</h1>
+        <p style="font-size: 18pt; font-weight: bold; color: #2c5282;">${invoice.invoice_number}</p>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-box">
+          <h3>Cliente</h3>
+          <p><strong>${invoice.client?.name || invoice.client_name || 'Sin cliente'}</strong></p>
+          ${invoice.client?.email ? `<p>${invoice.client.email}</p>` : ''}
+          ${invoice.client?.nif_cif ? `<p>NIF/CIF: ${invoice.client.nif_cif}</p>` : ''}
+          ${invoice.client?.address ? `<p>${invoice.client.address}</p>` : ''}
+          ${invoice.client?.city && invoice.client?.postal_code ? `<p>${invoice.client.postal_code} ${invoice.client.city}</p>` : ''}
+        </div>
+        <div class="info-box">
+          <h3>Información de Factura</h3>
+          <p><strong>Fecha emisión:</strong> ${formatDate(invoice.issue_date)}</p>
+          <p><strong>Fecha vencimiento:</strong> ${formatDate(invoice.due_date)}</p>
+          <p><strong>Estado:</strong> ${statusMap[invoice.status]?.label || invoice.status}</p>
+          ${invoice.payment_date ? `<p><strong>Fecha pago:</strong> ${formatDate(invoice.payment_date)}</p>` : ''}
+        </div>
+      </div>
+
+      ${invoice.items && invoice.items.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th>Descripción</th>
+              <th class="text-center">Cantidad</th>
+              <th class="text-right">Precio Unit.</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${invoice.items.map(item => `
+              <tr>
+                <td>${item.description}</td>
+                <td class="text-center">${item.quantity} ${item.unit_type || ''}</td>
+                <td class="text-right">${currencyFormatter.format(item.unit_price)}</td>
+                <td class="text-right">${currencyFormatter.format(item.amount)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : ''}
+
+      <div class="totals">
+        <div class="totals-row">
+          <span>Subtotal:</span>
+          <span>${currencyFormatter.format(invoice.subtotal)}</span>
+        </div>
+        <div class="totals-row">
+          <span>IVA (${invoice.vat_percentage}%):</span>
+          <span>${currencyFormatter.format(invoice.vat_amount)}</span>
+        </div>
+        ${invoice.irpf_amount > 0 ? `
+          <div class="totals-row">
+            <span>IRPF (${invoice.irpf_percentage}%):</span>
+            <span style="color: #c53030;">-${currencyFormatter.format(invoice.irpf_amount)}</span>
+          </div>
+        ` : ''}
+        <div class="totals-row final">
+          <span>TOTAL:</span>
+          <span>${currencyFormatter.format(invoice.total)}</span>
+        </div>
+      </div>
+
+      ${invoice.notes ? `
+        <div class="notes">
+          <h3>Notas</h3>
+          <p>${invoice.notes}</p>
+        </div>
+      ` : ''}
+
+      <div class="footer">
+        <p>Generado el ${now} por Anclora Flow</p>
+        ${invoice.verifactu_csv ? `<p>CSV Verifactu: ${invoice.verifactu_csv}</p>` : ''}
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 // === RENDERIZADO ===
 
 function renderLoadingState() {
@@ -448,13 +807,13 @@ function renderInvoiceRows() {
           <span class="invoices-table__days">${invoice.daysLate || "-"}</span>
         </td>
         <td data-column="Acciones" class="invoices-table__actions">
-          <button type="button" class="table-action" title="Ver factura">
+          <button type="button" class="table-action" title="Ver factura" onclick="viewInvoice('${invoice.id}')">
             <span>👁️</span>
           </button>
-          <button type="button" class="table-action" title="Editar factura">
+          <button type="button" class="table-action" title="Editar factura" onclick="editInvoice('${invoice.id}')">
             <span>✏️</span>
           </button>
-          <button type="button" class="table-action" title="Descargar PDF">
+          <button type="button" class="table-action" title="Descargar PDF" onclick="downloadInvoicePDF('${invoice.id}')">
             <span>📄</span>
           </button>
           ${verifactuActions}
