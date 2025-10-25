@@ -12,6 +12,23 @@ NIF:        12345678A
 
 ---
 
+## 🔧 Configuración Inicial (Solo Primera Vez)
+
+**⚠️ IMPORTANTE:** Antes de usar el usuario demo por primera vez, ejecuta:
+
+```powershell
+.\setup-demo-user.ps1
+```
+
+Este script:
+- ✅ Agrega la columna `nif` a la tabla `users` (si no existe)
+- ✅ Crea/actualiza el usuario demo con las credenciales
+- ✅ Verifica que todo esté correcto
+
+**Solo necesitas ejecutarlo UNA VEZ** cuando configures el proyecto por primera vez.
+
+---
+
 ## 🚀 Método 1: Script Automático de Login (Más Rápido)
 
 ### Paso 1: Asegúrate de que el backend esté corriendo
