@@ -5,7 +5,9 @@
   "type": "commonjs",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "start:win": "powershell -ExecutionPolicy Bypass -File ./start.ps1",
+    "kill-port": "powershell -ExecutionPolicy Bypass -File ./kill-port.ps1 -Port 8020"
   },
   "dependencies": {
     "express": "^4.18.2",
