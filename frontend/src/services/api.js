@@ -230,8 +230,18 @@ class APIService {
 
   // === CLIENTES ===
 
-  async getClients() {
-    return this.get('/clients');
+  async getClients(filters = {}) {
+    const params = new URLSearchParams(
+      Object.entries(filters).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {})
+    ).toString();
+
+    const endpoint = params ? `/clients?${params}` : '/clients';
+    return this.get(endpoint);
   }
 
   async getClient(id) {

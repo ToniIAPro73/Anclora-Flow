@@ -1233,7 +1233,7 @@ async function openNewInvoiceModal() {
 
     let clients = [];
     try {
-      const clientsResponse = await window.api.getClients();
+      const clientsResponse = await window.api.getClients({ isActive: true });
       clients = clientsResponse?.clients || clientsResponse || [];
     } catch (clientError) {
       console.warn('No se pudieron cargar los clientes:', clientError);
