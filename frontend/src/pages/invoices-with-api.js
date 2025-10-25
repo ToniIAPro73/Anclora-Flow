@@ -268,11 +268,17 @@ function showVerifactuQRModal(invoiceId) {
           <p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center;">
             Escanea este código QR para verificar la factura en la web de la Agencia Tributaria.
           </p>
-          ${invoice.verifactuUrl ? `
+          ${invoice.verifactuUrl && !invoice.verifactuUrl.includes('/test/') ? `
             <div style="text-align: center; margin-top: 1rem;">
               <a href="${invoice.verifactuUrl}" target="_blank" class="btn-secondary" style="text-decoration: none; display: inline-block;">
                 🔗 Verificar en web AEAT
               </a>
+            </div>
+          ` : invoice.verifactuUrl ? `
+            <div style="text-align: center; margin-top: 1rem;">
+              <p style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
+                ℹ️ Modo test - La verificación en AEAT no está disponible
+              </p>
             </div>
           ` : ''}
         </div>
@@ -484,10 +490,204 @@ async function viewInvoice(invoiceId) {
 }
 
 // Editar factura
-function editInvoice(invoiceId) {
-  showNotification('Función de edición en desarrollo', 'info');
-  // TODO: Implementar modal de edición completo
-  console.log('Edit invoice:', invoiceId);
+async function editInvoice(invoiceId) {
+  try {
+    showNotification('Cargando factura...', 'info');
+
+    // Obtener detalles completos de la factura
+    const invoice = await window.api.getInvoice(invoiceId);
+
+    // Formatear fechas para input type="date" (YYYY-MM-DD)
+    const formatDateForInput = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0];
+    };
+
+    const modalHTML = `
+      <div class="modal is-open" id="edit-invoice-modal">
+        <div class="modal__backdrop" onclick="document.getElementById('edit-invoice-modal').remove()"></div>
+        <div class="modal__panel" style="max-width: 600px;">
+          <header class="modal__head">
+            <div>
+              <h2 class="modal__title">Editar Factura ${invoice.invoice_number}</h2>
+              <p class="modal__subtitle">Modificar datos de la factura</p>
+            </div>
+            <button type="button" class="modal__close" onclick="document.getElementById('edit-invoice-modal').remove()">×</button>
+          </header>
+          <div class="modal__body">
+            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+              <!-- Estado -->
+              <div>
+                <label for="edit-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                  Estado
+                </label>
+                <select
+                  id="edit-status"
+                  name="status"
+                  class="form-input"
+                  style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);"
+                >
+                  <option value="draft" ${invoice.status === 'draft' ? 'selected' : ''}>Borrador</option>
+                  <option value="pending" ${invoice.status === 'pending' ? 'selected' : ''}>Pendiente</option>
+                  <option value="sent" ${invoice.status === 'sent' ? 'selected' : ''}>Enviada</option>
+                  <option value="paid" ${invoice.status === 'paid' ? 'selected' : ''}>Cobrada</option>
+                  <option value="overdue" ${invoice.status === 'overdue' ? 'selected' : ''}>Vencida</option>
+                </select>
+              </div>
+
+              <!-- Fechas -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <label for="edit-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                    Fecha de emisión
+                  </label>
+                  <input
+                    type="date"
+                    id="edit-issue-date"
+                    name="issue_date"
+                    value="${formatDateForInput(invoice.issue_date)}"
+                    class="form-input"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);"
+                  />
+                </div>
+                <div>
+                  <label for="edit-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                    Fecha de vencimiento
+                  </label>
+                  <input
+                    type="date"
+                    id="edit-due-date"
+                    name="due_date"
+                    value="${formatDateForInput(invoice.due_date)}"
+                    class="form-input"
+                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);"
+                  />
+                </div>
+              </div>
+
+              <!-- Fecha de pago (solo si está pagada) -->
+              <div id="payment-date-container" style="display: ${invoice.status === 'paid' ? 'block' : 'none'};">
+                <label for="edit-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                  Fecha de pago
+                </label>
+                <input
+                  type="date"
+                  id="edit-payment-date"
+                  name="payment_date"
+                  value="${invoice.payment_date ? formatDateForInput(invoice.payment_date) : ''}"
+                  class="form-input"
+                  style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary);"
+                />
+              </div>
+
+              <!-- Notas -->
+              <div>
+                <label for="edit-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                  Notas
+                </label>
+                <textarea
+                  id="edit-notes"
+                  name="notes"
+                  rows="4"
+                  class="form-input"
+                  style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); resize: vertical;"
+                  placeholder="Añade notas adicionales..."
+                >${invoice.notes || ''}</textarea>
+              </div>
+
+              <!-- Info de Verifactu -->
+              ${invoice.verifactu_status === 'registered' ? `
+                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 6px; border-left: 4px solid #48bb78;">
+                  <p style="color: var(--text-secondary); font-size: 0.875rem; margin: 0;">
+                    ⚠️ Esta factura está registrada en Verifactu. Los cambios no afectarán el registro.
+                  </p>
+                </div>
+              ` : ''}
+            </form>
+          </div>
+          <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
+            <button
+              type="button"
+              class="btn-secondary"
+              onclick="document.getElementById('edit-invoice-modal').remove()"
+              style="flex: 1;"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn-primary"
+              onclick="saveInvoiceChanges('${invoice.id}')"
+              style="flex: 1;"
+            >
+              Guardar cambios
+            </button>
+          </footer>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Añadir listener para mostrar/ocultar fecha de pago
+    const statusSelect = document.getElementById('edit-status');
+    const paymentDateContainer = document.getElementById('payment-date-container');
+
+    statusSelect.addEventListener('change', (e) => {
+      paymentDateContainer.style.display = e.target.value === 'paid' ? 'block' : 'none';
+      if (e.target.value === 'paid' && !document.getElementById('edit-payment-date').value) {
+        document.getElementById('edit-payment-date').value = formatDateForInput(new Date());
+      }
+    });
+
+    // Remover notificaciones de carga
+    const notifications = document.querySelectorAll('.notification--info');
+    notifications.forEach(n => n.remove());
+
+  } catch (error) {
+    console.error('Error loading invoice for edit:', error);
+    showNotification(`Error al cargar la factura: ${error.message}`, 'error');
+  }
+}
+
+// Guardar cambios de factura
+async function saveInvoiceChanges(invoiceId) {
+  try {
+    const form = document.getElementById('edit-invoice-form');
+    const formData = new FormData(form);
+
+    const updates = {
+      status: formData.get('status'),
+      issue_date: formData.get('issue_date'),
+      due_date: formData.get('due_date'),
+      notes: formData.get('notes') || null
+    };
+
+    // Solo incluir payment_date si el estado es 'paid'
+    if (updates.status === 'paid') {
+      updates.payment_date = formData.get('payment_date') || new Date().toISOString().split('T')[0];
+    } else {
+      updates.payment_date = null;
+    }
+
+    showNotification('Guardando cambios...', 'info');
+
+    await window.api.updateInvoice(invoiceId, updates);
+
+    // Actualizar los datos locales
+    await loadInvoices();
+
+    // Cerrar modal
+    document.getElementById('edit-invoice-modal').remove();
+
+    showNotification('Factura actualizada correctamente', 'success');
+
+  } catch (error) {
+    console.error('Error saving invoice:', error);
+    showNotification(`Error al guardar: ${error.message}`, 'error');
+  }
 }
 
 // Descargar PDF de factura
@@ -932,6 +1132,7 @@ export function initInvoicesPage() {
   window.showNotification = showNotification;
   window.viewInvoice = viewInvoice;
   window.editInvoice = editInvoice;
+  window.saveInvoiceChanges = saveInvoiceChanges;
   window.downloadInvoicePDF = downloadInvoicePDF;
 
   // Cargar facturas automáticamente
