@@ -212,7 +212,19 @@ async function registerInvoiceVerifactu(invoiceId) {
 
 // === MODALES DE VERIFACTU ===
 
-function showVerifactuQRModal(invoice) {
+function showVerifactuQRModal(invoiceId) {
+  // Buscar la factura en los datos cargados
+  const invoice = invoicesData.find(inv => inv.id === invoiceId);
+  if (!invoice) {
+    showNotification('No se encontró la factura', 'error');
+    return;
+  }
+
+  if (!invoice.verifactuQrCode || !invoice.verifactuCsv) {
+    showNotification('Esta factura no tiene datos de Verifactu', 'warning');
+    return;
+  }
+
   const modalHTML = `
     <div class="modal is-open" id="verifactu-qr-modal">
       <div class="modal__backdrop" onclick="document.getElementById('verifactu-qr-modal').remove()"></div>
@@ -228,15 +240,15 @@ function showVerifactuQRModal(invoice) {
         </header>
         <div class="modal__body" style="padding: 2rem; text-align: center;">
           <div style="margin-bottom: 1.5rem;">
-            <p><strong>CSV:</strong> <code style="background: #f7fafc; padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">${invoice.verifactuCsv}</code></p>
+            <p style="color: var(--text-primary);"><strong>CSV:</strong> <code style="background: var(--bg-secondary); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace; color: var(--text-primary);">${invoice.verifactuCsv}</code></p>
           </div>
           <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
-            <img src="${invoice.verifactuQrCode}" alt="QR Verifactu" style="max-width: 300px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; background: white;">
+            <img src="${invoice.verifactuQrCode}" alt="QR Verifactu" style="max-width: 300px; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; background: white;">
           </div>
-          <p style="font-size: 0.9rem; color: #718096;">
+          <p style="font-size: 0.9rem; color: var(--text-secondary);">
             Escanea este código QR para verificar la factura en la web de la Agencia Tributaria.
           </p>
-          ${invoice.verifactuUrl ? `<p style="font-size: 0.85rem; margin-top: 1rem;"><a href="${invoice.verifactuUrl}" target="_blank" style="color: #4299e1;">Verificar en AEAT →</a></p>` : ''}
+          ${invoice.verifactuUrl ? `<p style="font-size: 0.85rem; margin-top: 1rem;"><a href="${invoice.verifactuUrl}" target="_blank" style="color: var(--color-primary);">Verificar en AEAT →</a></p>` : ''}
         </div>
         <footer class="modal__footer">
           <button class="btn-secondary" onclick="document.getElementById('verifactu-qr-modal').remove()">Cerrar</button>
@@ -251,7 +263,19 @@ function showVerifactuQRModal(invoice) {
   document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-function showVerifactuCSVModal(invoice) {
+function showVerifactuCSVModal(invoiceId) {
+  // Buscar la factura en los datos cargados
+  const invoice = invoicesData.find(inv => inv.id === invoiceId);
+  if (!invoice) {
+    showNotification('No se encontró la factura', 'error');
+    return;
+  }
+
+  if (!invoice.verifactuCsv) {
+    showNotification('Esta factura no tiene CSV de Verifactu', 'warning');
+    return;
+  }
+
   const modalHTML = `
     <div class="modal is-open" id="verifactu-csv-modal">
       <div class="modal__backdrop" onclick="document.getElementById('verifactu-csv-modal').remove()"></div>
@@ -267,22 +291,22 @@ function showVerifactuCSVModal(invoice) {
         </header>
         <div class="modal__body" style="padding: 2rem;">
           <div style="text-align: center; margin-bottom: 1.5rem;">
-            <div style="background: #f7fafc; border: 2px dashed #cbd5e0; padding: 2rem; border-radius: 8px;">
-              <p style="font-size: 0.9rem; color: #718096; margin-bottom: 0.75rem;">Código Seguro de Verificación</p>
-              <p style="font-size: 2rem; font-weight: bold; font-family: monospace; letter-spacing: 4px; color: #2d3748; margin: 0;">
+            <div style="background: var(--bg-secondary); border: 2px dashed var(--border-color); padding: 2rem; border-radius: 8px;">
+              <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Código Seguro de Verificación</p>
+              <p style="font-size: 2rem; font-weight: bold; font-family: monospace; letter-spacing: 4px; color: var(--text-primary); margin: 0;">
                 ${invoice.verifactuCsv}
               </p>
             </div>
           </div>
           ${invoice.verifactuHash ? `
           <div style="margin-top: 1.5rem; font-size: 0.85rem;">
-            <p><strong>Hash SHA-256:</strong></p>
-            <p style="font-family: monospace; background: #f7fafc; padding: 0.5rem; border-radius: 4px; word-break: break-all; color: #4a5568;">
+            <p style="color: var(--text-primary);"><strong>Hash SHA-256:</strong></p>
+            <p style="font-family: monospace; background: var(--bg-secondary); padding: 0.5rem; border-radius: 4px; word-break: break-all; color: var(--text-secondary);">
               ${invoice.verifactuHash}
             </p>
           </div>
           ` : ''}
-          <p style="font-size: 0.9rem; color: #718096; margin-top: 1.5rem;">
+          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 1.5rem;">
             Este código CSV identifica de forma única esta factura en el sistema Verifactu de la AEAT.
           </p>
         </div>
@@ -327,47 +351,47 @@ async function viewInvoice(invoiceId) {
             <!-- Información general -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
               <div>
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Cliente</h3>
-                <p style="font-size: 1rem; color: #1a202c;">${invoice.client?.name || invoice.client_name || 'Sin cliente'}</p>
-                ${invoice.client?.email ? `<p style="font-size: 0.875rem; color: #718096;">${invoice.client.email}</p>` : ''}
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Cliente</h3>
+                <p style="font-size: 1rem; color: var(--text-primary);">${invoice.client?.name || invoice.client_name || 'Sin cliente'}</p>
+                ${invoice.client?.email ? `<p style="font-size: 0.875rem; color: var(--text-secondary);">${invoice.client.email}</p>` : ''}
               </div>
               <div>
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Estado</h3>
-                <span class="badge badge--${statusMap[invoice.status]?.tone || 'neutral'}">
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Estado</h3>
+                <span class="status-pill status-pill--${statusMap[invoice.status]?.tone || 'draft'}">
                   ${statusMap[invoice.status]?.label || invoice.status}
                 </span>
               </div>
               <div>
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Fecha emisión</h3>
-                <p style="font-size: 1rem; color: #1a202c;">${formatDate(invoice.issue_date)}</p>
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Fecha emisión</h3>
+                <p style="font-size: 1rem; color: var(--text-primary);">${formatDate(invoice.issue_date)}</p>
               </div>
               <div>
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Fecha vencimiento</h3>
-                <p style="font-size: 1rem; color: #1a202c;">${formatDate(invoice.due_date)}</p>
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Fecha vencimiento</h3>
+                <p style="font-size: 1rem; color: var(--text-primary);">${formatDate(invoice.due_date)}</p>
               </div>
             </div>
 
             <!-- Líneas de factura -->
             ${invoice.items && invoice.items.length > 0 ? `
               <div style="margin-bottom: 2rem;">
-                <h3 style="font-size: 1rem; font-weight: 600; color: #1a202c; margin-bottom: 1rem;">Conceptos</h3>
+                <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem;">Conceptos</h3>
                 <div style="overflow-x: auto;">
                   <table style="width: 100%; border-collapse: collapse;">
                     <thead>
-                      <tr style="background-color: #f7fafc; border-bottom: 2px solid #e2e8f0;">
-                        <th style="padding: 0.75rem; text-align: left; font-size: 0.875rem; color: #4a5568;">Descripción</th>
-                        <th style="padding: 0.75rem; text-align: center; font-size: 0.875rem; color: #4a5568;">Cantidad</th>
-                        <th style="padding: 0.75rem; text-align: right; font-size: 0.875rem; color: #4a5568;">P. Unitario</th>
-                        <th style="padding: 0.75rem; text-align: right; font-size: 0.875rem; color: #4a5568;">Total</th>
+                      <tr style="background-color: var(--bg-secondary); border-bottom: 2px solid var(--border-color);">
+                        <th style="padding: 0.75rem; text-align: left; font-size: 0.875rem; color: var(--text-secondary);">Descripción</th>
+                        <th style="padding: 0.75rem; text-align: center; font-size: 0.875rem; color: var(--text-secondary);">Cantidad</th>
+                        <th style="padding: 0.75rem; text-align: right; font-size: 0.875rem; color: var(--text-secondary);">P. Unitario</th>
+                        <th style="padding: 0.75rem; text-align: right; font-size: 0.875rem; color: var(--text-secondary);">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       ${invoice.items.map(item => `
-                        <tr style="border-bottom: 1px solid #e2e8f0;">
-                          <td style="padding: 0.75rem; color: #1a202c;">${item.description}</td>
-                          <td style="padding: 0.75rem; text-align: center; color: #718096;">${item.quantity} ${item.unit_type || ''}</td>
-                          <td style="padding: 0.75rem; text-align: right; color: #718096;">${currencyFormatter.format(item.unit_price)}</td>
-                          <td style="padding: 0.75rem; text-align: right; font-weight: 600; color: #1a202c;">${currencyFormatter.format(item.amount)}</td>
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                          <td style="padding: 0.75rem; color: var(--text-primary);">${item.description}</td>
+                          <td style="padding: 0.75rem; text-align: center; color: var(--text-secondary);">${item.quantity} ${item.unit_type || ''}</td>
+                          <td style="padding: 0.75rem; text-align: right; color: var(--text-secondary);">${currencyFormatter.format(item.unit_price)}</td>
+                          <td style="padding: 0.75rem; text-align: right; font-weight: 600; color: var(--text-primary);">${currencyFormatter.format(item.amount)}</td>
                         </tr>
                       `).join('')}
                     </tbody>
@@ -377,35 +401,35 @@ async function viewInvoice(invoiceId) {
             ` : ''}
 
             <!-- Totales -->
-            <div style="border-top: 2px solid #e2e8f0; padding-top: 1.5rem;">
+            <div style="border-top: 2px solid var(--border-color); padding-top: 1.5rem;">
               <div style="display: flex; justify-content: flex-end;">
                 <div style="width: 300px;">
                   <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="color: #718096;">Subtotal:</span>
-                    <span style="color: #1a202c; font-weight: 500;">${currencyFormatter.format(invoice.subtotal)}</span>
+                    <span style="color: var(--text-secondary);">Subtotal:</span>
+                    <span style="color: var(--text-primary); font-weight: 500;">${currencyFormatter.format(invoice.subtotal)}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="color: #718096;">IVA (${invoice.vat_percentage}%):</span>
-                    <span style="color: #1a202c; font-weight: 500;">${currencyFormatter.format(invoice.vat_amount)}</span>
+                    <span style="color: var(--text-secondary);">IVA (${invoice.vat_percentage}%):</span>
+                    <span style="color: var(--text-primary); font-weight: 500;">${currencyFormatter.format(invoice.vat_amount)}</span>
                   </div>
                   ${invoice.irpf_amount > 0 ? `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                      <span style="color: #718096;">IRPF (${invoice.irpf_percentage}%):</span>
-                      <span style="color: #c53030; font-weight: 500;">-${currencyFormatter.format(invoice.irpf_amount)}</span>
+                      <span style="color: var(--text-secondary);">IRPF (${invoice.irpf_percentage}%):</span>
+                      <span style="color: #ef4444; font-weight: 500;">-${currencyFormatter.format(invoice.irpf_amount)}</span>
                     </div>
                   ` : ''}
-                  <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 2px solid #e2e8f0; margin-top: 0.75rem;">
-                    <span style="color: #1a202c; font-weight: 700; font-size: 1.125rem;">Total:</span>
-                    <span style="color: #1a202c; font-weight: 700; font-size: 1.125rem;">${currencyFormatter.format(invoice.total)}</span>
+                  <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 2px solid var(--border-color); margin-top: 0.75rem;">
+                    <span style="color: var(--text-primary); font-weight: 700; font-size: 1.125rem;">Total:</span>
+                    <span style="color: var(--text-primary); font-weight: 700; font-size: 1.125rem;">${currencyFormatter.format(invoice.total)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             ${invoice.notes ? `
-              <div style="margin-top: 1.5rem; padding: 1rem; background-color: #f7fafc; border-radius: 0.5rem;">
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: #4a5568; margin-bottom: 0.5rem;">Notas</h3>
-                <p style="color: #718096; white-space: pre-wrap;">${invoice.notes}</p>
+              <div style="margin-top: 1.5rem; padding: 1rem; background-color: var(--bg-secondary); border-radius: 0.5rem; border: 1px solid var(--border-color);">
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Notas</h3>
+                <p style="color: var(--text-secondary); white-space: pre-wrap;">${invoice.notes}</p>
               </div>
             ` : ''}
           </div>
@@ -749,10 +773,10 @@ function renderInvoiceRows() {
 
     if (invoice.verifactuStatus === 'registered') {
       verifactuActions = `
-        <button type="button" class="table-action" title="Ver QR Verifactu" onclick="showVerifactuQRModal(${JSON.stringify(invoice).replace(/"/g, '&quot;')})">
+        <button type="button" class="table-action" title="Ver QR Verifactu" onclick="showVerifactuQRModal('${invoice.id}')">
           <span>🔲</span>
         </button>
-        <button type="button" class="table-action" title="Ver CSV" onclick="showVerifactuCSVModal(${JSON.stringify(invoice).replace(/"/g, '&quot;')})">
+        <button type="button" class="table-action" title="Ver CSV" onclick="showVerifactuCSVModal('${invoice.id}')">
           <span>🔐</span>
         </button>
       `;
