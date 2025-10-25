@@ -182,12 +182,14 @@ async function registerInvoiceVerifactu(invoiceId) {
     const result = await window.api.registerInvoiceVerifactu(invoiceId);
 
     // Actualizar factura con los datos devueltos
-    if (invoice) {
+    if (invoice && result) {
       invoice.verifactuStatus = 'registered';
-      invoice.verifactuCsv = result.invoice.verifactu_csv;
-      invoice.verifactuQrCode = result.invoice.verifactu_qr_code;
-      invoice.verifactuUrl = result.invoice.verifactu_url;
-      invoice.verifactuHash = result.invoice.verifactu_hash;
+      // result puede ser el invoice directamente o tener un campo invoice
+      const invoiceData = result.invoice || result;
+      invoice.verifactuCsv = invoiceData.verifactu_csv;
+      invoice.verifactuQrCode = invoiceData.verifactu_qr_code;
+      invoice.verifactuUrl = invoiceData.verifactu_url;
+      invoice.verifactuHash = invoiceData.verifactu_hash;
     }
 
     renderInvoicesTable();
