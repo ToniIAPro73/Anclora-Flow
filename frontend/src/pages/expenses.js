@@ -435,7 +435,7 @@ function buildExpenseModalHtml(mode, expense) {
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(95vw, 720px); max-width: 720px;">
+      <div class="modal__panel" style="width: min(95vw, 960px); max-width: 960px;">
         <header class="modal__head">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
@@ -445,7 +445,7 @@ function buildExpenseModalHtml(mode, expense) {
         </header>
         <div class="modal__body">
           <form id="expense-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.25rem;">
-            <div class="grid grid--two">
+            <div class="grid grid--three">
               <div class="form-group">
                 <label for="expense-date">Fecha del gasto</label>
                 <input type="date" id="expense-date" name="expenseDate" class="form-input" value="${formatDateForInput(expense?.expense_date)}" required />
@@ -461,7 +461,7 @@ function buildExpenseModalHtml(mode, expense) {
               </div>
             </div>
 
-            <div class="grid grid--two">
+            <div class="grid grid--three">
               <div class="form-group">
                 <label for="expense-description">Descripción</label>
                 <input type="text" id="expense-description" name="description" class="form-input" placeholder="Describe el gasto" value="${escapeHtml(expense?.description || '')}" required maxlength="200" />
