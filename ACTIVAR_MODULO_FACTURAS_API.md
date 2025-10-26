@@ -7,6 +7,7 @@ Guía rápida para activar el nuevo módulo de facturas que conecta con la API r
 He creado un nuevo archivo: **`frontend/src/pages/invoices-with-api.js`**
 
 Este módulo incluye:
+
 - ✅ Conexión completa con el backend API
 - ✅ Carga dinámica de facturas desde la base de datos
 - ✅ Registro en Verifactu con un clic
@@ -73,6 +74,7 @@ docker exec anclora-postgres psql -U postgres -d anclora_flow -c "\d invoices" |
 Necesitas un usuario registrado. Dos opciones:
 
 **Opción A: Crear desde el frontend**
+
 ```
 1. Abre http://localhost:3020/register.html
 2. Regístrate con tus datos
@@ -80,6 +82,7 @@ Necesitas un usuario registrado. Dos opciones:
 ```
 
 **Opción B: Crear desde PowerShell**
+
 ```powershell
 $body = @{
     name = "Usuario Test"
@@ -195,6 +198,7 @@ Write-Host "Factura creada con ID: $($newInvoice.id)"
 ## 🎨 Qué Verás en la UI
 
 ### Estado Inicial (Sin Facturas)
+
 ```
 ┌────────────────────────────────────────────────────┐
 │                                                    │
@@ -205,6 +209,7 @@ Write-Host "Factura creada con ID: $($newInvoice.id)"
 ```
 
 ### Estado de Carga
+
 ```
 ┌────────────────────────────────────────────────────┐
 │                                                    │
@@ -215,6 +220,7 @@ Write-Host "Factura creada con ID: $($newInvoice.id)"
 ```
 
 ### Con Facturas
+
 ```
 ┌─────────┬──────────┬─────────┬──────────┬───────────┐
 │ Factura │ Cliente  │ Total   │ Estado   │ Verifactu │
@@ -225,6 +231,7 @@ Write-Host "Factura creada con ID: $($newInvoice.id)"
 ```
 
 ### Después de Registrar
+
 ```
 ┌─────────┬──────────┬─────────┬──────────┬───────────┐
 │ Factura │ Cliente  │ Total   │ Estado   │ Verifactu │
@@ -235,6 +242,7 @@ Write-Host "Factura creada con ID: $($newInvoice.id)"
 ```
 
 ### Modal de QR
+
 ```
 ╔═══════════════════════════════════════╗
 ║   Código QR - Verifactu              ║
@@ -273,7 +281,7 @@ Si necesitas el token para hacer peticiones desde PowerShell:
 ```javascript
 // Abre la consola del navegador (F12)
 // Y ejecuta:
-localStorage.getItem('auth_token')
+localStorage.getItem("auth_token");
 
 // Copia el resultado
 ```
@@ -295,6 +303,7 @@ localStorage.getItem('auth_token')
 **Problema:** El backend no está corriendo
 
 **Solución:**
+
 ```powershell
 cd backend
 npm start
@@ -305,6 +314,7 @@ npm start
 **Problema:** No estás autenticado o no tienes facturas
 
 **Solución:**
+
 1. Verifica que estés logueado
 2. Crea facturas desde la API (ver Paso 5 arriba)
 3. Recarga el módulo
@@ -314,6 +324,7 @@ npm start
 **Problema:** Errores de JavaScript en consola
 
 **Solución:**
+
 1. Abre consola del navegador (F12)
 2. Mira los errores
 3. Verifica que `window.api` esté definido: `typeof window.api`
@@ -323,6 +334,7 @@ npm start
 **Problema:** Error en el backend durante el registro
 
 **Solución:**
+
 1. Revisa logs del backend
 2. Verifica que la migración de Verifactu esté aplicada
 3. Mira los logs: `GET /api/verifactu/logs`
@@ -352,9 +364,10 @@ npm start
 ✅ Ver logs
 ✅ Verificar cadena blockchain
 
-## 🎉 ¡Listo!
+## 🎉 ¡Listo
 
 Ahora tienes el módulo de facturas **completamente funcional** con:
+
 - Datos reales de la base de datos
 - Verifactu funcionando al 100%
 - UI moderna y responsiva
