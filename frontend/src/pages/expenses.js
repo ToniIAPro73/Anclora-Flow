@@ -248,7 +248,7 @@ function renderExpensesTable() {
     const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || 'Sin categoría';
     const paymentLabel = PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || 'N/A';
     return `
-      <tr data-expense-id="${expense.id}">
+      <tr class="expenses-table__row" data-expense-id="${expense.id}">
         <td>
           <time datetime="${escapeHtml(expense.expenseDate || '')}">
             ${formatDate(expense.expenseDate)}
@@ -266,7 +266,7 @@ function renderExpensesTable() {
             ${expense.vendor ? `<small>${escapeHtml(expense.vendor)}</small>` : ''}
           </div>
         </td>
-        <td class="amount-cell">
+        <td class="expenses-table__amount">
           ${formatCurrency(expense.amount)}
           <small class="vat-indicator">IVA ${expense.vatPercentage.toFixed(2)}% (${formatCurrency(expense.vatAmount)})</small>
         </td>
@@ -275,9 +275,9 @@ function renderExpensesTable() {
             ${expense.isDeductible ? `Deducible ${expense.deductiblePercentage}%` : 'No deducible'}
           </span>
         </td>
-        <td>${escapeHtml(paymentLabel)}</td>
-        <td>${expense.projectName ? escapeHtml(expense.projectName) : '-'}</td>
-        <td class="table-actions">
+        <td class="expenses-table__client">${escapeHtml(paymentLabel)}</td>
+        <td class="expenses-table__client">${expense.projectName ? escapeHtml(expense.projectName) : '-'}</td>
+        <td class="expenses-table__actions">
           <button type="button" class="table-action" title="Ver gasto" onclick="viewExpense('${expense.id}')">👁️</button>
           <button type="button" class="table-action" title="Editar gasto" onclick="openExpenseModal('edit', '${expense.id}')">✏️</button>
           <button type="button" class="table-action" title="Eliminar gasto" onclick="confirmDeleteExpense('${expense.id}')">🗑️</button>
@@ -373,8 +373,12 @@ function setupFilters() {
         dateFrom: '',
         dateTo: ''
       };
+      if (searchInput) searchInput.value = '';
+      if (categorySelect) categorySelect.value = '';
+      if (deductibleSelect) deductibleSelect.value = '';
+      if (dateFromInput) dateFromInput.value = '';
+      if (dateToInput) dateToInput.value = '';
       loadExpenses();
-      setupFilters();
     });
   }
 }
@@ -697,17 +701,17 @@ async function confirmDeleteExpense(expenseId) {
 // === MARKUP PRINCIPAL ===
 export default function renderExpenses() {
   return `
-    <section class="module expenses" aria-labelledby="expenses-title">
-      <div class="module-header">
-        <div class="module-title-section">
-          <h2 id="expenses-title">Gastos y Deducciones</h2>
-          <p class="module-subtitle">Controla tus gastos deducibles y optimiza tu fiscalidad</p>
+    <section class="expenses" aria-labelledby="expenses-title">
+      <header class="expenses__hero">
+        <div class="expenses__hero-copy">
+          <h1 id="expenses-title">Gastos &amp; Deducciones</h1>
+          <p>Gestiona tus deducciones, tickets y bases imponibles en un único panel.</p>
         </div>
-        <button type="button" class="btn btn-primary" id="new-expense-btn">
-          <span class="icon">＋</span>
-          Registrar gasto
-        </button>
-      </div>
+        <div class="expenses__hero-actions">
+          <button type="button" class="btn-primary" id="new-expense-btn">Registrar gasto</button>
+          <button type="button" class="btn-ghost" data-feature-pending="upload-receipt">Adjuntar justificante</button>
+        </div>
+      </header>
 
       <div class="summary-cards">
         <div class="card stat-card">
@@ -744,45 +748,42 @@ export default function renderExpenses() {
         </div>
       </div>
 
-      <section class="filters-section" aria-label="Filtros de gastos">
-        <div class="filters-row">
-          <div class="filter-group">
-            <label for="expense-search">Buscar</label>
-            <input type="search" id="expense-search" class="filter-input" placeholder="Descripción, proveedor..." />
-          </div>
-          <div class="filter-group">
-            <label for="expense-category-filter">Categoría</label>
-            <select id="expense-category-filter" class="filter-select">
-              <option value="">Todas</option>
-              ${Object.entries(EXPENSE_CATEGORIES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="expense-deductible-filter">Deducible</label>
-            <select id="expense-deductible-filter" class="filter-select">
-              <option value="">Todos</option>
-              <option value="true">Solo deducibles</option>
-              <option value="false">No deducibles</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="expense-date-from">Desde</label>
-            <input type="date" id="expense-date-from" class="filter-input" />
-          </div>
-          <div class="filter-group">
-            <label for="expense-date-to">Hasta</label>
-            <input type="date" id="expense-date-to" class="filter-input" />
-          </div>
+      <section class="expenses__filters" aria-label="Filtros de gastos">
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="expense-search">Buscar gastos</label>
+          <input type="search" id="expense-search" class="expenses__search" placeholder="Descripción, proveedor..." autocomplete="off" />
         </div>
-        <div class="filters-footer">
-          <span data-expenses-count>0 gastos encontrados</span>
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="expense-category-filter">Categoría</label>
+          <select id="expense-category-filter" class="expenses__select">
+            <option value="">Todas las categorías</option>
+            ${Object.entries(EXPENSE_CATEGORIES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="expense-deductible-filter">Deducible</label>
+          <select id="expense-deductible-filter" class="expenses__select">
+            <option value="">Todos</option>
+            <option value="true">Solo deducibles</option>
+            <option value="false">No deducibles</option>
+          </select>
+        </div>
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="expense-date-from">Fecha desde</label>
+          <input type="date" id="expense-date-from" class="expenses__select" />
+        </div>
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="expense-date-to">Fecha hasta</label>
+          <input type="date" id="expense-date-to" class="expenses__select" />
+        </div>
+        <div class="expenses__filters-group expenses__filters-group--pinned">
           <button type="button" class="btn-ghost" data-expenses-reset>Limpiar filtros</button>
         </div>
       </section>
 
-      <section class="module-table" aria-label="Listado de gastos">
-        <div class="table-responsive">
-          <table class="table expenses-table">
+      <section class="expenses-table" aria-label="Listado de gastos">
+        <div class="expenses-table__surface">
+          <table>
             <thead>
               <tr>
                 <th scope="col">Fecha</th>
@@ -802,9 +803,12 @@ export default function renderExpenses() {
             </tbody>
           </table>
         </div>
+        <footer class="invoices-table__footer">
+          <p data-expenses-count>0 gastos encontrados</p>
+        </footer>
         <div class="module-loading" data-expenses-loading hidden>
           <span class="loader"></span>
-          <p>Sincronizando con Hacienda...</p>
+          <p>Sincronizando gastos...</p>
         </div>
         <div class="module-error" data-expenses-error hidden></div>
       </section>
