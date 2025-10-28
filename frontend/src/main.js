@@ -12,7 +12,6 @@ import renderCalendar from "./pages/calendar.js";
 import renderReports from "./pages/reports.js";
 import renderAssistant from "./pages/assistant.js";
 import renderSettings from "./pages/settings.js";
-import renderRegisterPage, { initRegisterPage } from "./pages/register.js";
 
 const routes = {
   "/dashboard": renderDashboard,
@@ -27,13 +26,6 @@ const routes = {
   "/settings": renderSettings,
 };
 
-const standaloneRoutes = {
-  "/register": {
-    render: renderRegisterPage,
-    init: initRegisterPage,
-  },
-};
-
 const guestUser = {
   name: "Invitado",
   email: "",
@@ -44,6 +36,8 @@ const guestUser = {
 let currentUser = null;
 let authReady = false;
 const isProduction = import.meta.env.MODE === "production";
+let lastNonRegisterHash = "#/dashboard";
+window.__lastRouteBeforeRegister = lastNonRegisterHash;
 
 const STORAGE_KEYS = {
   theme: "anclora-theme",
@@ -303,6 +297,7 @@ function initUserMenu() {
     });
 
     menu.addEventListener("click", (event) => {
+      event.stopPropagation();
       const target = event.target;
       if (!(target instanceof HTMLElement)) {
         return;
@@ -807,7 +802,7 @@ async function bootstrap() {
   await navigate();
 
   const { path } = parseRoute((window.location.hash || "").replace(/^#/, ""));
-  const modalHandledRoutes = ["/auth/reset", "/auth/callback", "/auth/verify", "/register"];
+  const modalHandledRoutes = ["/auth/reset", "/auth/callback", "/auth/verify"];
   if (!currentUser && !modalHandledRoutes.includes(path)) {
     openAuthModal(AUTH_VIEWS.LOGIN);
   }
@@ -821,6 +816,10 @@ async function navigate() {
   const rawHash = window.location.hash || "";
   const hash = rawHash.startsWith("#") ? rawHash.slice(1) : rawHash;
   const { path, params } = parseRoute(hash || "/dashboard");
+  if (path !== "/register") {
+    lastNonRegisterHash = rawHash || "#/dashboard";
+    window.__lastRouteBeforeRegister = lastNonRegisterHash;
+  }
   const handledAuthRoute = ["/auth/callback", "/auth/verify", "/auth/reset"].includes(path);
 
   if (handledAuthRoute) {
@@ -834,19 +833,10 @@ async function navigate() {
     return;
   }
 
-  if (path === "/register" && currentUser) {
-    window.location.replace("#/dashboard");
-    return;
-  }
-
-  if (standaloneRoutes[path]) {
-    const { render, init } = standaloneRoutes[path];
-    document.body.classList.remove("is-lock-scroll");
-    shellHydrated = false;
-    document.body.innerHTML = render();
-    if (typeof init === "function") {
-      init(params);
-    }
+  if (path === "/register") {
+    ensureShell();
+    initShellInteractions();
+    openAuthModal(AUTH_VIEWS.REGISTER);
     return;
   }
 
@@ -888,7 +878,7 @@ window.addEventListener("auth:changed", async (event) => {
   await navigate();
 
   const { path } = parseRoute((window.location.hash || "").replace(/^#/, ""));
-  if (!currentUser && !["/auth/reset", "/register"].includes(path)) {
+  if (!currentUser && path !== "/auth/reset") {
     openAuthModal(AUTH_VIEWS.LOGIN);
   }
 });

@@ -716,6 +716,11 @@ async function loadInvoices() {
       throw new Error('Servicio API no disponible. Asegúrate de que api.js esté cargado.');
     }
 
+    if (!window.api.isAuthenticated()) {
+      renderErrorState('Inicia sesión para consultar tus facturas.');
+      return;
+    }
+
     const response = await window.api.getInvoices();
     invoicesData = response.invoices || response || [];
 
@@ -746,8 +751,12 @@ async function loadInvoices() {
 
   } catch (error) {
     console.error('Error cargando facturas:', error);
-    renderErrorState(error.message);
-    showNotification(error.message || 'Error al cargar facturas', 'error');
+    let message = error.message || 'Error al cargar facturas';
+    if (error instanceof window.APIError && error.status === 0) {
+      message = 'No se pudo conectar con el backend (http://localhost:8020). Asegúrate de que el servicio esté activo.';
+    }
+    renderErrorState(message);
+    showNotification(message, 'error');
   } finally {
     isLoading = false;
   }

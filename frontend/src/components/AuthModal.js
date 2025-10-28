@@ -89,13 +89,15 @@ export function renderAuthModal() {
               <label for="auth-register-company">Empresa</label>
               <input id="auth-register-company" name="company" type="text" autocomplete="organization" required placeholder="Nombre de tu empresa" />
             </div>
-            <div class="auth-modal__field">
-              <label for="auth-register-email">Correo electrónico</label>
-              <input id="auth-register-email" name="email" type="email" autocomplete="email" required placeholder="empresa@correo.com" />
-            </div>
-            <div class="auth-modal__field">
-              <label for="auth-register-phone">Teléfono</label>
-              <input id="auth-register-phone" name="phone" type="tel" autocomplete="tel" required placeholder="+34 600 000 000" />
+            <div class="auth-modal__row">
+              <div class="auth-modal__field">
+                <label for="auth-register-email">Correo electrónico</label>
+                <input id="auth-register-email" name="email" type="email" autocomplete="email" required placeholder="empresa@correo.com" />
+              </div>
+              <div class="auth-modal__field">
+                <label for="auth-register-phone">Teléfono</label>
+                <input id="auth-register-phone" name="phone" type="tel" autocomplete="tel" required placeholder="+34 600 000 000" />
+              </div>
             </div>
             <div class="auth-modal__row">
               <div class="auth-modal__field">
@@ -184,9 +186,9 @@ export function renderAuthModal() {
         overflow: hidden;
         box-shadow: var(--shadow-lg);
         z-index: 1;
-        max-width: 860px;
+        max-width: 820px;
         width: 100%;
-        max-height: min(720px, 90vh);
+        max-height: 640px;
       }
 
       .auth-modal__close {
@@ -274,13 +276,11 @@ export function renderAuthModal() {
       }
 
       .auth-modal__content {
-        padding: 2.5rem;
+        padding: 2rem 2.25rem;
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1.2rem;
         background: var(--bg-primary);
-        overflow-y: auto;
-        min-height: 0;
       }
 
       .auth-modal__tabs {
@@ -342,7 +342,13 @@ export function renderAuthModal() {
 
       .auth-modal__social {
         display: grid;
-        gap: 0.65rem;
+        gap: 0.5rem;
+      }
+
+      @media (min-width: 720px) {
+        .auth-modal__social {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
 
       .auth-modal__social-btn {
@@ -418,8 +424,12 @@ export function renderAuthModal() {
 
       .auth-modal__row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 0.75rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+      }
+
+      .auth-modal__row--single {
+        grid-template-columns: 1fr;
       }
 
       .auth-modal__field {
@@ -437,7 +447,7 @@ export function renderAuthModal() {
         border-radius: 12px;
         border: 1px solid var(--border-color);
         background: var(--bg-secondary);
-        padding: 0.75rem 1rem;
+        padding: 0.7rem 0.95rem;
         font-size: 0.95rem;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
       }
@@ -491,7 +501,7 @@ export function renderAuthModal() {
 
       .auth-modal__legal {
         margin: 0;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         color: var(--text-muted);
       }
 
@@ -519,14 +529,43 @@ export function renderAuthModal() {
         }
       }
 
+      .auth-modal--register .auth-modal__panel {
+        grid-template-columns: minmax(360px, 520px);
+        max-width: 600px;
+        max-height: 620px;
+      }
+
+      .auth-modal--register .auth-modal__hero {
+        display: none;
+      }
+
+      .auth-modal--register form[data-auth-view="register"] {
+        gap: 0.75rem;
+      }
+
+      .auth-modal--register form[data-auth-view="register"] .auth-modal__row {
+        gap: 0.6rem;
+      }
+      .auth-modal--register .auth-modal__content {
+        padding: 1.85rem 2.15rem;
+        gap: 1rem;
+      }
+
       @media (max-width: 880px) {
         .auth-modal__panel {
           grid-template-columns: 1fr;
           max-width: 420px;
+          max-height: none;
         }
 
         .auth-modal__hero {
           display: none;
+        }
+
+        .auth-modal__content {
+          padding: 1.75rem;
+          overflow-y: auto;
+          max-height: 80vh;
         }
       }
 
@@ -652,6 +691,16 @@ export function initAuthModal() {
     if (subtitle) {
       subtitle.textContent = subtitles[view] || subtitles[VIEW_LOGIN];
     }
+
+    if (view === VIEW_REGISTER) {
+      modal.classList.add('auth-modal--register');
+    } else {
+      modal.classList.remove('auth-modal--register');
+      if (window.location.hash === '#/register') {
+        const fallbackHash = window.__lastRouteBeforeRegister || '#/dashboard';
+        window.history.replaceState({}, '', fallbackHash);
+      }
+    }
   }
 
   function closeModal() {
@@ -660,6 +709,10 @@ export function initAuthModal() {
     document.body.classList.remove('is-lock-scroll');
     clearAlert();
     setView(VIEW_LOGIN);
+    if (window.location.hash === '#/register') {
+      const fallbackHash = window.__lastRouteBeforeRegister || '#/dashboard';
+      window.history.replaceState({}, '', fallbackHash);
+    }
   }
 
   function handleSocialLogin(provider) {
@@ -677,7 +730,10 @@ export function initAuthModal() {
 
       if (view === VIEW_REGISTER) {
         event.preventDefault();
-        window.location.hash = '#/register';
+        setView(view);
+        if (window.location.hash !== '#/register') {
+          window.location.hash = '#/register';
+        }
         return;
       }
 
@@ -942,11 +998,22 @@ export function openAuthModal(initialView = VIEW_LOGIN, options = {}) {
 
   initAuthModal();
 
+  if (initialView === VIEW_REGISTER) {
+    const currentHash = window.location.hash || '#/dashboard';
+    if (currentHash !== '#/register') {
+      window.__lastRouteBeforeRegister = currentHash;
+    }
+  }
+
   modal.classList.add('is-open');
   modal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('is-lock-scroll');
 
   modal.dispatchEvent(new CustomEvent('auth:set-view', { detail: initialView }));
+
+  if (initialView === VIEW_REGISTER && window.location.hash !== '#/register') {
+    window.location.hash = '#/register';
+  }
 
   if (options.resetToken) {
     modal.dispatchEvent(new CustomEvent('auth:set-reset-token', { detail: options.resetToken }));
