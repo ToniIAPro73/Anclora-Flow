@@ -1044,8 +1044,3 @@ export default {
   openAuthModal,
   closeAuthModal,
 };
-      @media (max-width: 640px) {
-        .auth-modal__social {
-          grid-template-columns: 1fr;
-        }
-      }
