@@ -6,7 +6,7 @@ import renderDashboard from "./pages/dashboard.js";
 import renderInvoices from "./pages/invoices-with-api.js";
 import renderExpenses, { initExpenses } from "./pages/expenses.js";
 import renderClients, { initClients } from "./pages/clients.js";
-import renderSubscriptions from "./pages/subscriptions.js";
+import renderSubscriptions, { initSubscriptions } from "./pages/subscriptions.js";
 import renderBudget from "./pages/budget.js";
 import renderCalendar from "./pages/calendar.js";
 import renderReports from "./pages/reports.js";
@@ -715,6 +715,9 @@ function initPage(route, params) {
       break;
     case "/clients":
       initClients();
+      break;
+    case "/subscriptions":
+      initSubscriptions();
       break;
     default:
       break;

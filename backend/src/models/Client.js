@@ -48,24 +48,56 @@ class Client {
 
   // Get all clients for a user
   static async findAllByUser(userId, filters = {}) {
-    let sql = 'SELECT * FROM clients WHERE user_id = $1';
-    const params = [userId];
-    let paramCount = 2;
+    let sql = `
+      SELECT
+        c.*,
+        COALESCE(p.project_count, 0) AS projects_count,
+        COALESCE(s.subscription_count, 0) AS subscriptions_count,
+        COALESCE(inv.invoice_count, 0) AS invoice_count,
+        COALESCE(inv.total_invoiced, 0) AS total_invoiced,
+        COALESCE(inv.total_pending, 0) AS total_pending
+      FROM clients c
+      LEFT JOIN (
+        SELECT client_id, COUNT(*) AS project_count
+        FROM projects
+        GROUP BY client_id
+      ) p ON p.client_id = c.id
+      LEFT JOIN (
+        SELECT client_id, COUNT(*) AS subscription_count
+        FROM subscriptions
+        GROUP BY client_id
+      ) s ON s.client_id = c.id
+      LEFT JOIN (
+        SELECT
+          client_id,
+          COUNT(*) AS invoice_count,
+          COALESCE(SUM(total), 0) AS total_invoiced,
+          COALESCE(SUM(CASE WHEN status != 'paid' THEN total ELSE 0 END), 0) AS total_pending
+        FROM invoices
+        WHERE user_id = $1
+        GROUP BY client_id
+      ) inv ON inv.client_id = c.id
+      WHERE c.user_id = $1
+    `;
 
-    // Apply filters
+    const params = [userId];
+    let paramIndex = 2;
+
     if (filters.isActive !== undefined) {
-      sql += ` AND is_active = $${paramCount}`;
+      sql += ` AND c.is_active = $${paramIndex}`;
       params.push(filters.isActive);
-      paramCount++;
+      paramIndex += 1;
     }
 
     if (filters.search) {
-      sql += ` AND (name ILIKE $${paramCount} OR email ILIKE $${paramCount} OR nif_cif ILIKE $${paramCount})`;
+      sql += ` AND (c.name ILIKE $${paramIndex} OR c.email ILIKE $${paramIndex} OR c.nif_cif ILIKE $${paramIndex})`;
       params.push(`%${filters.search}%`);
-      paramCount++;
+      paramIndex += 1;
     }
 
-    sql += ' ORDER BY name ASC';
+    sql += `
+      ORDER BY c.name ASC
+    `;
 
     const result = await query(sql, params);
     return result.rows;
@@ -156,6 +188,100 @@ class Client {
     `;
 
     const result = await query(sql, [userId, limit]);
+    return result.rows;
+  }
+
+  static async getSummary(userId) {
+    const sql = `
+      WITH base AS (
+        SELECT *
+        FROM clients
+        WHERE user_id = $1
+      )
+      SELECT
+        COUNT(*) AS total_clients,
+        COUNT(*) FILTER (WHERE is_active) AS active_clients,
+        COUNT(*) FILTER (WHERE NOT is_active) AS inactive_clients,
+        COUNT(*) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)) AS new_this_month,
+        COALESCE(SUM(i.total), 0) AS total_billed,
+        COALESCE(SUM(i.total) FILTER (WHERE i.status = 'paid'), 0) AS total_paid,
+        COALESCE(SUM(i.total) FILTER (WHERE i.status != 'paid'), 0) AS total_pending
+      FROM base c
+      LEFT JOIN invoices i ON c.id = i.client_id AND i.user_id = $1
+    `;
+
+    const result = await query(sql, [userId]);
+    return result.rows[0] || null;
+  }
+
+  static async getRecent(userId, limit = 6) {
+    const sql = `
+      SELECT
+        c.*,
+        COALESCE(SUM(i.total), 0) AS total_billed,
+        COUNT(DISTINCT p.id) AS projects_count
+      FROM clients c
+      LEFT JOIN invoices i ON c.id = i.client_id AND i.user_id = $1
+      LEFT JOIN projects p ON c.id = p.client_id
+      WHERE c.user_id = $1
+      GROUP BY c.id
+      ORDER BY c.created_at DESC
+      LIMIT $2
+    `;
+
+    const result = await query(sql, [userId, limit]);
+    return result.rows;
+  }
+
+  static async getProjects(userId, clientId) {
+    const sql = `
+      SELECT
+        p.*,
+        COUNT(DISTINCT i.id) AS invoice_count,
+        COALESCE(SUM(i.total), 0) AS total_invoiced,
+        COUNT(DISTINCT s.id) AS subscription_count
+      FROM projects p
+      LEFT JOIN invoices i ON p.id = i.project_id
+      LEFT JOIN subscriptions s ON p.id = s.project_id
+      WHERE p.user_id = $1
+        AND p.client_id = $2
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+    `;
+
+    const result = await query(sql, [userId, clientId]);
+    return result.rows;
+  }
+
+  static async getSubscriptions(userId, clientId) {
+    const sql = `
+      SELECT
+        s.*,
+        p.name AS project_name
+      FROM subscriptions s
+      LEFT JOIN projects p ON s.project_id = p.id
+      WHERE s.user_id = $1
+        AND s.client_id = $2
+      ORDER BY s.next_billing_date ASC
+    `;
+
+    const result = await query(sql, [userId, clientId]);
+    return result.rows;
+  }
+
+  static async getRevenueTrend(userId, months = 6) {
+    const sql = `
+      SELECT
+        DATE_TRUNC('month', i.issue_date) AS month,
+        COALESCE(SUM(i.total), 0) AS total_billed
+      FROM invoices i
+      WHERE i.user_id = $1
+        AND i.issue_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '${months - 1} months'
+      GROUP BY month
+      ORDER BY month
+    `;
+
+    const result = await query(sql, [userId]);
     return result.rows;
   }
 }

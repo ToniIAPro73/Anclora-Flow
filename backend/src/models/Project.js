@@ -160,6 +160,81 @@ class Project {
     const result = await query(sql, [userId, projectId]);
     return result.rows[0];
   }
+
+  static async getSummary(userId) {
+    const sql = `
+      SELECT
+        COUNT(*) AS total_projects,
+        COUNT(*) FILTER (WHERE status = 'active') AS active_projects,
+        COUNT(*) FILTER (WHERE status = 'on-hold') AS on_hold_projects,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed_projects,
+        COALESCE(SUM(budget), 0) AS total_budget,
+        COALESCE(SUM(i.total), 0) AS total_invoiced
+      FROM projects p
+      LEFT JOIN invoices i ON p.id = i.project_id AND i.user_id = $1
+      WHERE p.user_id = $1
+    `;
+
+    const result = await query(sql, [userId]);
+    return result.rows[0] || null;
+  }
+
+  static async getStatusMetrics(userId) {
+    const sql = `
+      SELECT
+        p.status,
+        COUNT(*) AS count,
+        COALESCE(SUM(p.budget), 0) AS total_budget,
+        COALESCE(SUM(i.total), 0) AS total_invoiced
+      FROM projects p
+      LEFT JOIN invoices i ON p.id = i.project_id AND i.user_id = $1
+      WHERE p.user_id = $1
+      GROUP BY p.status
+      ORDER BY p.status
+    `;
+
+    const result = await query(sql, [userId]);
+    return result.rows;
+  }
+
+  static async getUpcomingDeadlines(userId, limit = 6) {
+    const sql = `
+      SELECT
+        p.*,
+        c.name AS client_name,
+        COUNT(DISTINCT t.id) AS subscription_count,
+        COALESCE(SUM(i.total), 0) AS total_invoiced
+      FROM projects p
+      LEFT JOIN clients c ON p.client_id = c.id
+      LEFT JOIN subscriptions t ON p.id = t.project_id
+      LEFT JOIN invoices i ON p.id = i.project_id AND i.user_id = $1
+      WHERE p.user_id = $1
+        AND p.end_date IS NOT NULL
+        AND p.end_date >= CURRENT_DATE
+      GROUP BY p.id, c.name
+      ORDER BY p.end_date ASC
+      LIMIT $2
+    `;
+
+    const result = await query(sql, [userId, limit]);
+    return result.rows;
+  }
+
+  static async getSubscriptions(userId, projectId) {
+    const sql = `
+      SELECT
+        s.*,
+        c.name AS client_name
+      FROM subscriptions s
+      LEFT JOIN clients c ON s.client_id = c.id
+      WHERE s.user_id = $1
+        AND s.project_id = $2
+      ORDER BY s.next_billing_date ASC
+    `;
+
+    const result = await query(sql, [userId, projectId]);
+    return result.rows;
+  }
 }
 
 module.exports = Project;
