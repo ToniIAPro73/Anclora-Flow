@@ -718,6 +718,7 @@ async function loadInvoices() {
 
     if (!window.api.isAuthenticated()) {
       renderErrorState('Inicia sesión para consultar tus facturas.');
+      isLoading = false;
       return;
     }
 

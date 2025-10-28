@@ -178,6 +178,7 @@ async function loadExpenses() {
 
   if (!window.api.isAuthenticated()) {
     renderErrorState('Inicia sesión para revisar tus gastos.');
+    isLoading = false;
     return;
   }
 

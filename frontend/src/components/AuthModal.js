@@ -180,15 +180,16 @@ export function renderAuthModal() {
       .auth-modal__panel {
         position: relative;
         display: grid;
-        grid-template-columns: minmax(260px, 320px) minmax(320px, 360px);
+        grid-template-columns: minmax(280px, 340px) minmax(340px, 400px);
         background: var(--bg-primary);
         border-radius: 22px;
         overflow: hidden;
         box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(51, 102, 255, 0.35);
         z-index: 1;
-        max-width: 820px;
+        max-width: 900px;
         width: 100%;
-        max-height: 640px;
+        max-height: 660px;
       }
 
       .auth-modal__close {
@@ -276,10 +277,10 @@ export function renderAuthModal() {
       }
 
       .auth-modal__content {
-        padding: 2rem 2.25rem;
+        padding: 2rem 2.4rem;
         display: flex;
         flex-direction: column;
-        gap: 1.2rem;
+        gap: 1rem;
         background: var(--bg-primary);
       }
 
@@ -343,12 +344,7 @@ export function renderAuthModal() {
       .auth-modal__social {
         display: grid;
         gap: 0.5rem;
-      }
-
-      @media (min-width: 720px) {
-        .auth-modal__social {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       .auth-modal__social-btn {
@@ -415,7 +411,7 @@ export function renderAuthModal() {
 
       form[data-auth-view] {
         display: grid;
-        gap: 1rem;
+        gap: 0.85rem;
       }
 
       [hidden] {
@@ -425,7 +421,7 @@ export function renderAuthModal() {
       .auth-modal__row {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.65rem;
+        gap: 0.7rem;
       }
 
       .auth-modal__row--single {
@@ -530,9 +526,9 @@ export function renderAuthModal() {
       }
 
       .auth-modal--register .auth-modal__panel {
-        grid-template-columns: minmax(360px, 520px);
-        max-width: 600px;
-        max-height: 620px;
+        grid-template-columns: minmax(540px, 680px);
+        max-width: 740px;
+        max-height: 640px;
       }
 
       .auth-modal--register .auth-modal__hero {
@@ -540,14 +536,14 @@ export function renderAuthModal() {
       }
 
       .auth-modal--register form[data-auth-view="register"] {
-        gap: 0.75rem;
+        gap: 0.85rem;
       }
 
       .auth-modal--register form[data-auth-view="register"] .auth-modal__row {
-        gap: 0.6rem;
+        gap: 0.75rem;
       }
       .auth-modal--register .auth-modal__content {
-        padding: 1.85rem 2.15rem;
+        padding: 2.1rem 2.6rem;
         gap: 1rem;
       }
 
@@ -585,6 +581,12 @@ export function renderAuthModal() {
         .auth-modal__form-actions {
           flex-direction: column;
           align-items: stretch;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .auth-modal__social {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -1042,3 +1044,8 @@ export default {
   openAuthModal,
   closeAuthModal,
 };
+      @media (max-width: 640px) {
+        .auth-modal__social {
+          grid-template-columns: 1fr;
+        }
+      }
