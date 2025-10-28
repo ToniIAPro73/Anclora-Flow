@@ -12,6 +12,7 @@ import renderCalendar from "./pages/calendar.js";
 import renderReports from "./pages/reports.js";
 import renderAssistant from "./pages/assistant.js";
 import renderSettings from "./pages/settings.js";
+import renderRegisterPage, { initRegisterPage } from "./pages/register.js";
 
 const routes = {
   "/dashboard": renderDashboard,
@@ -24,6 +25,13 @@ const routes = {
   "/reports": renderReports,
   "/assistant": renderAssistant,
   "/settings": renderSettings,
+};
+
+const standaloneRoutes = {
+  "/register": {
+    render: renderRegisterPage,
+    init: initRegisterPage,
+  },
 };
 
 const guestUser = {
@@ -799,7 +807,7 @@ async function bootstrap() {
   await navigate();
 
   const { path } = parseRoute((window.location.hash || "").replace(/^#/, ""));
-  const modalHandledRoutes = ["/auth/reset", "/auth/callback", "/auth/verify"];
+  const modalHandledRoutes = ["/auth/reset", "/auth/callback", "/auth/verify", "/register"];
   if (!currentUser && !modalHandledRoutes.includes(path)) {
     openAuthModal(AUTH_VIEWS.LOGIN);
   }
@@ -822,6 +830,22 @@ async function navigate() {
       await handleEmailVerification(params);
     } else if (path === "/auth/reset") {
       showResetPasswordModal(params);
+    }
+    return;
+  }
+
+  if (path === "/register" && currentUser) {
+    window.location.replace("#/dashboard");
+    return;
+  }
+
+  if (standaloneRoutes[path]) {
+    const { render, init } = standaloneRoutes[path];
+    document.body.classList.remove("is-lock-scroll");
+    shellHydrated = false;
+    document.body.innerHTML = render();
+    if (typeof init === "function") {
+      init(params);
     }
     return;
   }
@@ -864,7 +888,7 @@ window.addEventListener("auth:changed", async (event) => {
   await navigate();
 
   const { path } = parseRoute((window.location.hash || "").replace(/^#/, ""));
-  if (!currentUser && path !== "/auth/reset") {
+  if (!currentUser && !["/auth/reset", "/register"].includes(path)) {
     openAuthModal(AUTH_VIEWS.LOGIN);
   }
 });

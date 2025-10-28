@@ -184,8 +184,9 @@ export function renderAuthModal() {
         overflow: hidden;
         box-shadow: var(--shadow-lg);
         z-index: 1;
-        max-width: 840px;
+        max-width: 860px;
         width: 100%;
+        max-height: min(720px, 90vh);
       }
 
       .auth-modal__close {
@@ -278,6 +279,8 @@ export function renderAuthModal() {
         flex-direction: column;
         gap: 1.5rem;
         background: var(--bg-primary);
+        overflow-y: auto;
+        min-height: 0;
       }
 
       .auth-modal__tabs {
@@ -415,7 +418,7 @@ export function renderAuthModal() {
 
       .auth-modal__row {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 0.75rem;
       }
 
@@ -666,11 +669,19 @@ export function initAuthModal() {
   }
 
   tabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', (event) => {
       const view = tab.dataset.authTab;
-      if (view && view !== activeView) {
-        setView(view);
+      if (!view || view === activeView) {
+        return;
       }
+
+      if (view === VIEW_REGISTER) {
+        event.preventDefault();
+        window.location.hash = '#/register';
+        return;
+      }
+
+      setView(view);
     });
   });
 

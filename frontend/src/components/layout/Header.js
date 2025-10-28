@@ -54,7 +54,7 @@ export function renderHeader(user = {}) {
             `
                 : `
               <li role="none"><button role="menuitem" id="open-login-btn" type="button" data-auth-open="login">Iniciar sesion</button></li>
-              <li role="none"><button role="menuitem" id="open-register-btn" type="button" data-auth-open="register">Crear cuenta</button></li>
+              <li role="none"><a role="menuitem" href="#/register" id="open-register-link">Crear cuenta</a></li>
             `
             }
           </ul>
