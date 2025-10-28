@@ -35,9 +35,7 @@ Write-Host "✓ Docker OK`n" -ForegroundColor Green
 
 Write-Host "🚀 Ejecutando migración..." -ForegroundColor Cyan
 $migration = Get-Content $migrationPath -Raw
-$result = docker exec -i anclora-postgres psql -U postgres -d anclora_flow <<EOF
-$migration
-EOF
+$migration | docker exec -i anclora-postgres psql -U postgres -d anclora_flow
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`n✗ Error en la migración" -ForegroundColor Red
@@ -62,9 +60,7 @@ if (!(Test-Path $testDataPath)) {
 
 Write-Host "📝 Creando clientes y facturas de prueba..." -ForegroundColor Cyan
 $testData = Get-Content $testDataPath -Raw
-$result = docker exec -i anclora-postgres psql -U postgres -d anclora_flow <<EOF
-$testData
-EOF
+$testData | docker exec -i anclora-postgres psql -U postgres -d anclora_flow
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "✓ Datos de prueba creados`n" -ForegroundColor Green
