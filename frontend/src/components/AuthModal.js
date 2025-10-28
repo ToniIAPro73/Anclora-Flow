@@ -1,4 +1,4 @@
-const VIEW_LOGIN = 'login';
+﻿const VIEW_LOGIN = 'login';
 const VIEW_REGISTER = 'register';
 const VIEW_RECOVER = 'recover';
 const VIEW_RESET = 'reset';
@@ -16,7 +16,7 @@ export function renderAuthModal() {
     <div id="auth-modal" class="auth-modal" aria-hidden="true" aria-labelledby="auth-modal-title" role="dialog">
       <div class="auth-modal__backdrop" data-modal-dismiss></div>
       <section class="auth-modal__panel" role="document">
-        <button class="auth-modal__close" data-modal-dismiss aria-label="Cerrar">×</button>
+        <button class="auth-modal__close" data-modal-dismiss aria-label="Cerrar">Ã—</button>
         <aside class="auth-modal__hero">
           <div class="auth-modal__hero-gradient"></div>
           <div class="auth-modal__hero-content">
@@ -35,7 +35,7 @@ export function renderAuthModal() {
         <div class="auth-modal__content">
           <header class="auth-modal__tabs" data-auth-tabs role="tablist">
             <button type="button" class="auth-modal__tab is-active" data-auth-tab="${VIEW_LOGIN}" aria-selected="true" role="tab">
-              Iniciar sesión
+              Iniciar sesiÃ³n
             </button>
             <button type="button" class="auth-modal__tab" data-auth-tab="${VIEW_REGISTER}" aria-selected="false" role="tab">
               Crear cuenta
@@ -59,17 +59,17 @@ export function renderAuthModal() {
 
           <form id="auth-login-form" data-auth-view="${VIEW_LOGIN}" novalidate>
             <div class="auth-modal__field">
-              <label for="auth-login-email">Correo electrónico</label>
+              <label for="auth-login-email">Correo electrÃ³nico</label>
               <input id="auth-login-email" name="email" type="email" autocomplete="email" required placeholder="tu@email.com" />
             </div>
             <div class="auth-modal__field">
-              <label for="auth-login-password">Contraseña</label>
-              <input id="auth-login-password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
+              <label for="auth-login-password">ContraseÃ±a</label>
+              <input id="auth-login-password" name="password" type="password" autocomplete="current-password" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
             </div>
             <div class="auth-modal__form-actions">
               <button type="submit" class="auth-modal__submit">Entrar</button>
               <button type="button" class="auth-modal__link" data-auth-switch="${VIEW_RECOVER}">
-                ¿Olvidaste tu contraseña?
+                Â¿Olvidaste tu contraseÃ±a?
               </button>
             </div>
           </form>
@@ -91,22 +91,22 @@ export function renderAuthModal() {
             </div>
             <div class="auth-modal__row">
               <div class="auth-modal__field">
-                <label for="auth-register-email">Correo electrónico</label>
+                <label for="auth-register-email">Correo electrÃ³nico</label>
                 <input id="auth-register-email" name="email" type="email" autocomplete="email" required placeholder="empresa@correo.com" />
               </div>
               <div class="auth-modal__field">
-                <label for="auth-register-phone">Teléfono</label>
+                <label for="auth-register-phone">TelÃ©fono</label>
                 <input id="auth-register-phone" name="phone" type="tel" autocomplete="tel" required placeholder="+34 600 000 000" />
               </div>
             </div>
             <div class="auth-modal__row">
               <div class="auth-modal__field">
-                <label for="auth-register-password">Contraseña</label>
-                <input id="auth-register-password" name="password" type="password" autocomplete="new-password" required placeholder="Mínimo 8 caracteres" minlength="8" />
+                <label for="auth-register-password">ContraseÃ±a</label>
+                <input id="auth-register-password" name="password" type="password" autocomplete="new-password" required placeholder="MÃ­nimo 8 caracteres" minlength="8" />
               </div>
               <div class="auth-modal__field">
-                <label for="auth-register-confirm">Confirmar contraseña</label>
-                <input id="auth-register-confirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Repite la contraseña" minlength="8" />
+                <label for="auth-register-confirm">Confirmar contraseÃ±a</label>
+                <input id="auth-register-confirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Repite la contraseÃ±a" minlength="8" />
               </div>
             </div>
             <p class="auth-modal__legal">
@@ -117,16 +117,16 @@ export function renderAuthModal() {
 
           <form id="auth-recover-form" data-auth-view="${VIEW_RECOVER}" hidden novalidate>
             <div class="auth-modal__field">
-              <label for="auth-recover-email">Correo electrónico</label>
+              <label for="auth-recover-email">Correo electrÃ³nico</label>
               <input id="auth-recover-email" name="email" type="email" autocomplete="email" required placeholder="tu@email.com" />
             </div>
             <p class="auth-modal__hint">
-              Te enviaremos un enlace temporal para crear una nueva contraseña.
+              Te enviaremos un enlace temporal para crear una nueva contraseÃ±a.
             </p>
             <div class="auth-modal__form-actions">
               <button type="submit" class="auth-modal__submit">Enviar enlace</button>
               <button type="button" class="auth-modal__link" data-auth-switch="${VIEW_LOGIN}">
-                Volver a iniciar sesión
+                Volver a iniciar sesiÃ³n
               </button>
             </div>
           </form>
@@ -134,20 +134,20 @@ export function renderAuthModal() {
           <form id="auth-reset-form" data-auth-view="${VIEW_RESET}" hidden novalidate>
             <input type="hidden" data-reset-token />
             <div class="auth-modal__field">
-              <label for="auth-reset-password">Nueva contraseña</label>
-              <input id="auth-reset-password" name="password" type="password" autocomplete="new-password" required placeholder="Mínimo 8 caracteres" minlength="8" />
+              <label for="auth-reset-password">Nueva contraseÃ±a</label>
+              <input id="auth-reset-password" name="password" type="password" autocomplete="new-password" required placeholder="MÃ­nimo 8 caracteres" minlength="8" />
             </div>
             <div class="auth-modal__field">
-              <label for="auth-reset-confirm">Confirmar contraseña</label>
-              <input id="auth-reset-confirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Repite la contraseña" minlength="8" />
+              <label for="auth-reset-confirm">Confirmar contraseÃ±a</label>
+              <input id="auth-reset-confirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Repite la contraseÃ±a" minlength="8" />
             </div>
             <p class="auth-modal__hint">
-              El enlace expira en unos minutos. Usa una contraseña segura que no hayas empleado antes.
+              El enlace expira en unos minutos. Usa una contraseÃ±a segura que no hayas empleado antes.
             </p>
             <div class="auth-modal__form-actions">
-              <button type="submit" class="auth-modal__submit">Actualizar contraseña</button>
+              <button type="submit" class="auth-modal__submit">Actualizar contraseÃ±a</button>
               <button type="button" class="auth-modal__link" data-auth-switch="${VIEW_LOGIN}">
-                Volver al inicio de sesión
+                Volver al inicio de sesiÃ³n
               </button>
             </div>
           </form>
@@ -272,7 +272,7 @@ export function renderAuthModal() {
       }
 
       .auth-modal__highlights li::before {
-        content: '•';
+        content: 'â€¢';
         margin-right: 0.4rem;
       }
 
@@ -638,7 +638,7 @@ export function initAuthModal() {
     [VIEW_LOGIN]: 'Gestiona tus ingresos y gastos con nuestra suite colaborativa.',
     [VIEW_REGISTER]: 'Activa tu espacio profesional e invita a tu equipo cuando quieras.',
     [VIEW_RECOVER]: 'Recupera el acceso a tu cuenta con un enlace seguro.',
-    [VIEW_RESET]: 'Define una nueva contraseña para continuar trabajando sin interrupciones.',
+    [VIEW_RESET]: 'Define una nueva contraseÃ±a para continuar trabajando sin interrupciones.',
   };
 
   function clearAlert() {
@@ -786,7 +786,7 @@ export function initAuthModal() {
       lastLoginEmail = email || '';
 
       if (!email || !password) {
-        showAlert('error', 'Introduce tu correo y contraseña.');
+        showAlert('error', 'Introduce tu correo y contraseÃ±a.');
         return;
       }
 
@@ -794,24 +794,24 @@ export function initAuthModal() {
 
       try {
         const response = await window.api.login(email, password);
-        showAlert('success', response.message || 'Sesión iniciada correctamente.');
+        showAlert('success', response.message || 'SesiÃ³n iniciada correctamente.');
         window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: response.user } }));
         setTimeout(() => {
           closeModal();
         }, 400);
       } catch (error) {
-        let message = 'No se pudo iniciar sesión.';
+        let message = 'No se pudo iniciar sesiÃ³n.';
 
         if (error instanceof window.APIError) {
           if (error.status === 401) {
-            message = 'Correo o contraseña incorrectos.';
+            message = 'Correo o contraseÃ±a incorrectos.';
           } else if (error.status === 0) {
-            message = 'No podemos conectar con el servidor. Inténtalo más tarde.';
+            message = 'No podemos conectar con el servidor. IntÃ©ntalo mÃ¡s tarde.';
           } else if (error.data?.error) {
             message = error.data.error;
           }
           if (error.data?.requiresVerification && lastLoginEmail) {
-            message += ` <button type="button" class="auth-modal__link" data-auth-resend="${lastLoginEmail}">Reenviar verificación</button>`;
+            message += ` <button type="button" class="auth-modal__link" data-auth-resend="${lastLoginEmail}">Reenviar verificaciÃ³n</button>`;
           }
         }
 
@@ -832,9 +832,9 @@ export function initAuthModal() {
       event.preventDefault();
       try {
         const response = await window.api.resendVerification(resendEmail);
-        showAlert('info', response.message || 'Hemos reenviado el correo de verificación.');
+        showAlert('info', response.message || 'Hemos reenviado el correo de verificaciÃ³n.');
       } catch (error) {
-        showAlert('error', 'No pudimos reenviar el correo. Inténtalo más tarde.');
+        showAlert('error', 'No pudimos reenviar el correo. IntÃ©ntalo mÃ¡s tarde.');
       }
     }
   });
@@ -864,12 +864,12 @@ export function initAuthModal() {
       }
 
       if (payload.password.length < 8) {
-        showAlert('error', 'La contraseña debe tener al menos 8 caracteres.');
+        showAlert('error', 'La contraseÃ±a debe tener al menos 8 caracteres.');
         return;
       }
 
       if (payload.password !== payload.confirmPassword) {
-        showAlert('error', 'Las contraseñas no coinciden.');
+        showAlert('error', 'Las contraseÃ±as no coinciden.');
         return;
       }
 
@@ -905,7 +905,7 @@ export function initAuthModal() {
       const email = emailInput?.value.trim();
 
       if (!email) {
-        showAlert('error', 'Introduce tu correo electrónico.');
+        showAlert('error', 'Introduce tu correo electrÃ³nico.');
         return;
       }
 
@@ -915,7 +915,7 @@ export function initAuthModal() {
         const response = await window.api.requestPasswordReset(email);
         showAlert('success', response.message || 'Si el correo existe, enviaremos un enlace en minutos.');
       } catch (_error) {
-        showAlert('error', 'No pudimos enviar el enlace. Inténtalo más tarde.');
+        showAlert('error', 'No pudimos enviar el enlace. IntÃ©ntalo mÃ¡s tarde.');
       } finally {
         toggleLoading(submitBtn, false);
       }
@@ -929,7 +929,7 @@ export function initAuthModal() {
       clearAlert();
 
       if (!resetToken) {
-        showAlert('error', 'El enlace de restablecimiento no es válido o ha caducado.');
+        showAlert('error', 'El enlace de restablecimiento no es vÃ¡lido o ha caducado.');
         return;
       }
 
@@ -941,12 +941,12 @@ export function initAuthModal() {
       const confirmPassword = confirmInput?.value || '';
 
       if (password.length < 8) {
-        showAlert('error', 'La contraseña debe tener al menos 8 caracteres.');
+        showAlert('error', 'La contraseÃ±a debe tener al menos 8 caracteres.');
         return;
       }
 
       if (password !== confirmPassword) {
-        showAlert('error', 'Las contraseñas no coinciden.');
+        showAlert('error', 'Las contraseÃ±as no coinciden.');
         return;
       }
 
@@ -955,14 +955,14 @@ export function initAuthModal() {
       try {
         const response = await window.api.resetPassword(resetToken, password);
         resetToken = null;
-        showAlert('success', response.message || 'Contraseña actualizada correctamente. Estamos iniciando tu sesión.');
+        showAlert('success', response.message || 'ContraseÃ±a actualizada correctamente. Estamos iniciando tu sesiÃ³n.');
         window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: response.user } }));
         setTimeout(() => {
           closeModal();
           window.location.hash = "#/dashboard";
         }, 500);
       } catch (error) {
-        let message = 'No se pudo actualizar la contraseña.';
+        let message = 'No se pudo actualizar la contraseÃ±a.';
         if (error instanceof window.APIError && error.data?.error) {
           message = error.data.error;
         }
