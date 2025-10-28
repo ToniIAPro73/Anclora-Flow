@@ -1,7 +1,7 @@
 // API Service - Comunicación centralizada con el backend
 // Base URL del backend
 
-const API_BASE_URL = 'http://localhost:8020/api';
+const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8020/api';
 
 // Clase para manejar errores de API
 class APIError extends Error {
@@ -49,6 +49,21 @@ class APIService {
     localStorage.setItem('user_data', JSON.stringify(userData));
   }
 
+  // Aplicar sesión recibida desde el backend
+  applySession(payload) {
+    if (!payload) {
+      return;
+    }
+
+    if (payload.token) {
+      this.setToken(payload.token);
+    }
+
+    if (payload.user) {
+      this.setUserData(payload.user);
+    }
+  }
+
   // Verificar si el usuario está autenticado
   isAuthenticated() {
     return !!this.token;
@@ -86,6 +101,16 @@ class APIService {
       const data = await response.json();
 
       if (!response.ok) {
+        if (
+          (response.status === 401 || response.status === 403) &&
+          options.includeAuth !== false
+        ) {
+          this.clearToken();
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: null } }));
+          }
+        }
+
         throw new APIError(
           data.error || 'Error en la petición',
           response.status,
@@ -137,25 +162,60 @@ class APIService {
 
   async register(userData) {
     const response = await this.post('/auth/register', userData, { includeAuth: false });
-    if (response.token) {
-      this.setToken(response.token);
-      this.setUserData(response.user);
-    }
+    this.applySession(response);
     return response;
   }
 
   async login(email, password) {
     const response = await this.post('/auth/login', { email, password }, { includeAuth: false });
-    if (response.token) {
-      this.setToken(response.token);
-      this.setUserData(response.user);
-    }
+    this.applySession(response);
     return response;
   }
 
   logout() {
     this.clearToken();
-    window.location.href = '/login.html';
+  }
+
+  async getCurrentUser() {
+    const response = await this.get('/auth/me');
+    if (response) {
+      this.setUserData(response);
+    }
+    return response;
+  }
+
+  async resendVerification(email) {
+    return this.post('/auth/resend-verification', { email }, { includeAuth: false });
+  }
+
+  async verifyEmail(token) {
+    const response = await this.post('/auth/verify-email', { token }, { includeAuth: false });
+    this.applySession(response);
+    return response;
+  }
+
+  async requestPasswordReset(email) {
+    return this.post('/auth/forgot-password', { email }, { includeAuth: false });
+  }
+
+  async resetPassword(token, password) {
+    const response = await this.post(
+      '/auth/reset-password',
+      { token, password },
+      { includeAuth: false }
+    );
+    this.applySession(response);
+    return response;
+  }
+
+  async devLogin() {
+    const response = await this.post('/auth/dev-login', {}, { includeAuth: false });
+    this.applySession(response);
+    return response;
+  }
+
+  getBaseUrl() {
+    return this.baseURL;
   }
 
   // === FACTURAS ===

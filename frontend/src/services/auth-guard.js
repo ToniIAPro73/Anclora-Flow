@@ -1,6 +1,7 @@
 // Auth Guard - Middleware para proteger rutas
 // Importar en cada página protegida para verificar autenticación
 
+import { openAuthModal } from '../components/AuthModal.js';
 import api from './api.js';
 
 class AuthGuard {
@@ -11,12 +12,7 @@ class AuthGuard {
   checkAuth() {
     // Verificar si el usuario está autenticado
     if (!api.isAuthenticated()) {
-      // Guardar la URL actual para redirigir después del login
-      const currentPath = window.location.pathname + window.location.search;
-      sessionStorage.setItem('redirect_after_login', currentPath);
-
-      // Redirigir a login
-      window.location.href = '/login.html';
+      openAuthModal('login');
       return false;
     }
 
@@ -29,6 +25,9 @@ class AuthGuard {
 
   logout() {
     api.logout();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: null } }));
+    }
   }
 }
 

@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    company VARCHAR(255),
+    phone VARCHAR(50),
     password_hash VARCHAR(255),
     nif VARCHAR(20),
     avatar_url TEXT,
@@ -16,10 +20,30 @@ CREATE TABLE IF NOT EXISTS users (
     auth_provider_id VARCHAR(255),
     language VARCHAR(10) DEFAULT 'es',
     theme VARCHAR(20) DEFAULT 'light',
+    email_verified_at TIMESTAMP WITH TIME ZONE,
+    verification_token UUID,
+    verification_sent_at TIMESTAMP WITH TIME ZONE,
+    password_reset_token UUID,
+    password_reset_expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP WITH TIME ZONE
 );
+
+-- Ensure new user columns exist when updating existing databases
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS first_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS last_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS company VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS verification_token UUID,
+    ADD COLUMN IF NOT EXISTS verification_sent_at TIMESTAMP WITH TIME ZONE,
+    ADD COLUMN IF NOT EXISTS password_reset_token UUID,
+    ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMP WITH TIME ZONE;
+
+CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
+CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token);
 
 -- Clients Table
 CREATE TABLE IF NOT EXISTS clients (

@@ -1,8 +1,9 @@
 import renderSidebarToggleIcon from "./sidebarToggleIcon.js";
 
 export function renderHeader(user = {}) {
+  const isAuthenticated = Boolean(user?.id);
   const { name = "Invitado", avatar = "" } = user;
-  const displayName = name || "Invitado";
+  const displayName = isAuthenticated ? name || "Usuario" : "Invitado";
   const initials = displayName
     .split(/\s+/)
     .filter(Boolean)
@@ -45,8 +46,17 @@ export function renderHeader(user = {}) {
             <span class="user-chip__label">${displayName}</span>
           </button>
           <ul class="dropdown" role="menu">
-            <li role="none"><a role="menuitem" href="#/settings">Configuracion</a></li>
-            <li role="none"><button role="menuitem" id="logout-btn" type="button">Cerrar sesion</button></li>
+            ${
+              isAuthenticated
+                ? `
+              <li role="none"><a role="menuitem" href="#/settings">Configuracion</a></li>
+              <li role="none"><button role="menuitem" id="logout-btn" type="button">Cerrar sesion</button></li>
+            `
+                : `
+              <li role="none"><button role="menuitem" id="open-login-btn" type="button" data-auth-open="login">Iniciar sesion</button></li>
+              <li role="none"><button role="menuitem" id="open-register-btn" type="button" data-auth-open="register">Crear cuenta</button></li>
+            `
+            }
           </ul>
         </div>
       </nav>

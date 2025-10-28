@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   frontend:
@@ -23,13 +23,36 @@ services:
     volumes:
       - ./backend:/app
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: anclora_flow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   ai-services:
     build: ./ai-services
     command: uvicorn main:app --host 0.0.0.0 --port 8001
     ports:
-      - "5452:5432"
+      - "8001:8001"
     environment:
-      - PORT=5452  
+      - PORT=8001
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/anclora_flow
     working_dir: /app
     volumes:
       - ./ai-services:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

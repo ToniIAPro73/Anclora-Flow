@@ -176,6 +176,12 @@ async function loadExpenses() {
     return;
   }
 
+  if (!window.api.isAuthenticated()) {
+    renderErrorState('Inicia sesión para revisar tus gastos.');
+    isLoading = false;
+    return;
+  }
+
   isLoading = true;
   renderLoadingState();
   renderErrorState('');
@@ -209,7 +215,10 @@ async function loadExpenses() {
     updateFilterCount(response?.count ?? expensesData.length);
   } catch (error) {
     console.error('Error cargando gastos:', error);
-    const message = error?.message || 'Se produjo un error al cargar los gastos';
+    let message = error?.message || 'Se produjo un error al cargar los gastos';
+    if (error instanceof window.APIError && error.status === 0) {
+      message = 'No se pudo conectar con el backend (http://localhost:8020). Comprueba que el servicio esté activo.';
+    }
     renderErrorState(message);
     showNotification(message, 'error');
   } finally {
