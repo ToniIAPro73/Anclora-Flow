@@ -1,7 +1,3 @@
-# Dependencies
-node_modules/
-package-lock.json
-
 # Environment variables
 .env
 
@@ -35,3 +31,14 @@ temp/
 *.jpeg
 *.bmp
 *.svg
+
+# Backend deps locales
+backend/node_modules/
+backend/package-lock.json
+
+# Python virtual environments
+# Ignore any venv variant (e.g., .venv311, venv311)
+.venv*/
+venv*/
+.python-version
+.pytest_cache/
