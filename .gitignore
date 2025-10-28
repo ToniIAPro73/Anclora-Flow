@@ -36,6 +36,10 @@ temp/
 backend/node_modules/
 backend/package-lock.json
 
+# Frontend deps locales
+frontend/node_modules/
+frontend/package-lock.json
+
 # Python virtual environments
 # Ignore any venv variant (e.g., .venv311, venv311)
 .venv*/
