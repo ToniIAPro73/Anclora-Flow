@@ -2,6 +2,20 @@
 -- Incluye clientes nacionales, UE e internacionales con facturas correspondientes
 
 -- ========================================
+-- OBTENER ID DEL USUARIO DEMO
+-- ========================================
+DO $$
+DECLARE
+    demo_user_id UUID;
+BEGIN
+    -- Obtener el ID del usuario demo@anclora.test
+    SELECT id INTO demo_user_id FROM users WHERE email = 'demo@anclora.test' LIMIT 1;
+
+    IF demo_user_id IS NULL THEN
+        RAISE EXCEPTION 'Usuario demo no encontrado. Asegúrate de que el usuario demo@anclora.test existe.';
+    END IF;
+
+-- ========================================
 -- PASO 1: CREAR CLIENTES DE PRUEBA
 -- ========================================
 
@@ -9,7 +23,7 @@
 INSERT INTO clients (id, user_id, name, email, nif_cif, address, city, postal_code, country, country_code, client_type, tax_id_type)
 VALUES (
     'c1000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'Acme Technologies España SL',
     'info@acme.es',
     'B87654321',
@@ -26,7 +40,7 @@ VALUES (
 INSERT INTO clients (id, user_id, name, email, nif_cif, address, city, postal_code, country, country_code, client_type, tax_id_type, vat_validated)
 VALUES (
     'c1000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'TechCorp France SARL',
     'contact@techcorp.fr',
     'FR12345678901',
@@ -44,7 +58,7 @@ VALUES (
 INSERT INTO clients (id, user_id, name, email, nif_cif, address, city, postal_code, country, country_code, client_type, tax_id_type, vat_validated)
 VALUES (
     'c1000000-0000-0000-0000-000000000003',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'Innovation GmbH',
     'info@innovation.de',
     'DE987654321',
@@ -62,7 +76,7 @@ VALUES (
 INSERT INTO clients (id, user_id, name, email, nif_cif, address, city, postal_code, country, country_code, client_type, tax_id_type)
 VALUES (
     'c1000000-0000-0000-0000-000000000004',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'Silicon Valley Corp',
     'contact@svcorp.com',
     'US123456789',
@@ -79,7 +93,7 @@ VALUES (
 INSERT INTO clients (id, user_id, name, email, nif_cif, address, city, postal_code, country, country_code, client_type, tax_id_type)
 VALUES (
     'c1000000-0000-0000-0000-000000000005',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'British Tech Ltd',
     'hello@britishtech.co.uk',
     'GB123456789',
@@ -96,7 +110,7 @@ VALUES (
 INSERT INTO clients (id, user_id, name, email, nif_cif, address, city, postal_code, country, country_code, client_type, tax_id_type, vat_validated)
 VALUES (
     'c1000000-0000-0000-0000-000000000006',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'Milano Digital SRL',
     'info@milanodigital.it',
     'IT11223344556',
@@ -118,7 +132,7 @@ VALUES (
 INSERT INTO projects (id, user_id, client_id, name, description, status, budget, start_date)
 VALUES (
     'p1000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000001',
     'Desarrollo Web Acme',
     'Desarrollo de aplicación web corporativa',
@@ -131,7 +145,7 @@ VALUES (
 INSERT INTO projects (id, user_id, client_id, name, description, status, budget, start_date)
 VALUES (
     'p1000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000002',
     'Consulting TechCorp France',
     'Servicios de consultoría técnica',
@@ -153,7 +167,7 @@ INSERT INTO invoices (
 )
 VALUES (
     'i1000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000001',
     'p1000000-0000-0000-0000-000000000001',
     'FAC-2025-001',
@@ -188,7 +202,7 @@ INSERT INTO invoices (
 )
 VALUES (
     'i1000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000002',
     'p1000000-0000-0000-0000-000000000002',
     'FAC-2025-002',
@@ -227,7 +241,7 @@ INSERT INTO invoices (
 )
 VALUES (
     'i1000000-0000-0000-0000-000000000003',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000003',
     'FAC-2025-003',
     '2025-10-10',
@@ -265,7 +279,7 @@ INSERT INTO invoices (
 )
 VALUES (
     'i1000000-0000-0000-0000-000000000004',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000004',
     'FAC-2025-004',
     '2025-10-15',
@@ -302,7 +316,7 @@ INSERT INTO invoices (
 )
 VALUES (
     'i1000000-0000-0000-0000-000000000005',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000005',
     'FAC-2025-005',
     '2025-10-20',
@@ -339,7 +353,7 @@ INSERT INTO invoices (
 )
 VALUES (
     'i1000000-0000-0000-0000-000000000006',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000001',
     'FAC-2025-006',
     '2025-10-25',
@@ -374,7 +388,7 @@ INSERT INTO invoices (
 )
 VALUES (
     'i1000000-0000-0000-0000-000000000007',
-    '00000000-0000-0000-0000-000000000001',
+    demo_user_id,
     'c1000000-0000-0000-0000-000000000006',
     'FAC-2025-007',
     '2025-10-28',
@@ -400,6 +414,8 @@ VALUES
     ('i1000000-0000-0000-0000-000000000007', 'Backend API development', 80, 'hours', 120.00, 0.00, 9600.00),
     ('i1000000-0000-0000-0000-000000000007', 'Frontend React development', 60, 'hours', 90.00, 0.00, 5400.00)
 ON CONFLICT DO NOTHING;
+
+END $$;
 
 -- ========================================
 -- RESUMEN DE FACTURAS CREADAS
