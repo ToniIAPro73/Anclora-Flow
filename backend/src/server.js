@@ -3,6 +3,8 @@ const express = require("express");
 const cors = require("cors");
 const passport = require("passport");
 const { initializeDatabase, closePool } = require("./database/config");
+const { ensureDevUser } = require("./utils/devUser");
+require("./config/passport");
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || process.env.PORT || 8020;
@@ -65,6 +67,10 @@ const startServer = async () => {
 
     // Initialize database
     await initializeDatabase();
+
+    if (process.env.NODE_ENV !== 'production') {
+      await ensureDevUser();
+    }
 
     // Start server
     app.listen(PORT, () => {

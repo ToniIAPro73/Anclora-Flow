@@ -1,13 +1,20 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Resolve database connection settings with sensible defaults for Docker Compose
+const dbHost = process.env.DB_HOST || process.env.POSTGRES_HOST || 'postgres';
+const dbPort = Number(process.env.DB_PORT || process.env.POSTGRES_PORT || 5432);
+const dbUser = process.env.DB_USER || process.env.POSTGRES_USER || 'postgres';
+const dbPassword = process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || 'postgres';
+const dbName = process.env.DB_NAME || process.env.POSTGRES_DB || 'anclora_flow';
+
 // PostgreSQL connection pool configuration
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5452,
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_NAME || 'anclora_flow',
+  host: dbHost,
+  port: dbPort,
+  user: dbUser,
+  password: dbPassword,
+  database: dbName,
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
   connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
@@ -62,7 +69,12 @@ const initializeDatabase = async () => {
     const sqlPath = path.join(__dirname, 'init.sql');
     const sql = fs.readFileSync(sqlPath, 'utf8');
 
-    console.log('🔄 Inicializando base de datos...');
+    console.log('🔄 Inicializando base de datos con configuración:', {
+      host: dbHost,
+      port: dbPort,
+      database: dbName,
+      user: dbUser,
+    });
     await query(sql);
     console.log('✅ Base de datos inicializada correctamente');
   } catch (error) {

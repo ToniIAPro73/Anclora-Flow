@@ -123,7 +123,7 @@ Write-Host "   3. Ejecuta: cd frontend; .\start.ps1" -ForegroundColor White
 Write-Host ""
 Write-Host "🌐 URLs que estarán disponibles:" -ForegroundColor Yellow
 Write-Host "   • Backend:  http://localhost:8020/api/health" -ForegroundColor Cyan
-Write-Host "   • Frontend: http://localhost:5173" -ForegroundColor Cyan
+Write-Host "   • Frontend: http://localhost:3020" -ForegroundColor Cyan
 Write-Host ""
 
 Read-Host "Presiona ENTER para iniciar el backend"

@@ -1,7 +1,7 @@
 import "./styles/colors.css";
 import "./services/api.js";
+import { initAuthModal, openAuthModal } from "./components/AuthModal.js";
 import renderApp from "./pages/index.js";
-import renderLogin from "./pages/login.js";
 import renderDashboard from "./pages/dashboard.js";
 import renderInvoices from "./pages/invoices-with-api.js";
 import renderExpenses, { initExpenses } from "./pages/expenses.js";
@@ -26,12 +26,16 @@ const routes = {
   "/settings": renderSettings,
 };
 
-const demoUser = {
-  name: "Demo",
-  email: "demo@demo.com",
+const guestUser = {
+  name: "Invitado",
+  email: "",
   avatar: "",
-  authProvider: "local",
+  authProvider: "guest",
 };
+
+let currentUser = null;
+let authReady = false;
+const isProduction = import.meta.env.MODE === "production";
 
 const STORAGE_KEYS = {
   theme: "anclora-theme",
@@ -50,6 +54,97 @@ const SIDEBAR_STATE = {
 };
 const SIDEBAR_BREAKPOINT = 960;
 const sidebarMedia = window.matchMedia(`(max-width: ${SIDEBAR_BREAKPOINT}px)`);
+const AUTH_VIEWS = {
+  LOGIN: "login",
+  REGISTER: "register",
+  RECOVER: "recover",
+  RESET: "reset",
+};
+
+async function fetchCurrentUser() {
+  try {
+    const user = await window.api.getCurrentUser();
+    return user;
+  } catch (error) {
+    if (error instanceof window.APIError && (error.status === 401 || error.status === 403)) {
+      window.api.clearToken();
+    }
+    return null;
+  }
+}
+
+async function attemptDevLogin() {
+  if (isProduction) {
+    return null;
+  }
+
+  try {
+    const response = await window.api.devLogin();
+    return response.user || null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function handleAuthCallback(params) {
+  const error = params.get("error");
+  const token = params.get("token");
+
+  if (token) {
+    window.api.setToken(token);
+    const user = await fetchCurrentUser();
+    if (user) {
+      window.dispatchEvent(new CustomEvent("auth:changed", { detail: { user } }));
+    }
+  } else if (error) {
+    openAuthModal(AUTH_VIEWS.LOGIN);
+  }
+
+  window.history.replaceState({}, "", "#/dashboard");
+}
+
+async function handleEmailVerification(params) {
+  const token = params.get("token");
+  if (!token) {
+    openAuthModal(AUTH_VIEWS.LOGIN);
+    return;
+  }
+
+  try {
+    const response = await window.api.verifyEmail(token);
+    window.dispatchEvent(new CustomEvent("auth:changed", { detail: { user: response.user } }));
+  } catch (_error) {
+    openAuthModal(AUTH_VIEWS.LOGIN);
+  } finally {
+    window.history.replaceState({}, "", "#/dashboard");
+  }
+}
+
+function showResetPasswordModal(params) {
+  const token = params.get("token");
+  if (!token) {
+    openAuthModal(AUTH_VIEWS.LOGIN);
+    return;
+  }
+
+  openAuthModal(AUTH_VIEWS.RESET, { resetToken: token });
+}
+
+async function handleLogout() {
+  window.api.logout();
+  let user = null;
+
+  if (!isProduction) {
+    user = await attemptDevLogin();
+  }
+
+  if (user) {
+    window.dispatchEvent(new CustomEvent("auth:changed", { detail: { user } }));
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent("auth:changed", { detail: { user: null } }));
+}
 
 function getInitialSidebarPreference() {
   const stored = localStorage.getItem(STORAGE_KEYS.sidebar);
@@ -196,6 +291,27 @@ function initUserMenu() {
       if (event.key === "Escape") {
         closeMenu();
         trigger.blur();
+      }
+    });
+
+    menu.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      const view = target.dataset.authOpen;
+      if (view) {
+        event.preventDefault();
+        closeMenu();
+        openAuthModal(view);
+        return;
+      }
+
+      if (target.id === "logout-btn") {
+        event.preventDefault();
+        closeMenu();
+        handleLogout();
       }
     });
 
@@ -644,11 +760,14 @@ if (sidebarMedia.addEventListener) {
   sidebarMedia.addListener(handleSidebarBreakpointChange);
 }
 
-function ensureShell() {
+function ensureShell(options = {}) {
+  const { force = false } = options;
   const hasPageContent = Boolean(document.getElementById("page-content"));
-  if (!hasPageContent) {
-    document.body.innerHTML = renderApp(demoUser);
+  if (!hasPageContent || force) {
+    document.body.innerHTML = renderApp(currentUser || guestUser);
     shellHydrated = false;
+    userMenuInitialized = false;
+    sidebarGlobalHandlersBound = false;
   }
 
   if (!shellHydrated) {
@@ -658,23 +777,59 @@ function ensureShell() {
     applySidebarState(initialCollapsed, { persist: false });
     shellHydrated = true;
   }
+
+  initAuthModal();
 }
 
-function navigate() {
+async function bootstrap() {
+  currentUser = window.api.getUserData() || null;
+
+  if (window.api.isAuthenticated()) {
+    currentUser = await fetchCurrentUser();
+  }
+
+  if (!currentUser && !isProduction) {
+    currentUser = await attemptDevLogin();
+  }
+
+  authReady = true;
+
+  ensureShell({ force: true });
+  initShellInteractions();
+  await navigate();
+
+  const { path } = parseRoute((window.location.hash || "").replace(/^#/, ""));
+  const modalHandledRoutes = ["/auth/reset", "/auth/callback", "/auth/verify"];
+  if (!currentUser && !modalHandledRoutes.includes(path)) {
+    openAuthModal(AUTH_VIEWS.LOGIN);
+  }
+}
+
+async function navigate() {
+  if (!authReady) {
+    return;
+  }
+
   const rawHash = window.location.hash || "";
   const hash = rawHash.startsWith("#") ? rawHash.slice(1) : rawHash;
   const { path, params } = parseRoute(hash || "/dashboard");
+  const handledAuthRoute = ["/auth/callback", "/auth/verify", "/auth/reset"].includes(path);
+
+  if (handledAuthRoute) {
+    if (path === "/auth/callback") {
+      await handleAuthCallback(params);
+    } else if (path === "/auth/verify") {
+      await handleEmailVerification(params);
+    } else if (path === "/auth/reset") {
+      showResetPasswordModal(params);
+    }
+    return;
+  }
+
   const targetRoute = routes[path] ? path : "/dashboard";
 
   if (isInvoiceModalOpen) {
     closeInvoiceModal();
-  }
-
-  if (targetRoute === "/login") {
-    document.body.classList.remove("is-lock-scroll");
-    shellHydrated = false;
-    document.body.innerHTML = renderLogin();
-    return;
   }
 
   ensureShell();
@@ -683,7 +838,7 @@ function navigate() {
   const pageRenderer = routes[targetRoute] || renderDashboard;
   const container = document.getElementById("page-content");
   if (container) {
-    container.innerHTML = pageRenderer(demoUser);
+    container.innerHTML = pageRenderer(currentUser || guestUser);
   }
 
   initPage(targetRoute, params);
@@ -693,5 +848,31 @@ function navigate() {
   }
 }
 
-window.addEventListener("hashchange", navigate);
-document.addEventListener("DOMContentLoaded", navigate);
+window.addEventListener("auth:changed", async (event) => {
+  const detailUser = event.detail?.user || null;
+  let user = detailUser;
+
+  if (!user && window.api.isAuthenticated()) {
+    user = await fetchCurrentUser();
+  }
+
+  currentUser = user;
+  authReady = true;
+
+  ensureShell({ force: true });
+  initShellInteractions();
+  await navigate();
+
+  const { path } = parseRoute((window.location.hash || "").replace(/^#/, ""));
+  if (!currentUser && path !== "/auth/reset") {
+    openAuthModal(AUTH_VIEWS.LOGIN);
+  }
+});
+
+window.addEventListener("hashchange", () => {
+  navigate();
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  bootstrap();
+});
