@@ -472,6 +472,46 @@ class APIService {
   async getSubscriptionStatusBreakdown() {
     return this.get('/subscriptions/status-breakdown');
   }
+
+  // === PRESUPUESTOS ===
+
+  async getBudgets(params = {}) {
+    const query = new URLSearchParams(
+      Object.entries(params).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {})
+    ).toString();
+
+    const endpoint = query ? `/budgets?${query}` : '/budgets';
+    return this.get(endpoint);
+  }
+
+  async getBudgetSummary(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = query ? `/budgets/summary?${query}` : '/budgets/summary';
+    return this.get(endpoint);
+  }
+
+  async getBudgetSuggestions(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = query ? `/budgets/suggestions?${query}` : '/budgets/suggestions';
+    return this.get(endpoint);
+  }
+
+  async createBudget(payload) {
+    return this.post('/budgets', payload);
+  }
+
+  async updateBudget(id, payload) {
+    return this.put(`/budgets/${id}`, payload);
+  }
+
+  async deleteBudget(id) {
+    return this.delete(`/budgets/${id}`);
+  }
 }
 
 // Crear instancia global del servicio API
