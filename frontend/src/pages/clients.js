@@ -74,31 +74,37 @@ function debounce(callback, delay = 320) {
 
 function setLoading(isLoading) {
   clientsState.loading = isLoading;
-  const spinner = document.querySelector('[data-clients-loading]');
-  if (spinner) spinner.hidden = !isLoading;
+  ['[data-clients-loading]', '[data-projects-loading]'].forEach((selector) => {
+    const spinner = document.querySelector(selector);
+    if (spinner) {
+      spinner.hidden = !isLoading;
+    }
+  });
 }
 
 function setError(message) {
   clientsState.error = message;
-  const errorBox = document.querySelector('[data-clients-error]');
-  if (!errorBox) return;
-  if (!message) {
-    errorBox.hidden = true;
-    errorBox.innerHTML = '';
-    return;
-  }
+  ['[data-clients-error]', '[data-projects-error]'].forEach((selector) => {
+    const errorBox = document.querySelector(selector);
+    if (!errorBox) return;
+    if (!message) {
+      errorBox.hidden = true;
+      errorBox.innerHTML = '';
+      return;
+    }
 
-  errorBox.hidden = false;
-  errorBox.innerHTML = `
-    <div class="module-error__content">
-      <span class="module-error__icon">⚠️</span>
-      <div>
-        <p class="module-error__title">No se pudieron cargar los datos</p>
-        <p class="module-error__message">${escapeHtml(message)}</p>
+    errorBox.hidden = false;
+    errorBox.innerHTML = `
+      <div class="module-error__content">
+        <span class="module-error__icon">⚠️</span>
+        <div>
+          <p class="module-error__title">No se pudieron cargar los datos</p>
+          <p class="module-error__message">${escapeHtml(message)}</p>
+        </div>
+        <button type="button" class="btn btn-secondary" data-action="retry-clients">Reintentar</button>
       </div>
-      <button type="button" class="btn btn-secondary" data-action="retry-clients">Reintentar</button>
-    </div>
-  `;
+    `;
+  });
 }
 
 function showToast(message, type = 'info') {
@@ -510,6 +516,15 @@ function renderClientsTable() {
   const tbody = document.querySelector('[data-clients-table]');
   if (!tbody) return;
 
+  const total = clientsState.clients.length;
+  const countEl = document.querySelector('[data-clients-count]');
+  if (countEl) {
+    countEl.textContent =
+      total === 0
+        ? 'Sin clientes disponibles'
+        : `Mostrando ${total} ${total === 1 ? 'cliente' : 'clientes'}`;
+  }
+
   if (!clientsState.clients.length) {
     tbody.innerHTML = `
       <tr>
@@ -569,6 +584,15 @@ function renderClientsTable() {
 function renderProjectsTable() {
   const tbody = document.querySelector('[data-projects-table]');
   if (!tbody) return;
+
+  const total = clientsState.projects.length;
+  const countEl = document.querySelector('[data-projects-count]');
+  if (countEl) {
+    countEl.textContent =
+      total === 0
+        ? 'Sin proyectos disponibles'
+        : `Mostrando ${total} ${total === 1 ? 'proyecto' : 'proyectos'}`;
+  }
 
   if (!clientsState.projects.length) {
     tbody.innerHTML = `
@@ -1036,7 +1060,7 @@ async function handleProjectDelete(id) {
 
 
 export function initClients() {
-  const module = document.querySelector('.clients-page');
+  const module = document.querySelector('.clients');
   if (!module) return;
 
   module.addEventListener('click', handleClick);
@@ -1051,110 +1075,89 @@ export function initClients() {
 
 export default function renderClients() {
   return `
-    <section class="clients-page" aria-labelledby="clients-title">
-      <header class="clients-page__hero">
-        <div class="clients-page__hero-copy">
+    <section class="clients" aria-labelledby="clients-title">
+      <header class="invoices__hero clients__hero">
+        <div class="invoices__hero-copy">
           <h1 id="clients-title">Clientes &amp; Proyectos</h1>
-          <p>Visión 360º de tu cartera y estado de ejecución.</p>
+          <p>Gestiona tu cartera y proyectos con los mismos patrones que Facturas.</p>
         </div>
-        <div class="clients-page__hero-actions">
+        <div class="invoices__hero-actions">
           <button type="button" class="btn-primary" data-open-client>Nuevo cliente</button>
-          <button type="button" class="btn-secondary" data-open-project>Nuevo proyecto</button>
+          <button type="button" class="btn-ghost" data-open-project>Nuevo proyecto</button>
         </div>
       </header>
 
-      <section class="clients-page__metrics" aria-label="Resumen general">
-        <article class="clients-metric">
-          <span class="clients-metric__label">Clientes totales</span>
-          <span class="clients-metric__value" id="clients-summary-total">0</span>
-          <span class="clients-metric__hint">Registrados</span>
-        </article>
-        <article class="clients-metric">
-          <span class="clients-metric__label">Clientes activos</span>
-          <span class="clients-metric__value" id="clients-summary-active">0</span>
-          <span class="clients-metric__hint">Con actividad</span>
-        </article>
-        <article class="clients-metric">
-          <span class="clients-metric__label">Pendiente de cobro</span>
-          <span class="clients-metric__value" id="clients-summary-pending">€0</span>
-          <span class="clients-metric__hint">Facturas abiertas</span>
-        </article>
-        <article class="clients-metric">
-          <span class="clients-metric__label">Facturación total</span>
-          <span class="clients-metric__value" id="clients-summary-revenue">€0</span>
-          <span class="clients-metric__hint">Acumulado</span>
-        </article>
-        <article class="clients-metric">
-          <span class="clients-metric__label">Proyectos totales</span>
-          <span class="clients-metric__value" id="projects-summary-total">0</span>
-          <span class="clients-metric__hint">Activos + cerrados</span>
-        </article>
-        <article class="clients-metric">
-          <span class="clients-metric__label">Proyectos activos</span>
-          <span class="clients-metric__value" id="projects-summary-active">0</span>
-          <span class="clients-metric__hint">En curso</span>
-        </article>
-        <article class="clients-metric">
-          <span class="clients-metric__label">Presupuesto asignado</span>
-          <span class="clients-metric__value" id="projects-summary-budget">€0</span>
-          <span class="clients-metric__hint">Importe planificado</span>
-        </article>
-        <article class="clients-metric">
-          <span class="clients-metric__label">Facturación proyectos</span>
-          <span class="clients-metric__value" id="projects-summary-revenue">€0</span>
-          <span class="clients-metric__hint">Ingresos vinculados</span>
-        </article>
-      </section>
-
-      <div class="clients-page__tabs" role="tablist">
-        <button type="button" class="clients-tab is-active" data-clients-tab="clients" aria-pressed="true">
+      <div class="clients-tabs" role="tablist">
+        <button
+          type="button"
+          class="btn-ghost clients-tab is-active"
+          data-clients-tab="clients"
+          aria-pressed="true"
+        >
           Clientes
         </button>
-        <button type="button" class="clients-tab" data-clients-tab="projects" aria-pressed="false">
+        <button
+          type="button"
+          class="btn-ghost clients-tab"
+          data-clients-tab="projects"
+          aria-pressed="false"
+        >
           Proyectos
         </button>
       </div>
 
-      <div class="clients-page__filters" data-clients-panel="clients">
-        <label class="visually-hidden" for="clients-search">Buscar clientes</label>
-        <div class="clients-filter">
-          <span class="clients-filter__icon">🔍</span>
+      <section
+        class="invoices__filters clients__filters"
+        data-clients-panel="clients"
+        aria-label="Filtros de clientes"
+      >
+        <div class="invoices__filters-group">
+          <label class="visually-hidden" for="clients-search">Buscar clientes</label>
           <input
             type="search"
             id="clients-search"
+            class="invoices__search"
             placeholder="Buscar clientes..."
             autocomplete="off"
             data-clients-search
           />
         </div>
-        <div class="clients-filter">
-          <label class="visually-hidden" for="clients-status">Estado de cliente</label>
-          <select id="clients-status" data-clients-status>
+        <div class="invoices__filters-group">
+          <label class="visually-hidden" for="clients-status">Filtrar por estado</label>
+          <select id="clients-status" class="invoices__select" data-clients-status>
             <option value="all">Todos</option>
             <option value="active">Activos</option>
             <option value="inactive">Inactivos</option>
           </select>
         </div>
-        <button type="button" class="btn-ghost" data-action="refresh-clients">
-          Recargar
-        </button>
-      </div>
+        <div class="invoices__filters-group">
+          <button type="button" class="btn-ghost" data-action="refresh-clients">
+            <span>🔄</span>
+            Recargar
+          </button>
+        </div>
+      </section>
 
-      <div class="clients-page__filters" data-clients-panel="projects" hidden>
-        <label class="visually-hidden" for="projects-search">Buscar proyectos</label>
-        <div class="clients-filter">
-          <span class="clients-filter__icon">🔍</span>
+      <section
+        class="invoices__filters clients__filters"
+        data-clients-panel="projects"
+        aria-label="Filtros de proyectos"
+        hidden
+      >
+        <div class="invoices__filters-group">
+          <label class="visually-hidden" for="projects-search">Buscar proyectos</label>
           <input
             type="search"
             id="projects-search"
+            class="invoices__search"
             placeholder="Buscar proyectos..."
             autocomplete="off"
             data-projects-search
           />
         </div>
-        <div class="clients-filter">
-          <label class="visually-hidden" for="projects-status">Estado de proyecto</label>
-          <select id="projects-status" data-projects-status>
+        <div class="invoices__filters-group">
+          <label class="visually-hidden" for="projects-status">Estado del proyecto</label>
+          <select id="projects-status" class="invoices__select" data-projects-status>
             <option value="all">Todos</option>
             <option value="active">Activos</option>
             <option value="on-hold">En pausa</option>
@@ -1162,14 +1165,21 @@ export default function renderClients() {
             <option value="cancelled">Cancelados</option>
           </select>
         </div>
-        <button type="button" class="btn-ghost" data-action="refresh-projects">
-          Recargar
-        </button>
-      </div>
+        <div class="invoices__filters-group">
+          <button type="button" class="btn-ghost" data-action="refresh-projects">
+            <span>🔄</span>
+            Recargar
+          </button>
+        </div>
+      </section>
 
-      <section class="clients-page__table" data-clients-panel="clients">
-        <div class="clients-table__surface">
-          <table class="data-table data-table--compact">
+      <section
+        class="invoices-table clients-table"
+        data-clients-panel="clients"
+        aria-label="Listado de clientes"
+      >
+        <div class="invoices-table__surface">
+          <table>
             <thead>
               <tr>
                 <th scope="col">Cliente</th>
@@ -1183,18 +1193,24 @@ export default function renderClients() {
             <tbody data-clients-table></tbody>
           </table>
         </div>
-        <div class="clients-table__footer">
+        <footer class="invoices-table__footer">
           <div class="module-loading" data-clients-loading hidden>
             <span class="spinner"></span>
-            <p>Cargando información...</p>
+            <p>Cargando clientes...</p>
           </div>
           <div class="module-error" data-clients-error hidden></div>
-        </div>
+          <p data-clients-count>Sin clientes cargados</p>
+        </footer>
       </section>
 
-      <section class="clients-page__table" data-clients-panel="projects" hidden>
-        <div class="clients-table__surface">
-          <table class="data-table data-table--compact">
+      <section
+        class="invoices-table clients-table"
+        data-clients-panel="projects"
+        aria-label="Listado de proyectos"
+        hidden
+      >
+        <div class="invoices-table__surface">
+          <table>
             <thead>
               <tr>
                 <th scope="col">Proyecto</th>
@@ -1208,27 +1224,14 @@ export default function renderClients() {
             <tbody data-projects-table></tbody>
           </table>
         </div>
-      </section>
-
-      <section class="clients-page__insights" aria-label="Actividad reciente">
-        <article class="clients-insight">
-          <header class="clients-insight__header">
-            <h3>Clientes recientes</h3>
-          </header>
-          <ul class="clients-insight__list" data-recent-clients></ul>
-        </article>
-        <article class="clients-insight">
-          <header class="clients-insight__header">
-            <h3>Hitos de proyectos</h3>
-          </header>
-          <ul class="clients-insight__list" data-upcoming-projects></ul>
-        </article>
-        <article class="clients-insight">
-          <header class="clients-insight__header">
-            <h3>Estado por proyectos</h3>
-          </header>
-          <ul class="clients-insight__list" data-status-metrics></ul>
-        </article>
+        <footer class="invoices-table__footer">
+          <div class="module-loading" data-projects-loading hidden>
+            <span class="spinner"></span>
+            <p>Cargando proyectos...</p>
+          </div>
+          <div class="module-error" data-projects-error hidden></div>
+          <p data-projects-count>Sin proyectos cargados</p>
+        </footer>
       </section>
 
       <div class="modal" id="client-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="client-modal-title">
@@ -1243,9 +1246,9 @@ export default function renderClients() {
               <span aria-hidden="true">×</span>
             </button>
           </header>
-          <form class="modal-form" data-form-type="client" novalidate>
+          <form class="invoice-form" data-form-type="client" novalidate>
             <div class="modal__body">
-              <div class="form-grid">
+              <div class="invoice-form__grid">
                 <label class="form-field">
                   <span>Nombre *</span>
                   <input type="text" name="name" required placeholder="Razón social o nombre comercial" />
@@ -1276,7 +1279,7 @@ export default function renderClients() {
                 <span>Cliente activo</span>
               </label>
             </div>
-            <footer class="modal__footer">
+            <footer class="invoice-form__footer modal__footer">
               <button type="button" class="btn-secondary" data-modal-close="client">Cancelar</button>
               <button type="submit" class="btn-primary" data-client-submit>Crear cliente</button>
             </footer>
@@ -1296,9 +1299,9 @@ export default function renderClients() {
               <span aria-hidden="true">×</span>
             </button>
           </header>
-          <form class="modal-form" data-form-type="project" novalidate>
+          <form class="invoice-form" data-form-type="project" novalidate>
             <div class="modal__body">
-              <div class="form-grid">
+              <div class="invoice-form__grid">
                 <label class="form-field">
                   <span>Nombre *</span>
                   <input type="text" name="name" required placeholder="Nombre interno del proyecto" />
@@ -1336,7 +1339,7 @@ export default function renderClients() {
                 </label>
               </div>
             </div>
-            <footer class="modal__footer">
+            <footer class="invoice-form__footer modal__footer">
               <button type="button" class="btn-secondary" data-modal-close="project">Cancelar</button>
               <button type="submit" class="btn-primary" data-project-submit>Crear proyecto</button>
             </footer>
