@@ -77,6 +77,14 @@ class VerifactuService {
           softwareNIF: config.software_nif || 'B12345678',
           softwareName: config.software_name || 'Anclora Flow',
           softwareVersion: config.software_version || '1.0.0',
+          // Campos para operaciones internacionales
+          operationType: invoice.operation_type || 'national',
+          operationCode: invoice.verifactu_operation_code || '01',
+          vatExemptionReason: invoice.vat_exemption_reason || null,
+          reverseCharge: invoice.reverse_charge || false,
+          clientVatNumber: invoice.client_vat_number || null,
+          destinationCountry: invoice.destination_country_code || 'ES',
+          goodsOrServices: invoice.goods_or_services || 'services',
         };
 
         // 10. Enviar a la AEAT (simulado en modo test)

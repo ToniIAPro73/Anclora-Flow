@@ -19,14 +19,14 @@ const validate = (req, res, next) => {
 // GET /api/clients - Get all clients with filters
 router.get('/',
   [
-    query('isActive').optional().isBoolean(),
+    query('isActive').optional().isBoolean().toBoolean(),
     query('search').optional().isString()
   ],
   validate,
   async (req, res) => {
     try {
       const filters = {
-        isActive: req.query.isActive === 'true',
+        isActive: typeof req.query.isActive === 'boolean' ? req.query.isActive : undefined,
         search: req.query.search
       };
 
@@ -53,6 +53,81 @@ router.get('/top',
     } catch (error) {
       console.error('Error fetching top clients:', error);
       res.status(500).json({ error: 'Error al obtener los principales clientes' });
+    }
+  }
+);
+
+// GET /api/clients/summary - Overall clients summary
+router.get('/summary',
+  async (req, res) => {
+    try {
+      const summary = await Client.getSummary(req.user.id);
+      res.json(summary);
+    } catch (error) {
+      console.error('Error fetching clients summary:', error);
+      res.status(500).json({ error: 'Error al obtener el resumen de clientes' });
+    }
+  }
+);
+
+// GET /api/clients/recent - Recent clients
+router.get('/recent',
+  [
+    query('limit').optional().isInt({ min: 1, max: 24 })
+  ],
+  validate,
+  async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit, 10) : 6;
+      const clients = await Client.getRecent(req.user.id, limit);
+      res.json(clients);
+    } catch (error) {
+      console.error('Error fetching recent clients:', error);
+      res.status(500).json({ error: 'Error al obtener clientes recientes' });
+    }
+  }
+);
+
+// GET /api/clients/analytics/revenue-trend - Monthly revenue trend
+router.get('/analytics/revenue-trend',
+  [
+    query('months').optional().isInt({ min: 1, max: 24 })
+  ],
+  validate,
+  async (req, res) => {
+    try {
+      const months = req.query.months ? parseInt(req.query.months, 10) : 6;
+      const trend = await Client.getRevenueTrend(req.user.id, months);
+      res.json(trend);
+    } catch (error) {
+      console.error('Error fetching clients revenue trend:', error);
+      res.status(500).json({ error: 'Error al obtener la tendencia de ingresos' });
+    }
+  }
+);
+
+// GET /api/clients/:id/projects - Projects for a client
+router.get('/:id/projects',
+  async (req, res) => {
+    try {
+      const projects = await Client.getProjects(req.user.id, req.params.id);
+      res.json(projects);
+    } catch (error) {
+      console.error('Error fetching client projects:', error);
+      res.status(500).json({ error: 'Error al obtener los proyectos del cliente' });
+    }
+  }
+);
+
+// GET /api/clients/:id/subscriptions - Subscriptions for a client
+router.get('/:id/subscriptions',
+  async (req, res) => {
+    try {
+      const subscriptions = await Client.getSubscriptions(req.user.id, req.params.id);
+      res.json(subscriptions);
+    } catch (error) {
+      console.error('Error fetching client subscriptions:', error);
+      res.status(500).json({ error: 'Error al obtener las suscripciones del cliente' });
     }
   }
 );

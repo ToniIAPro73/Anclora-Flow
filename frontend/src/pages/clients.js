@@ -1,1057 +1,1309 @@
-// Datos de demostración - Clientes
-const demoClients = [
-  {
-    id: '1',
-    name: 'Tech Solutions SL',
-    email: 'contacto@techsolutions.es',
-    phone: '+34 91 123 4567',
-    nifCif: 'B12345678',
-    address: 'Calle Mayor 123',
-    city: 'Madrid',
-    postalCode: '28001',
-    country: 'España',
-    notes: 'Cliente principal, pago puntual',
-    isActive: true,
-    created_at: '2024-01-15'
+const sidebarViews = {
+  CLIENT_DETAIL: 'client-detail',
+  CLIENT_FORM: 'client-form',
+  CLIENT_EMPTY: 'client-empty',
+  PROJECT_DETAIL: 'project-detail',
+  PROJECT_FORM: 'project-form',
+  PROJECT_EMPTY: 'project-empty',
+};
+
+const clientsState = {
+  activeTab: 'clients',
+  clients: [],
+  projects: [],
+  clientSummary: {
+    total_clients: 0,
+    active_clients: 0,
+    total_pending: 0,
+    total_billed: 0,
   },
-  {
-    id: '2',
-    name: 'Innovate Digital',
-    email: 'admin@innovatedigital.com',
-    phone: '+34 93 987 6543',
-    nifCif: 'B87654321',
-    address: 'Av. Diagonal 456',
-    city: 'Barcelona',
-    postalCode: '08008',
-    country: 'España',
-    notes: '',
-    isActive: true,
-    created_at: '2024-02-20'
+  projectSummary: {
+    total_projects: 0,
+    active_projects: 0,
+    total_budget: 0,
+    total_invoiced: 0,
   },
-  {
-    id: '3',
-    name: 'Creative Agency',
-    email: 'hello@creativeagency.es',
-    phone: '+34 96 555 1234',
-    nifCif: 'B11223344',
-    address: 'Calle Colón 789',
-    city: 'Valencia',
-    postalCode: '46004',
-    country: 'España',
-    notes: 'Requiere facturación mensual',
-    isActive: true,
-    created_at: '2024-03-10'
+  recentClients: [],
+  upcomingDeadlines: [],
+  statusMetrics: [],
+  clientFilters: {
+    search: '',
+    status: 'all',
   },
-  {
-    id: '4',
-    name: 'StartUp Hub',
-    email: 'info@startuphub.com',
-    phone: '+34 95 444 7890',
-    nifCif: 'B99887766',
-    address: 'Parque Tecnológico',
-    city: 'Sevilla',
-    postalCode: '41092',
-    country: 'España',
-    notes: 'Cliente nuevo, en periodo de prueba',
-    isActive: true,
-    created_at: '2024-11-01'
+  projectFilters: {
+    search: '',
+    status: 'all',
   },
-  {
-    id: '5',
-    name: 'Old Client Corp',
-    email: 'old@client.com',
-    phone: '+34 91 999 8888',
-    nifCif: 'B55443322',
-    address: 'Calle Antigua 1',
-    city: 'Madrid',
-    postalCode: '28002',
-    country: 'España',
-    notes: 'Cliente inactivo desde 2023',
-    isActive: false,
-    created_at: '2023-05-10'
+  selectedClientId: null,
+  selectedProjectId: null,
+  sidebarView: sidebarViews.CLIENT_DETAIL,
+  clientFormEditingId: null,
+  projectFormEditingId: null,
+  projectPrefillClientId: null,
+  loading: false,
+  error: null,
+};
+
+const money = new Intl.NumberFormat('es-ES', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 2,
+});
+
+function formatCurrency(value) {
+  const parsed = Number.parseFloat(value);
+  if (Number.isNaN(parsed)) return money.format(0);
+  return money.format(parsed);
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function escapeHtml(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+let debounceTimer = null;
+function debounce(callback, delay = 320) {
+  window.clearTimeout(debounceTimer);
+  debounceTimer = window.setTimeout(callback, delay);
+}
+
+function setLoading(isLoading) {
+  clientsState.loading = isLoading;
+  const spinner = document.querySelector('[data-clients-loading]');
+  if (spinner) spinner.hidden = !isLoading;
+}
+
+function setError(message) {
+  clientsState.error = message;
+  const errorBox = document.querySelector('[data-clients-error]');
+  if (!errorBox) return;
+  if (!message) {
+    errorBox.hidden = true;
+    errorBox.innerHTML = '';
+    return;
   }
-];
 
-// Datos de demostración - Proyectos
-const demoProjects = [
-  {
-    id: '1',
-    clientId: '1',
-    clientName: 'Tech Solutions SL',
-    name: 'Desarrollo Web Corporativa',
-    description: 'Rediseño completo de la web corporativa con WordPress',
-    status: 'active',
-    budget: 15000,
-    startDate: '2024-11-01',
-    endDate: '2025-02-28',
-    color: '#3B82F6'
-  },
-  {
-    id: '2',
-    clientId: '1',
-    clientName: 'Tech Solutions SL',
-    name: 'App Móvil iOS',
-    description: 'Desarrollo de aplicación móvil nativa para iOS',
-    status: 'active',
-    budget: 25000,
-    startDate: '2024-10-15',
-    endDate: '2025-03-31',
-    color: '#10B981'
-  },
-  {
-    id: '3',
-    clientId: '2',
-    clientName: 'Innovate Digital',
-    name: 'Campaña Marketing Digital',
-    description: 'Estrategia y ejecución de campaña en redes sociales',
-    status: 'completed',
-    budget: 8000,
-    startDate: '2024-09-01',
-    endDate: '2024-11-30',
-    color: '#8B5CF6'
-  },
-  {
-    id: '4',
-    clientId: '3',
-    clientName: 'Creative Agency',
-    name: 'Identidad Corporativa',
-    description: 'Diseño de logo, branding y manual de identidad',
-    status: 'active',
-    budget: 5000,
-    startDate: '2024-12-01',
-    endDate: '2025-01-31',
-    color: '#F59E0B'
-  }
-];
-
-export function renderClients() {
-  return `
-    <section class="module clients">
-      <!-- Tabs para alternar entre Clientes y Proyectos -->
-      <div class="module-tabs">
-        <button
-          id="tab-clients"
-          class="tab-button active"
-          data-tab="clients"
-          type="button"
-        >
-          Clientes
-        </button>
-        <button
-          id="tab-projects"
-          class="tab-button"
-          data-tab="projects"
-          type="button"
-        >
-          Proyectos
-        </button>
+  errorBox.hidden = false;
+  errorBox.innerHTML = `
+    <div class="module-error__content">
+      <span class="module-error__icon">⚠️</span>
+      <div>
+        <p class="module-error__title">No se pudieron cargar los datos</p>
+        <p class="module-error__message">${escapeHtml(message)}</p>
       </div>
-
-      <!-- Panel de Clientes -->
-      <div id="clients-panel" class="tab-panel active">
-        <div class="module-header">
-          <div class="module-title-section">
-            <h2>Clientes</h2>
-            <p class="module-subtitle">Gestiona tu cartera de clientes</p>
-          </div>
-          <button id="new-client-btn" class="btn btn-primary" type="button">
-            <span class="icon">+</span> Nuevo Cliente
-          </button>
-        </div>
-
-        <!-- Tarjetas de resumen -->
-        <div class="summary-cards">
-          <div class="card stat-card">
-            <div class="card-icon" style="background: var(--color-primary-light);">👥</div>
-            <div class="card-content">
-              <span class="card-label">Total Clientes</span>
-              <span class="card-value" id="total-clients">0</span>
-              <span class="card-trend positive">Activos</span>
-            </div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="card-icon" style="background: var(--color-success-light);">✓</div>
-            <div class="card-content">
-              <span class="card-label">Clientes Activos</span>
-              <span class="card-value" id="active-clients">0</span>
-              <span class="card-trend">En este mes</span>
-            </div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="card-icon" style="background: var(--color-info-light);">📊</div>
-            <div class="card-content">
-              <span class="card-label">Nuevos este mes</span>
-              <span class="card-value" id="new-clients">0</span>
-              <span class="card-trend">Crecimiento</span>
-            </div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="card-icon" style="background: var(--color-warning-light);">💰</div>
-            <div class="card-content">
-              <span class="card-label">Facturación Media</span>
-              <span class="card-value" id="avg-revenue">€0</span>
-              <span class="card-trend">Por cliente</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filtros -->
-        <div class="filters-section">
-          <div class="filters-row">
-            <div class="filter-group">
-              <label for="client-search">Buscar</label>
-              <input
-                type="text"
-                id="client-search"
-                class="filter-input"
-                placeholder="Nombre, email, NIF/CIF..."
-              />
-            </div>
-
-            <div class="filter-group">
-              <label for="client-status-filter">Estado</label>
-              <select id="client-status-filter" class="filter-select">
-                <option value="">Todos</option>
-                <option value="true" selected>Activos</option>
-                <option value="false">Inactivos</option>
-              </select>
-            </div>
-
-            <button id="reset-client-filters" class="btn btn-secondary" type="button">
-              Limpiar filtros
-            </button>
-          </div>
-          <div class="filter-results">
-            <span id="client-filter-result-count">0 clientes encontrados</span>
-          </div>
-        </div>
-
-        <!-- Grid de clientes -->
-        <div id="clients-grid" class="clients-grid">
-          <!-- Los clientes se cargarán aquí -->
-        </div>
-      </div>
-
-      <!-- Panel de Proyectos -->
-      <div id="projects-panel" class="tab-panel" style="display: none;">
-        <div class="module-header">
-          <div class="module-title-section">
-            <h2>Proyectos</h2>
-            <p class="module-subtitle">Gestiona tus proyectos activos</p>
-          </div>
-          <button id="new-project-btn" class="btn btn-primary" type="button">
-            <span class="icon">+</span> Nuevo Proyecto
-          </button>
-        </div>
-
-        <!-- Tarjetas de resumen de proyectos -->
-        <div class="summary-cards">
-          <div class="card stat-card">
-            <div class="card-icon" style="background: var(--color-primary-light);">📁</div>
-            <div class="card-content">
-              <span class="card-label">Total Proyectos</span>
-              <span class="card-value" id="total-projects">0</span>
-              <span class="card-trend">En total</span>
-            </div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="card-icon" style="background: var(--color-success-light);">⚡</div>
-            <div class="card-content">
-              <span class="card-label">Proyectos Activos</span>
-              <span class="card-value" id="active-projects">0</span>
-              <span class="card-trend">En progreso</span>
-            </div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="card-icon" style="background: var(--color-info-light);">✅</div>
-            <div class="card-content">
-              <span class="card-label">Completados</span>
-              <span class="card-value" id="completed-projects">0</span>
-              <span class="card-trend">Este año</span>
-            </div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="card-icon" style="background: var(--color-warning-light);">💰</div>
-            <div class="card-content">
-              <span class="card-label">Presupuesto Total</span>
-              <span class="card-value" id="total-budget">€0</span>
-              <span class="card-trend">Activos</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filtros de proyectos -->
-        <div class="filters-section">
-          <div class="filters-row">
-            <div class="filter-group">
-              <label for="project-search">Buscar</label>
-              <input
-                type="text"
-                id="project-search"
-                class="filter-input"
-                placeholder="Nombre del proyecto..."
-              />
-            </div>
-
-            <div class="filter-group">
-              <label for="project-status-filter">Estado</label>
-              <select id="project-status-filter" class="filter-select">
-                <option value="">Todos</option>
-                <option value="active" selected>Activos</option>
-                <option value="completed">Completados</option>
-                <option value="on-hold">En pausa</option>
-                <option value="cancelled">Cancelados</option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <label for="project-client-filter">Cliente</label>
-              <select id="project-client-filter" class="filter-select">
-                <option value="">Todos los clientes</option>
-              </select>
-            </div>
-
-            <button id="reset-project-filters" class="btn btn-secondary" type="button">
-              Limpiar filtros
-            </button>
-          </div>
-          <div class="filter-results">
-            <span id="project-filter-result-count">0 proyectos encontrados</span>
-          </div>
-        </div>
-
-        <!-- Grid de proyectos -->
-        <div id="projects-grid" class="projects-grid">
-          <!-- Los proyectos se cargarán aquí -->
-        </div>
-      </div>
-    </section>
-
-    <!-- Modal para añadir/editar cliente -->
-    <div id="client-modal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 id="client-modal-title">Nuevo Cliente</h3>
-          <button class="modal-close" id="close-client-modal" type="button">&times;</button>
-        </div>
-        <div class="modal-body">
-          <form id="client-form">
-            <div class="form-section">
-              <h4>Datos del Cliente</h4>
-
-              <div class="form-group">
-                <label for="client-name">Nombre *</label>
-                <input
-                  type="text"
-                  id="client-name"
-                  required
-                  placeholder="Nombre de la empresa o persona"
-                />
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="client-email">Email</label>
-                  <input type="email" id="client-email" placeholder="contacto@cliente.com" />
-                </div>
-
-                <div class="form-group">
-                  <label for="client-phone">Teléfono</label>
-                  <input type="tel" id="client-phone" placeholder="+34 XXX XXX XXX" />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="client-nif">NIF/CIF</label>
-                <input type="text" id="client-nif" placeholder="B12345678" />
-              </div>
-            </div>
-
-            <div class="form-section">
-              <h4>Dirección</h4>
-
-              <div class="form-group">
-                <label for="client-address">Dirección</label>
-                <input type="text" id="client-address" placeholder="Calle, número, piso..." />
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="client-city">Ciudad</label>
-                  <input type="text" id="client-city" placeholder="Madrid" />
-                </div>
-
-                <div class="form-group">
-                  <label for="client-postal">Código Postal</label>
-                  <input type="text" id="client-postal" placeholder="28001" />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="client-country">País</label>
-                <input type="text" id="client-country" value="España" />
-              </div>
-            </div>
-
-            <div class="form-section">
-              <h4>Información Adicional</h4>
-
-              <div class="form-group">
-                <label for="client-notes">Notas</label>
-                <textarea
-                  id="client-notes"
-                  rows="3"
-                  placeholder="Información adicional sobre el cliente..."
-                ></textarea>
-              </div>
-
-              <div class="form-group checkbox-group">
-                <label>
-                  <input type="checkbox" id="client-is-active" checked />
-                  Cliente activo
-                </label>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" id="cancel-client-btn" class="btn btn-secondary">
-                Cancelar
-              </button>
-              <button type="submit" class="btn btn-primary">
-                Guardar Cliente
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para añadir/editar proyecto -->
-    <div id="project-modal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 id="project-modal-title">Nuevo Proyecto</h3>
-          <button class="modal-close" id="close-project-modal" type="button">&times;</button>
-        </div>
-        <div class="modal-body">
-          <form id="project-form">
-            <div class="form-section">
-              <h4>Datos del Proyecto</h4>
-
-              <div class="form-group">
-                <label for="project-name">Nombre del Proyecto *</label>
-                <input
-                  type="text"
-                  id="project-name"
-                  required
-                  placeholder="Ej: Desarrollo Web Corporativa"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="project-client">Cliente *</label>
-                <select id="project-client" required>
-                  <option value="">Seleccionar cliente</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="project-description">Descripción</label>
-                <textarea
-                  id="project-description"
-                  rows="3"
-                  placeholder="Describe el proyecto..."
-                ></textarea>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="project-status">Estado</label>
-                  <select id="project-status">
-                    <option value="active" selected>Activo</option>
-                    <option value="completed">Completado</option>
-                    <option value="on-hold">En pausa</option>
-                    <option value="cancelled">Cancelado</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="project-budget">Presupuesto (€)</label>
-                  <input
-                    type="number"
-                    id="project-budget"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="form-section">
-              <h4>Fechas</h4>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="project-start-date">Fecha de inicio</label>
-                  <input type="date" id="project-start-date" />
-                </div>
-
-                <div class="form-group">
-                  <label for="project-end-date">Fecha de finalización</label>
-                  <input type="date" id="project-end-date" />
-                </div>
-              </div>
-            </div>
-
-            <div class="form-section">
-              <h4>Visual</h4>
-
-              <div class="form-group">
-                <label for="project-color">Color del Proyecto</label>
-                <input type="color" id="project-color" value="#3B82F6" />
-                <small>Selecciona un color para identificar visualmente el proyecto</small>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" id="cancel-project-btn" class="btn btn-secondary">
-                Cancelar
-              </button>
-              <button type="submit" class="btn btn-primary">
-                Guardar Proyecto
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+      <button type="button" class="btn btn-secondary" data-action="retry-clients">Reintentar</button>
     </div>
   `;
 }
 
-// Inicializar la página de clientes
-export function initClients() {
-  attachTabEventListeners();
-  loadClients();
-  loadProjects();
-  attachClientEventListeners();
-  attachProjectEventListeners();
-  updateClientSummaryCards();
-  updateProjectSummaryCards();
-  populateClientFilters();
-}
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `notification notification--${type}`;
+  toast.innerHTML = `
+    <span>${escapeHtml(message)}</span>
+    <button type="button" class="notification__close" aria-label="Cerrar">×</button>
+  `;
 
-// Event listeners para tabs
-function attachTabEventListeners() {
-  const tabButtons = document.querySelectorAll('.tab-button');
-  tabButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
-      const tab = e.target.dataset.tab;
-      switchTab(tab);
-    });
-  });
-}
-
-// Cambiar entre tabs
-function switchTab(tabName) {
-  // Actualizar botones
-  document.querySelectorAll('.tab-button').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  toast.querySelector('.notification__close').addEventListener('click', () => {
+    toast.remove();
   });
 
-  // Actualizar paneles
-  document.getElementById('clients-panel').style.display = tabName === 'clients' ? 'block' : 'none';
-  document.getElementById('projects-panel').style.display = tabName === 'projects' ? 'block' : 'none';
+  document.body.appendChild(toast);
+  window.setTimeout(() => toast.remove(), 3200);
 }
 
-// Cargar clientes
-function loadClients() {
-  renderClientsGrid(demoClients);
-  updateClientFilterCount(demoClients.length);
+function ensureSelection() {
+  if (clientsState.clients.length) {
+    if (
+      !clientsState.selectedClientId ||
+      !clientsState.clients.some((client) => client.id === clientsState.selectedClientId)
+    ) {
+      clientsState.selectedClientId = clientsState.clients[0].id;
+    }
+    if (clientsState.sidebarView === sidebarViews.CLIENT_EMPTY) {
+      clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
+    }
+  } else {
+    clientsState.selectedClientId = null;
+    if (
+      clientsState.sidebarView === sidebarViews.CLIENT_DETAIL ||
+      clientsState.sidebarView === sidebarViews.CLIENT_FORM
+    ) {
+      clientsState.sidebarView = sidebarViews.CLIENT_EMPTY;
+    }
+  }
+
+  if (clientsState.projects.length) {
+    if (
+      !clientsState.selectedProjectId ||
+      !clientsState.projects.some((project) => project.id === clientsState.selectedProjectId)
+    ) {
+      clientsState.selectedProjectId = clientsState.projects[0].id;
+    }
+    if (clientsState.sidebarView === sidebarViews.PROJECT_EMPTY) {
+      clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
+    }
+  } else {
+    clientsState.selectedProjectId = null;
+    if (
+      clientsState.sidebarView === sidebarViews.PROJECT_DETAIL ||
+      clientsState.sidebarView === sidebarViews.PROJECT_FORM
+    ) {
+      clientsState.sidebarView = sidebarViews.PROJECT_EMPTY;
+    }
+  }
 }
 
-// Renderizar grid de clientes
-function renderClientsGrid(clients) {
-  const grid = document.getElementById('clients-grid');
-  if (!grid) return;
+async function loadClientSummary() {
+  try {
+    const summary = await window.api.getClientSummary();
+    if (summary) {
+      clientsState.clientSummary = summary;
+    }
+  } catch (error) {
+    console.error('Error loading client summary', error);
+  }
+}
 
-  if (clients.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state-card">
-        <h3>No hay clientes</h3>
-        <p>Añade tu primer cliente para empezar a gestionar tu cartera.</p>
-        <button class="btn btn-primary" onclick="document.getElementById('new-client-btn').click()">
-          Añadir Cliente
-        </button>
-      </div>
+async function loadProjectSummary() {
+  try {
+    const summary = await window.api.getProjectSummary();
+    if (summary) {
+      clientsState.projectSummary = summary;
+    }
+  } catch (error) {
+    console.error('Error loading project summary', error);
+  }
+}
+
+async function loadRecentClients() {
+  try {
+    const recent = await window.api.getRecentClients(5);
+    clientsState.recentClients = Array.isArray(recent) ? recent : [];
+  } catch (error) {
+    clientsState.recentClients = [];
+  }
+}
+
+async function loadProjectInsights() {
+  try {
+    const [deadlines, metrics] = await Promise.all([
+      window.api.getProjectUpcomingDeadlines(5),
+      window.api.getProjectStatusMetrics(),
+    ]);
+    clientsState.upcomingDeadlines = Array.isArray(deadlines) ? deadlines : [];
+    clientsState.statusMetrics = Array.isArray(metrics) ? metrics : [];
+  } catch (error) {
+    clientsState.upcomingDeadlines = [];
+    clientsState.statusMetrics = [];
+  }
+}
+
+function buildClientFilters() {
+  const filters = {};
+  if (clientsState.clientFilters.search.trim()) {
+    filters.search = clientsState.clientFilters.search.trim();
+  }
+  if (clientsState.clientFilters.status !== 'all') {
+    filters.isActive = clientsState.clientFilters.status === 'active';
+  }
+  return filters;
+}
+
+function buildProjectFilters() {
+  const filters = {};
+  if (clientsState.projectFilters.search.trim()) {
+    filters.search = clientsState.projectFilters.search.trim();
+  }
+  if (clientsState.projectFilters.status !== 'all') {
+    filters.status = clientsState.projectFilters.status;
+  }
+  return filters;
+}
+
+async function loadClients() {
+  const response = await window.api.getClients(buildClientFilters());
+  const { clients = [] } = response || {};
+  clientsState.clients = clients.map((client) => ({
+    id: String(client.id),
+    name: client.name,
+    email: client.email,
+    phone: client.phone,
+    nifCif: client.nif_cif,
+    city: client.city,
+    notes: client.notes,
+    isActive: client.is_active,
+    totalInvoiced: client.total_invoiced ?? 0,
+    totalPending: client.total_pending ?? 0,
+    projectsCount: client.projects_count ?? 0,
+    subscriptionsCount: client.subscriptions_count ?? 0,
+    invoiceCount: client.invoice_count ?? 0,
+    createdAt: client.created_at,
+  }));
+}
+
+async function loadProjects() {
+  const response = await window.api.getProjects(buildProjectFilters());
+  const { projects = [] } = response || {};
+  clientsState.projects = projects.map((project) => ({
+    id: String(project.id),
+    clientId: project.client_id ? String(project.client_id) : null,
+    clientName: project.client_name,
+    name: project.name,
+    status: project.status,
+    budget: project.budget,
+    totalInvoiced: project.total_invoiced ?? 0,
+    invoiceCount: project.invoice_count ?? 0,
+    startDate: project.start_date,
+    endDate: project.end_date,
+    description: project.description,
+    color: project.color,
+  }));
+}
+
+function renderSummaryCards() {
+  const clientTotals = document.getElementById('clients-summary-total');
+  const clientActive = document.getElementById('clients-summary-active');
+  const clientPending = document.getElementById('clients-summary-pending');
+  const clientRevenue = document.getElementById('clients-summary-revenue');
+
+  const projectTotals = document.getElementById('projects-summary-total');
+  const projectActive = document.getElementById('projects-summary-active');
+  const projectBudget = document.getElementById('projects-summary-budget');
+  const projectRevenue = document.getElementById('projects-summary-revenue');
+
+  if (clientTotals) clientTotals.textContent = clientsState.clientSummary.total_clients ?? 0;
+  if (clientActive) clientActive.textContent = clientsState.clientSummary.active_clients ?? 0;
+  if (clientPending) clientPending.textContent = formatCurrency(clientsState.clientSummary.total_pending ?? 0);
+  if (clientRevenue) clientRevenue.textContent = formatCurrency(clientsState.clientSummary.total_billed ?? 0);
+
+  if (projectTotals) projectTotals.textContent = clientsState.projectSummary.total_projects ?? 0;
+  if (projectActive) projectActive.textContent = clientsState.projectSummary.active_projects ?? 0;
+  if (projectBudget) projectBudget.textContent = formatCurrency(clientsState.projectSummary.total_budget ?? 0);
+  if (projectRevenue) projectRevenue.textContent = formatCurrency(clientsState.projectSummary.total_invoiced ?? 0);
+}
+
+function renderClientsTable() {
+  const tbody = document.querySelector('[data-clients-table]');
+  if (!tbody) return;
+
+  if (!clientsState.clients.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty-state">
+            <span class="empty-state__icon">🧾</span>
+            <h3>Sin clientes registrados</h3>
+            <p>Crea tu primer cliente para empezar a registrar proyectos y facturas.</p>
+            <button class="btn btn-primary" type="button" data-open-client>Nuevo cliente</button>
+          </div>
+        </td>
+      </tr>
     `;
     return;
   }
 
-  grid.innerHTML = clients.map(client => `
-    <div class="client-card" data-client-id="${client.id}">
-      <div class="client-card-header">
-        <div class="client-avatar">${client.name.charAt(0)}</div>
-        <div class="client-info">
-          <h3>${client.name}</h3>
-          <p>${client.email || 'Sin email'}</p>
+  tbody.innerHTML = clientsState.clients
+    .map((client) => {
+      const isSelected = client.id === clientsState.selectedClientId;
+      return `
+        <tr data-client-row="${client.id}" class="${isSelected ? 'is-selected' : ''}">
+          <td>
+            <div class="table-cell--main">
+              <strong>${escapeHtml(client.name)}</strong>
+              <span>${escapeHtml(client.email || 'Sin email')}</span>
+            </div>
+          </td>
+          <td>
+            <span>${escapeHtml(client.phone || '—')}</span>
+            <span class="meta">${escapeHtml(client.nifCif || 'Sin NIF/CIF')}</span>
+          </td>
+          <td>
+            <strong>${formatCurrency(client.totalInvoiced)}</strong>
+            <span class="meta pending">${formatCurrency(client.totalPending)} pendientes</span>
+          </td>
+          <td>
+            <span>${client.projectsCount}</span>
+            <span class="meta">Proyectos</span>
+          </td>
+          <td>
+            <span class="badge badge--${client.isActive ? 'success' : 'neutral'}">
+              ${client.isActive ? 'Activo' : 'Inactivo'}
+            </span>
+          </td>
+          <td>
+            <div class="table-actions">
+              <button type="button" class="btn-icon" data-client-edit="${client.id}" aria-label="Editar cliente">✏️</button>
+              <button type="button" class="btn-icon btn-icon--danger" data-client-delete="${client.id}" aria-label="Eliminar cliente">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function renderProjectsTable() {
+  const tbody = document.querySelector('[data-projects-table]');
+  if (!tbody) return;
+
+  if (!clientsState.projects.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty-state">
+            <span class="empty-state__icon">📂</span>
+            <h3>Sin proyectos activos</h3>
+            <p>Registra un proyecto para organizar tareas, presupuestos y facturación.</p>
+            <button class="btn btn-primary" type="button" data-open-project>Nuevo proyecto</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = clientsState.projects
+    .map((project) => {
+      const isSelected = project.id === clientsState.selectedProjectId;
+      const statusBadge =
+        project.status === 'completed'
+          ? 'success'
+          : project.status === 'cancelled'
+          ? 'danger'
+          : project.status === 'on-hold'
+          ? 'warning'
+          : 'info';
+
+      return `
+        <tr data-project-row="${project.id}" class="${isSelected ? 'is-selected' : ''}">
+          <td>
+            <div class="table-cell--main">
+              <strong>${escapeHtml(project.name)}</strong>
+              <span>${escapeHtml(project.clientName || 'Sin cliente')}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge badge--${statusBadge}">
+              ${
+                project.status === 'completed'
+                  ? 'Completado'
+                  : project.status === 'cancelled'
+                  ? 'Cancelado'
+                  : project.status === 'on-hold'
+                  ? 'En pausa'
+                  : 'Activo'
+              }
+            </span>
+          </td>
+          <td>
+            <strong>${formatCurrency(project.totalInvoiced ?? 0)}</strong>
+            <span class="meta">${formatCurrency(project.budget ?? 0)} presupuesto</span>
+          </td>
+          <td>
+            <span>${project.invoiceCount ?? 0}</span>
+            <span class="meta">Facturas</span>
+          </td>
+          <td>
+            <span>${formatDate(project.startDate)}</span>
+            <span class="meta">${formatDate(project.endDate)}</span>
+          </td>
+          <td>
+            <div class="table-actions">
+              <button type="button" class="btn-icon" data-project-edit="${project.id}" aria-label="Editar proyecto">✏️</button>
+              <button type="button" class="btn-icon btn-icon--danger" data-project-delete="${project.id}" aria-label="Eliminar proyecto">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function renderInsights() {
+  const recentList = document.querySelector('[data-recent-clients]');
+  const upcomingList = document.querySelector('[data-upcoming-projects]');
+  const statusList = document.querySelector('[data-status-metrics]');
+
+  if (recentList) {
+    if (!clientsState.recentClients.length) {
+      recentList.innerHTML = '<li class="empty">Sin actividad reciente</li>';
+    } else {
+      recentList.innerHTML = clientsState.recentClients
+        .map(
+          (client) => `
+            <li>
+              <span class="title">${escapeHtml(client.name)}</span>
+              <span class="meta">${formatCurrency(client.total_billed ?? 0)}</span>
+            </li>
+          `
+        )
+        .join('');
+    }
+  }
+
+  if (upcomingList) {
+    if (!clientsState.upcomingDeadlines.length) {
+      upcomingList.innerHTML = '<li class="empty">Sin hitos próximos</li>';
+    } else {
+      upcomingList.innerHTML = clientsState.upcomingDeadlines
+        .map(
+          (project) => `
+            <li>
+              <span class="title">${escapeHtml(project.name)}</span>
+              <span class="meta">${formatDate(project.end_date)}</span>
+            </li>
+          `
+        )
+        .join('');
+    }
+  }
+
+  if (statusList) {
+    if (!clientsState.statusMetrics.length) {
+      statusList.innerHTML = '<li class="empty">Sin métricas registradas</li>';
+    } else {
+      statusList.innerHTML = clientsState.statusMetrics
+        .map(
+          (metric) => `
+            <li>
+              <span class="title">${escapeHtml(metric.status)}</span>
+              <span class="meta">${metric.count} proyectos</span>
+            </li>
+          `
+        )
+        .join('');
+    }
+  }
+}
+
+function populateFilterControls() {
+  const statusSelect = document.querySelector('[data-clients-status]');
+  if (statusSelect) {
+    statusSelect.value = clientsState.clientFilters.status;
+  }
+  const projectStatusSelect = document.querySelector('[data-projects-status]');
+  if (projectStatusSelect) {
+    projectStatusSelect.value = clientsState.projectFilters.status;
+  }
+}
+
+function buildClientFormHTML(client = {}) {
+  return `
+    <form class="sidebar-form" data-form-type="client">
+      <header class="sidebar-form__header">
+        <h3>${client.id ? 'Editar cliente' : 'Nuevo cliente'}</h3>
+        <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
+      </header>
+      <div class="form-grid">
+        <label>
+          <span>Nombre *</span>
+          <input type="text" name="name" value="${escapeHtml(client.name || '')}" required />
+        </label>
+        <label>
+          <span>Email</span>
+          <input type="email" name="email" value="${escapeHtml(client.email || '')}" />
+        </label>
+        <label>
+          <span>Teléfono</span>
+          <input type="tel" name="phone" value="${escapeHtml(client.phone || '')}" />
+        </label>
+        <label>
+          <span>NIF / CIF</span>
+          <input type="text" name="nifCif" value="${escapeHtml(client.nifCif || '')}" />
+        </label>
+        <label>
+          <span>Ciudad</span>
+          <input type="text" name="city" value="${escapeHtml(client.city || '')}" />
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" name="isActive" ${client.isActive !== false ? 'checked' : ''} />
+          <span>Cliente activo</span>
+        </label>
+        <label class="wide">
+          <span>Notas</span>
+          <textarea name="notes" rows="3">${escapeHtml(client.notes || '')}</textarea>
+        </label>
+      </div>
+      <footer class="sidebar-form__footer">
+        <button type="submit" class="btn btn-primary">${client.id ? 'Guardar cambios' : 'Crear cliente'}</button>
+      </footer>
+    </form>
+  `;
+}
+
+function buildProjectFormHTML(project = {}) {
+  const selectedClientId = project.id
+    ? project.clientId
+    : clientsState.projectPrefillClientId || null;
+
+  const clientOptions = [
+    '<option value="">Sin asignar</option>',
+    ...clientsState.clients.map(
+      (client) =>
+        `<option value="${client.id}" ${
+          selectedClientId === client.id ? 'selected' : ''
+        }>${escapeHtml(client.name)}</option>`
+    ),
+  ].join('');
+
+  return `
+    <form class="sidebar-form" data-form-type="project">
+      <header class="sidebar-form__header">
+        <h3>${project.id ? 'Editar proyecto' : 'Nuevo proyecto'}</h3>
+        <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
+      </header>
+      <div class="form-grid">
+        <label>
+          <span>Nombre *</span>
+          <input type="text" name="name" value="${escapeHtml(project.name || '')}" required />
+        </label>
+        <label>
+          <span>Cliente</span>
+          <select name="clientId">
+            ${clientOptions}
+          </select>
+        </label>
+        <label>
+          <span>Estado</span>
+          <select name="status">
+            <option value="active" ${project.status === 'active' ? 'selected' : ''}>Activo</option>
+            <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>En pausa</option>
+            <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completado</option>
+            <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancelado</option>
+          </select>
+        </label>
+        <label>
+          <span>Presupuesto (€)</span>
+          <input type="number" min="0" step="0.01" name="budget" value="${project.budget != null ? project.budget : ''}" />
+        </label>
+        <label>
+          <span>Inicio</span>
+          <input type="date" name="startDate" value="${project.startDate ? project.startDate.split('T')[0] : ''}" />
+        </label>
+        <label>
+          <span>Entrega prevista</span>
+          <input type="date" name="endDate" value="${project.endDate ? project.endDate.split('T')[0] : ''}" />
+        </label>
+        <label class="wide">
+          <span>Descripción</span>
+          <textarea name="description" rows="3">${escapeHtml(project.description || '')}</textarea>
+        </label>
+      </div>
+      <footer class="sidebar-form__footer">
+        <button type="submit" class="btn btn-primary">${project.id ? 'Guardar cambios' : 'Crear proyecto'}</button>
+      </footer>
+    </form>
+  `;
+}
+
+function buildClientDetailHTML(client) {
+  if (!client) {
+    return `
+      <div class="sidebar-empty">
+        <span class="sidebar-empty__icon">👥</span>
+        <p>Selecciona un cliente para revisar su actividad.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <article class="sidebar-card">
+      <header class="sidebar-card__header">
+        <div>
+          <h3>${escapeHtml(client.name)}</h3>
+          <p>${escapeHtml(client.email || 'Sin email principal')}</p>
         </div>
-        <div class="client-status">
-          ${client.isActive ?
-            '<span class="badge badge-success">Activo</span>' :
-            '<span class="badge badge-error">Inactivo</span>'
+        <span class="badge badge--${client.isActive ? 'success' : 'neutral'}">
+          ${client.isActive ? 'Activo' : 'Inactivo'}
+        </span>
+      </header>
+      <dl class="detail-grid">
+        <div>
+          <dt>Teléfono</dt>
+          <dd>${escapeHtml(client.phone || 'Sin teléfono')}</dd>
+        </div>
+        <div>
+          <dt>NIF / CIF</dt>
+          <dd>${escapeHtml(client.nifCif || '—')}</dd>
+        </div>
+        <div>
+          <dt>Ciudad</dt>
+          <dd>${escapeHtml(client.city || '—')}</dd>
+        </div>
+        <div>
+          <dt>Proyectos</dt>
+          <dd>${client.projectsCount}</dd>
+        </div>
+        <div>
+          <dt>Facturación</dt>
+          <dd>${formatCurrency(client.totalInvoiced)}</dd>
+        </div>
+        <div>
+          <dt>Pendiente de cobro</dt>
+          <dd>${formatCurrency(client.totalPending)}</dd>
+        </div>
+      </dl>
+      <footer class="sidebar-card__footer">
+        <button type="button" class="btn btn-secondary" data-client-edit="${client.id}">Editar cliente</button>
+        <button type="button" class="btn btn-outline" data-open-project data-rel-client="${client.id}">
+          Nuevo proyecto
+        </button>
+      </footer>
+    </article>
+  `;
+}
+
+function buildProjectDetailHTML(project) {
+  if (!project) {
+    return `
+      <div class="sidebar-empty">
+        <span class="sidebar-empty__icon">📁</span>
+        <p>Selecciona un proyecto para visualizar su estado.</p>
+      </div>
+    `;
+  }
+
+  const statusBadge =
+    project.status === 'completed'
+      ? 'success'
+      : project.status === 'cancelled'
+      ? 'danger'
+      : project.status === 'on-hold'
+      ? 'warning'
+      : 'info';
+
+  return `
+    <article class="sidebar-card">
+      <header class="sidebar-card__header">
+        <div>
+          <h3>${escapeHtml(project.name)}</h3>
+          <p>${escapeHtml(project.clientName || 'Sin cliente')}</p>
+        </div>
+        <span class="badge badge--${statusBadge}">
+          ${
+            project.status === 'completed'
+              ? 'Completado'
+              : project.status === 'cancelled'
+              ? 'Cancelado'
+              : project.status === 'on-hold'
+              ? 'En pausa'
+              : 'Activo'
           }
+        </span>
+      </header>
+      <dl class="detail-grid">
+        <div>
+          <dt>Presupuesto</dt>
+          <dd>${formatCurrency(project.budget ?? 0)}</dd>
         </div>
-      </div>
-      <div class="client-card-body">
-        <div class="client-detail">
-          <span class="detail-label">NIF/CIF:</span>
-          <span class="detail-value">${client.nifCif || '-'}</span>
+        <div>
+          <dt>Facturación</dt>
+          <dd>${formatCurrency(project.totalInvoiced ?? 0)}</dd>
         </div>
-        <div class="client-detail">
-          <span class="detail-label">Teléfono:</span>
-          <span class="detail-value">${client.phone || '-'}</span>
+        <div>
+          <dt>Facturas emitidas</dt>
+          <dd>${project.invoiceCount ?? 0}</dd>
         </div>
-        <div class="client-detail">
-          <span class="detail-label">Ciudad:</span>
-          <span class="detail-value">${client.city || '-'}</span>
+        <div>
+          <dt>Inicio</dt>
+          <dd>${formatDate(project.startDate)}</dd>
         </div>
-        ${client.notes ? `
-          <div class="client-detail">
-            <span class="detail-label">Notas:</span>
-            <span class="detail-value">${client.notes}</span>
-          </div>
-        ` : ''}
-      </div>
-      <div class="client-card-footer">
-        <button
-          class="btn btn-sm btn-secondary"
-          data-action="view-client"
-          data-id="${client.id}"
-        >
-          Ver Detalles
+        <div>
+          <dt>Entrega</dt>
+          <dd>${formatDate(project.endDate)}</dd>
+        </div>
+      </dl>
+      <footer class="sidebar-card__footer">
+        <button type="button" class="btn btn-secondary" data-project-edit="${project.id}">
+          Editar proyecto
         </button>
-        <button
-          class="btn btn-sm btn-secondary"
-          data-action="edit-client"
-          data-id="${client.id}"
-        >
-          Editar
-        </button>
-        <button
-          class="btn btn-sm btn-danger"
-          data-action="delete-client"
-          data-id="${client.id}"
-        >
-          Eliminar
-        </button>
-      </div>
-    </div>
-  `).join('');
+      </footer>
+    </article>
+  `;
 }
 
-// Cargar proyectos
-function loadProjects() {
-  renderProjectsGrid(demoProjects);
-  updateProjectFilterCount(demoProjects.length);
-}
+function renderSidebar() {
+  const container = document.querySelector('[data-sidebar]');
+  if (!container) return;
 
-// Renderizar grid de proyectos
-function renderProjectsGrid(projects) {
-  const grid = document.getElementById('projects-grid');
-  if (!grid) return;
+  let html = '';
 
-  if (projects.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state-card">
-        <h3>No hay proyectos</h3>
-        <p>Crea tu primer proyecto para empezar a organizar tu trabajo.</p>
-        <button class="btn btn-primary" onclick="document.getElementById('new-project-btn').click()">
-          Crear Proyecto
-        </button>
+  if (clientsState.sidebarView === sidebarViews.CLIENT_EMPTY) {
+    html = `
+      <div class="sidebar-empty">
+        <span class="sidebar-empty__icon">🧾</span>
+        <p>No hay clientes registrados todavía.</p>
+        <button type="button" class="btn btn-primary" data-open-client>Crear cliente</button>
       </div>
     `;
+  } else if (clientsState.sidebarView === sidebarViews.PROJECT_EMPTY) {
+    html = `
+      <div class="sidebar-empty">
+        <span class="sidebar-empty__icon">📂</span>
+        <p>No hay proyectos registrados todavía.</p>
+        <button type="button" class="btn btn-primary" data-open-project>Crear proyecto</button>
+      </div>
+    `;
+  } else if (clientsState.sidebarView === sidebarViews.CLIENT_FORM) {
+    const client =
+      clientsState.clientFormEditingId &&
+      clientsState.clients.find((item) => item.id === clientsState.clientFormEditingId);
+    html = buildClientFormHTML(client);
+  } else if (clientsState.sidebarView === sidebarViews.PROJECT_FORM) {
+    const project =
+      clientsState.projectFormEditingId &&
+      clientsState.projects.find((item) => item.id === clientsState.projectFormEditingId);
+    html = buildProjectFormHTML(project);
+  } else if (clientsState.sidebarView === sidebarViews.PROJECT_DETAIL) {
+    const project = clientsState.projects.find(
+      (item) => item.id === clientsState.selectedProjectId
+    );
+    html = buildProjectDetailHTML(project);
+  } else {
+    const client = clientsState.clients.find(
+      (item) => item.id === clientsState.selectedClientId
+    );
+    html = buildClientDetailHTML(client);
+  }
+
+  container.innerHTML = html;
+}
+
+async function refreshClientsModule(options = {}) {
+  if (options.focusClientId) {
+    clientsState.selectedClientId = String(options.focusClientId);
+  }
+  if (options.focusProjectId) {
+    clientsState.selectedProjectId = String(options.focusProjectId);
+  }
+
+  if (typeof window.api === 'undefined') {
+    setError('Servicio API no disponible. Comprueba la carga de api.js');
     return;
   }
 
-  const statusLabels = {
-    active: 'Activo',
-    completed: 'Completado',
-    'on-hold': 'En pausa',
-    cancelled: 'Cancelado'
+  if (!window.api.isAuthenticated()) {
+    setError('Inicia sesión para gestionar tus clientes y proyectos.');
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setError(null);
+    await Promise.all([
+      loadClients(),
+      loadProjects(),
+      loadClientSummary(),
+      loadProjectSummary(),
+      loadRecentClients(),
+      loadProjectInsights(),
+    ]);
+    ensureSelection();
+    renderSummaryCards();
+    renderClientsTable();
+    renderProjectsTable();
+    renderInsights();
+    populateFilterControls();
+    renderSidebar();
+  } catch (error) {
+    console.error('Error loading clients module', error);
+    setError('Ocurrió un problema al cargar los datos.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setActiveTab(tab) {
+  if (clientsState.activeTab === tab) return;
+  clientsState.activeTab = tab;
+
+  document
+    .querySelectorAll('[data-clients-tab]')
+    .forEach((button) => button.classList.toggle('active', button.dataset.clientsTab === tab));
+
+  document
+    .querySelectorAll('[data-clients-panel]')
+    .forEach((panel) => {
+      panel.hidden = panel.dataset.clientsPanel !== tab;
+    });
+
+  if (tab === 'clients') {
+    if (clientsState.sidebarView === sidebarViews.PROJECT_DETAIL) {
+      clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
+    }
+    if (clientsState.sidebarView === sidebarViews.PROJECT_FORM) {
+      clientsState.sidebarView = sidebarViews.CLIENT_FORM;
+    }
+    if (clientsState.sidebarView === sidebarViews.PROJECT_EMPTY) {
+      clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
+    }
+  } else {
+    if (clientsState.sidebarView === sidebarViews.CLIENT_DETAIL) {
+      clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
+    }
+    if (clientsState.sidebarView === sidebarViews.CLIENT_FORM) {
+      clientsState.sidebarView = sidebarViews.PROJECT_FORM;
+    }
+    if (clientsState.sidebarView === sidebarViews.CLIENT_EMPTY) {
+      clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
+    }
+  }
+
+  renderSidebar();
+}
+
+function handleClick(event) {
+  const tabButton = event.target.closest('[data-clients-tab]');
+  if (tabButton) {
+    event.preventDefault();
+    setActiveTab(tabButton.dataset.clientsTab);
+    return;
+  }
+
+  const retryButton = event.target.closest('[data-action="retry-clients"]');
+  if (retryButton) {
+    void refreshClientsModule();
+    return;
+  }
+
+  const newClientBtn = event.target.closest('[data-open-client]');
+  if (newClientBtn) {
+    clientsState.clientFormEditingId = null;
+    clientsState.sidebarView = sidebarViews.CLIENT_FORM;
+    renderSidebar();
+    return;
+  }
+
+  const newProjectBtn = event.target.closest('[data-open-project]');
+  if (newProjectBtn) {
+    clientsState.projectFormEditingId = null;
+    const relClient = newProjectBtn.dataset.relClient;
+    clientsState.projectPrefillClientId = relClient ? String(relClient) : null;
+    clientsState.sidebarView = sidebarViews.PROJECT_FORM;
+    renderSidebar();
+    return;
+  }
+
+  const cancelBtn = event.target.closest('[data-action="cancel-form"]');
+  if (cancelBtn) {
+    clientsState.clientFormEditingId = null;
+    clientsState.projectFormEditingId = null;
+    clientsState.projectPrefillClientId = null;
+    if (clientsState.activeTab === 'clients') {
+      clientsState.sidebarView = clientsState.clients.length
+        ? sidebarViews.CLIENT_DETAIL
+        : sidebarViews.CLIENT_EMPTY;
+    } else {
+      clientsState.sidebarView = clientsState.projects.length
+        ? sidebarViews.PROJECT_DETAIL
+        : sidebarViews.PROJECT_EMPTY;
+    }
+    renderSidebar();
+    return;
+  }
+
+  const clientEditBtn = event.target.closest('[data-client-edit]');
+  if (clientEditBtn) {
+    event.stopPropagation();
+    clientsState.clientFormEditingId = String(clientEditBtn.dataset.clientEdit);
+    clientsState.sidebarView = sidebarViews.CLIENT_FORM;
+    renderSidebar();
+    return;
+  }
+
+  const clientDeleteBtn = event.target.closest('[data-client-delete]');
+  if (clientDeleteBtn) {
+    event.stopPropagation();
+    void handleClientDelete(clientDeleteBtn.dataset.clientDelete);
+    return;
+  }
+
+  const projectEditBtn = event.target.closest('[data-project-edit]');
+  if (projectEditBtn) {
+    event.stopPropagation();
+    clientsState.projectFormEditingId = String(projectEditBtn.dataset.projectEdit);
+    clientsState.sidebarView = sidebarViews.PROJECT_FORM;
+    renderSidebar();
+    return;
+  }
+
+  const projectDeleteBtn = event.target.closest('[data-project-delete]');
+  if (projectDeleteBtn) {
+    event.stopPropagation();
+    void handleProjectDelete(projectDeleteBtn.dataset.projectDelete);
+    return;
+  }
+
+  const clientRow = event.target.closest('[data-client-row]');
+  if (clientRow) {
+    clientsState.selectedClientId = String(clientRow.dataset.clientRow);
+    clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
+    renderClientsTable();
+    renderSidebar();
+    return;
+  }
+
+  const projectRow = event.target.closest('[data-project-row]');
+  if (projectRow) {
+    clientsState.selectedProjectId = String(projectRow.dataset.projectRow);
+    clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
+    renderProjectsTable();
+    renderSidebar();
+  }
+}
+
+function handleInput(event) {
+  if (event.target.matches('[data-clients-search]')) {
+    clientsState.clientFilters.search = event.target.value;
+    debounce(() => void refreshClientsModule());
+    return;
+  }
+
+  if (event.target.matches('[data-projects-search]')) {
+    clientsState.projectFilters.search = event.target.value;
+    debounce(() => void refreshClientsModule());
+  }
+}
+
+function handleChange(event) {
+  if (event.target.matches('[data-clients-status]')) {
+    clientsState.clientFilters.status = event.target.value;
+    void refreshClientsModule();
+    return;
+  }
+
+  if (event.target.matches('[data-projects-status]')) {
+    clientsState.projectFilters.status = event.target.value;
+    void refreshClientsModule();
+  }
+}
+
+async function handleClientFormSubmit(event) {
+  event.preventDefault();
+  const form = event.target.closest('form');
+  if (!form) return;
+  const data = new FormData(form);
+
+  const payload = {
+    name: data.get('name')?.toString().trim(),
+    email: data.get('email')?.toString().trim() || undefined,
+    phone: data.get('phone')?.toString().trim() || undefined,
+    nifCif: data.get('nifCif')?.toString().trim() || undefined,
+    city: data.get('city')?.toString().trim() || undefined,
+    notes: data.get('notes')?.toString().trim() || undefined,
+    isActive: data.get('isActive') === 'on',
   };
 
-  const statusColors = {
-    active: 'success',
-    completed: 'info',
-    'on-hold': 'warning',
-    cancelled: 'error'
+  const editingId = clientsState.clientFormEditingId;
+
+  try {
+    let response;
+    if (editingId) {
+      response = await window.api.updateClient(editingId, payload);
+      clientsState.selectedClientId = String(editingId);
+      showToast('Cliente actualizado correctamente', 'success');
+    } else {
+      response = await window.api.createClient(payload);
+      if (response?.id) {
+        clientsState.selectedClientId = String(response.id);
+      }
+      showToast('Cliente creado correctamente', 'success');
+    }
+    clientsState.clientFormEditingId = null;
+    clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
+    await refreshClientsModule({
+      focusClientId: clientsState.selectedClientId || response?.id,
+    });
+  } catch (error) {
+    console.error('Error saving client', error);
+    showToast('No se pudo guardar el cliente', 'error');
+  }
+}
+
+async function handleProjectFormSubmit(event) {
+  event.preventDefault();
+  const form = event.target.closest('form');
+  if (!form) return;
+  const data = new FormData(form);
+
+  const payload = {
+    name: data.get('name')?.toString().trim(),
+    clientId: data.get('clientId') || undefined,
+    status: data.get('status') || 'active',
+    budget: data.get('budget') ? Number.parseFloat(data.get('budget')) : undefined,
+    startDate: data.get('startDate') || undefined,
+    endDate: data.get('endDate') || undefined,
+    description: data.get('description')?.toString().trim() || undefined,
   };
 
-  grid.innerHTML = projects.map(project => `
-    <div class="project-card" data-project-id="${project.id}">
-      <div class="project-color-bar" style="background: ${project.color}"></div>
-      <div class="project-card-header">
-        <h3>${project.name}</h3>
-        <span class="badge badge-${statusColors[project.status]}">${statusLabels[project.status]}</span>
-      </div>
-      <div class="project-card-body">
-        <p class="project-client">Cliente: <strong>${project.clientName}</strong></p>
-        <p class="project-description">${project.description || 'Sin descripción'}</p>
-        <div class="project-meta">
-          <div class="meta-item">
-            <span class="meta-label">Presupuesto:</span>
-            <span class="meta-value">€${project.budget?.toFixed(2) || '0.00'}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Inicio:</span>
-            <span class="meta-value">${formatDate(project.startDate)}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Fin:</span>
-            <span class="meta-value">${formatDate(project.endDate)}</span>
-          </div>
+  const editingId = clientsState.projectFormEditingId;
+
+  try {
+    let response;
+    if (editingId) {
+      response = await window.api.updateProject(editingId, payload);
+      clientsState.selectedProjectId = String(editingId);
+      showToast('Proyecto actualizado correctamente', 'success');
+    } else {
+      response = await window.api.createProject(payload);
+      if (response?.id) {
+        clientsState.selectedProjectId = String(response.id);
+      }
+      showToast('Proyecto creado correctamente', 'success');
+    }
+    clientsState.projectFormEditingId = null;
+    clientsState.projectPrefillClientId = null;
+    clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
+    await refreshClientsModule({
+      focusProjectId: clientsState.selectedProjectId || response?.id,
+    });
+  } catch (error) {
+    console.error('Error saving project', error);
+    showToast('No se pudo guardar el proyecto', 'error');
+  }
+}
+
+function handleSubmit(event) {
+  if (event.target.matches('[data-form-type="client"]')) {
+    void handleClientFormSubmit(event);
+  } else if (event.target.matches('[data-form-type="project"]')) {
+    void handleProjectFormSubmit(event);
+  }
+}
+
+async function handleClientDelete(id) {
+  if (!window.confirm('¿Seguro que deseas eliminar este cliente?')) return;
+  try {
+    await window.api.deleteClient(id);
+    showToast('Cliente eliminado', 'success');
+    if (clientsState.selectedClientId === id) {
+      clientsState.selectedClientId = null;
+    }
+    await refreshClientsModule();
+  } catch (error) {
+    console.error('Error deleting client', error);
+    showToast('No se pudo eliminar el cliente', 'error');
+  }
+}
+
+async function handleProjectDelete(id) {
+  if (!window.confirm('¿Seguro que deseas eliminar este proyecto?')) return;
+  try {
+    await window.api.deleteProject(id);
+    showToast('Proyecto eliminado', 'success');
+    if (clientsState.selectedProjectId === id) {
+      clientsState.selectedProjectId = null;
+    }
+    await refreshClientsModule();
+  } catch (error) {
+    console.error('Error deleting project', error);
+    showToast('No se pudo eliminar el proyecto', 'error');
+  }
+}
+
+
+export function initClients() {
+  const module = document.querySelector('.clients-module');
+  if (!module) return;
+
+  module.addEventListener('click', handleClick);
+  module.addEventListener('input', handleInput);
+  module.addEventListener('change', handleChange);
+  module.addEventListener('submit', handleSubmit);
+
+  window.requestAnimationFrame(() => {
+    void refreshClientsModule();
+  });
+}
+
+export default function renderClients() {
+  return `
+    <section class="module clients-module">
+      <header class="module-header">
+        <div class="module-title-section">
+          <h1>Clientes &amp; Proyectos</h1>
+          <p>Visión 360º de tu cartera y estado de ejecución.</p>
+        </div>
+        <div class="module-actions">
+          <button type="button" class="btn btn-secondary" data-open-project>＋ Nuevo proyecto</button>
+          <button type="button" class="btn btn-primary" data-open-client>＋ Nuevo cliente</button>
+        </div>
+      </header>
+
+      <div class="summary-wrap">
+        <div class="summary-grid summary-grid--compact">
+          <article class="card stat-card stat-card--compact">
+            <div class="card-icon" style="background: var(--color-primary-light);">👥</div>
+            <div class="card-content">
+              <span class="card-label">Clientes totales</span>
+              <span class="card-value" id="clients-summary-total">0</span>
+            </div>
+          </article>
+          <article class="card stat-card stat-card--compact">
+            <div class="card-icon" style="background: var(--color-success-light);">✅</div>
+            <div class="card-content">
+              <span class="card-label">Clientes activos</span>
+              <span class="card-value" id="clients-summary-active">0</span>
+            </div>
+          </article>
+          <article class="card stat-card stat-card--compact">
+            <div class="card-icon" style="background: var(--color-warning-light);">💳</div>
+            <div class="card-content">
+              <span class="card-label">Pendiente de cobro</span>
+              <span class="card-value" id="clients-summary-pending">€0</span>
+            </div>
+          </article>
+          <article class="card stat-card stat-card--compact">
+            <div class="card-icon" style="background: var(--color-info-light);">📈</div>
+            <div class="card-content">
+              <span class="card-label">Facturación total</span>
+              <span class="card-value" id="clients-summary-revenue">€0</span>
+            </div>
+          </article>
+        </div>
+        <div class="summary-grid summary-grid--compact">
+          <article class="card stat-card stat-card--compact">
+            <div class="card-icon" style="background: var(--color-tertiary-light);">📂</div>
+            <div class="card-content">
+              <span class="card-label">Proyectos totales</span>
+              <span class="card-value" id="projects-summary-total">0</span>
+            </div>
+          </article>
+          <article class="card stat-card stat-card--compact">
+            <div class="card-icon" style="background: var(--color-secondary-light);">🚀</div>
+            <div class="card-content">
+              <span class="card-label">Proyectos activos</span>
+              <span class="card-value" id="projects-summary-active">0</span>
+            </div>
+          </article>
+          <article class="card stat-card stat-card--compact">
+            <div class="card-icon" style="background: var(--color-tertiary-muted);">💰</div>
+            <div class="card-content">
+              <span class="card-label">Presupuesto asignado</span>
+              <span class="card-value" id="projects-summary-budget">€0</span>
+            </div>
+          </article>
+          <article class="card stat-card stat-card--compact">
+            <div class="card-icon" style="background: var(--color-secondary-muted);">📊</div>
+            <div class="card-content">
+              <span class="card-label">Facturación proyectos</span>
+              <span class="card-value" id="projects-summary-revenue">€0</span>
+            </div>
+          </article>
         </div>
       </div>
-      <div class="project-card-footer">
-        <button
-          class="btn btn-sm btn-secondary"
-          data-action="view-project"
-          data-id="${project.id}"
-        >
-          Ver Detalles
-        </button>
-        <button
-          class="btn btn-sm btn-secondary"
-          data-action="edit-project"
-          data-id="${project.id}"
-        >
-          Editar
-        </button>
-        <button
-          class="btn btn-sm btn-danger"
-          data-action="delete-project"
-          data-id="${project.id}"
-        >
-          Eliminar
-        </button>
+
+      <div class="module-tabs module-tabs--pill">
+        <button type="button" class="tab-button active" data-clients-tab="clients">Clientes</button>
+        <button type="button" class="tab-button" data-clients-tab="projects">Proyectos</button>
       </div>
-    </div>
-  `).join('');
+
+      <div class="module-body module-body--split">
+        <div class="module-main">
+          <div class="module-toolbar" data-clients-panel="clients">
+            <label class="input input--search">
+              <span class="input__icon">🔍</span>
+              <input type="search" data-clients-search placeholder="Buscar clientes..." autocomplete="off" />
+            </label>
+            <label class="input input--select">
+              <span>Estado</span>
+              <select data-clients-status>
+                <option value="all">Todos</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="module-toolbar" data-clients-panel="projects" hidden>
+            <label class="input input--search">
+              <span class="input__icon">🔍</span>
+              <input type="search" data-projects-search placeholder="Buscar proyectos..." autocomplete="off" />
+            </label>
+            <label class="input input--select">
+              <span>Estado</span>
+              <select data-projects-status>
+                <option value="all">Todos</option>
+                <option value="active">Activos</option>
+                <option value="on-hold">En pausa</option>
+                <option value="completed">Completados</option>
+                <option value="cancelled">Cancelados</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="table-wrapper" data-clients-panel="clients">
+            <table class="data-table data-table--compact">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Contacto</th>
+                  <th>Facturación</th>
+                  <th>Proyectos</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-clients-table></tbody>
+            </table>
+          </div>
+
+          <div class="table-wrapper" data-clients-panel="projects" hidden>
+            <table class="data-table data-table--compact">
+              <thead>
+                <tr>
+                  <th>Proyecto</th>
+                  <th>Estado</th>
+                  <th>Facturación</th>
+                  <th>Facturas</th>
+                  <th>Fechas</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-projects-table></tbody>
+            </table>
+          </div>
+
+          <div class="module-loading" data-clients-loading hidden>
+            <span class="spinner"></span>
+            <p>Cargando información...</p>
+          </div>
+          <div class="module-error" data-clients-error hidden></div>
+        </div>
+
+        <aside class="module-sidebar" data-sidebar></aside>
+      </div>
+
+      <footer class="module-footer">
+        <section>
+          <h4>Clientes recientes</h4>
+          <ul class="insight-list" data-recent-clients></ul>
+        </section>
+        <section>
+          <h4>Hitos de proyectos</h4>
+          <ul class="insight-list" data-upcoming-projects></ul>
+        </section>
+        <section>
+          <h4>Estado por proyectos</h4>
+          <ul class="insight-list" data-status-metrics></ul>
+        </section>
+      </footer>
+    </section>
+  `;
 }
-
-// Actualizar tarjetas de resumen de clientes
-function updateClientSummaryCards() {
-  const totalClients = demoClients.length;
-  const activeClients = demoClients.filter(c => c.isActive).length;
-
-  const currentMonth = new Date().getMonth();
-  const newClients = demoClients.filter(c => {
-    const clientMonth = new Date(c.created_at).getMonth();
-    return clientMonth === currentMonth;
-  }).length;
-
-  document.getElementById('total-clients').textContent = totalClients;
-  document.getElementById('active-clients').textContent = activeClients;
-  document.getElementById('new-clients').textContent = newClients;
-  document.getElementById('avg-revenue').textContent = '€2,450';
-}
-
-// Actualizar tarjetas de resumen de proyectos
-function updateProjectSummaryCards() {
-  const totalProjects = demoProjects.length;
-  const activeProjects = demoProjects.filter(p => p.status === 'active').length;
-  const completedProjects = demoProjects.filter(p => p.status === 'completed').length;
-  const totalBudget = demoProjects
-    .filter(p => p.status === 'active')
-    .reduce((sum, p) => sum + (p.budget || 0), 0);
-
-  document.getElementById('total-projects').textContent = totalProjects;
-  document.getElementById('active-projects').textContent = activeProjects;
-  document.getElementById('completed-projects').textContent = completedProjects;
-  document.getElementById('total-budget').textContent = `€${totalBudget.toFixed(2)}`;
-}
-
-// Poblar filtros de clientes en el formulario de proyectos
-function populateClientFilters() {
-  const projectClientSelect = document.getElementById('project-client');
-  const projectClientFilter = document.getElementById('project-client-filter');
-
-  if (projectClientSelect) {
-    projectClientSelect.innerHTML = '<option value="">Seleccionar cliente</option>' +
-      demoClients.filter(c => c.isActive).map(client =>
-        `<option value="${client.id}">${client.name}</option>`
-      ).join('');
-  }
-
-  if (projectClientFilter) {
-    projectClientFilter.innerHTML = '<option value="">Todos los clientes</option>' +
-      demoClients.map(client =>
-        `<option value="${client.id}">${client.name}</option>`
-      ).join('');
-  }
-}
-
-// Event listeners para clientes
-function attachClientEventListeners() {
-  // Nuevo cliente
-  document.getElementById('new-client-btn')?.addEventListener('click', openClientModal);
-
-  // Cerrar modal
-  document.getElementById('close-client-modal')?.addEventListener('click', closeClientModal);
-  document.getElementById('cancel-client-btn')?.addEventListener('click', closeClientModal);
-
-  // Formulario
-  document.getElementById('client-form')?.addEventListener('submit', handleClientSubmit);
-
-  // Filtros
-  document.getElementById('client-search')?.addEventListener('input', applyClientFilters);
-  document.getElementById('client-status-filter')?.addEventListener('change', applyClientFilters);
-  document.getElementById('reset-client-filters')?.addEventListener('click', resetClientFilters);
-
-  // Acciones
-  document.getElementById('clients-grid')?.addEventListener('click', handleClientAction);
-}
-
-// Event listeners para proyectos
-function attachProjectEventListeners() {
-  // Nuevo proyecto
-  document.getElementById('new-project-btn')?.addEventListener('click', openProjectModal);
-
-  // Cerrar modal
-  document.getElementById('close-project-modal')?.addEventListener('click', closeProjectModal);
-  document.getElementById('cancel-project-btn')?.addEventListener('click', closeProjectModal);
-
-  // Formulario
-  document.getElementById('project-form')?.addEventListener('submit', handleProjectSubmit);
-
-  // Filtros
-  document.getElementById('project-search')?.addEventListener('input', applyProjectFilters);
-  document.getElementById('project-status-filter')?.addEventListener('change', applyProjectFilters);
-  document.getElementById('project-client-filter')?.addEventListener('change', applyProjectFilters);
-  document.getElementById('reset-project-filters')?.addEventListener('click', resetProjectFilters);
-
-  // Acciones
-  document.getElementById('projects-grid')?.addEventListener('click', handleProjectAction);
-}
-
-// Modals
-function openClientModal(client = null) {
-  const modal = document.getElementById('client-modal');
-  const title = document.getElementById('client-modal-title');
-  const form = document.getElementById('client-form');
-
-  if (!modal || !form) return;
-
-  if (client) {
-    title.textContent = 'Editar Cliente';
-    // TODO: Rellenar formulario
-  } else {
-    title.textContent = 'Nuevo Cliente';
-    form.reset();
-  }
-
-  modal.style.display = 'flex';
-}
-
-function closeClientModal() {
-  document.getElementById('client-modal').style.display = 'none';
-}
-
-function openProjectModal(project = null) {
-  const modal = document.getElementById('project-modal');
-  const title = document.getElementById('project-modal-title');
-  const form = document.getElementById('project-form');
-
-  if (!modal || !form) return;
-
-  if (project) {
-    title.textContent = 'Editar Proyecto';
-    // TODO: Rellenar formulario
-  } else {
-    title.textContent = 'Nuevo Proyecto';
-    form.reset();
-  }
-
-  modal.style.display = 'flex';
-}
-
-function closeProjectModal() {
-  document.getElementById('project-modal').style.display = 'none';
-}
-
-// Formularios
-function handleClientSubmit(e) {
-  e.preventDefault();
-
-  const clientData = {
-    name: document.getElementById('client-name').value,
-    email: document.getElementById('client-email').value,
-    phone: document.getElementById('client-phone').value,
-    nifCif: document.getElementById('client-nif').value,
-    address: document.getElementById('client-address').value,
-    city: document.getElementById('client-city').value,
-    postalCode: document.getElementById('client-postal').value,
-    country: document.getElementById('client-country').value,
-    notes: document.getElementById('client-notes').value,
-    isActive: document.getElementById('client-is-active').checked
-  };
-
-  console.log('Nuevo cliente:', clientData);
-  // TODO: Enviar a la API
-
-  alert('Cliente añadido correctamente (Demo)');
-  closeClientModal();
-}
-
-function handleProjectSubmit(e) {
-  e.preventDefault();
-
-  const projectData = {
-    clientId: document.getElementById('project-client').value,
-    name: document.getElementById('project-name').value,
-    description: document.getElementById('project-description').value,
-    status: document.getElementById('project-status').value,
-    budget: parseFloat(document.getElementById('project-budget').value),
-    startDate: document.getElementById('project-start-date').value,
-    endDate: document.getElementById('project-end-date').value,
-    color: document.getElementById('project-color').value
-  };
-
-  console.log('Nuevo proyecto:', projectData);
-  // TODO: Enviar a la API
-
-  alert('Proyecto creado correctamente (Demo)');
-  closeProjectModal();
-}
-
-// Filtros
-function applyClientFilters() {
-  const search = document.getElementById('client-search')?.value.toLowerCase() || '';
-  const status = document.getElementById('client-status-filter')?.value || '';
-
-  const filtered = demoClients.filter(client => {
-    const matchesSearch = !search ||
-      client.name.toLowerCase().includes(search) ||
-      client.email?.toLowerCase().includes(search) ||
-      client.nifCif?.toLowerCase().includes(search);
-
-    const matchesStatus = !status || client.isActive.toString() === status;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  renderClientsGrid(filtered);
-  updateClientFilterCount(filtered.length);
-}
-
-function resetClientFilters() {
-  document.getElementById('client-search').value = '';
-  document.getElementById('client-status-filter').value = '';
-  applyClientFilters();
-}
-
-function updateClientFilterCount(count) {
-  const countElement = document.getElementById('client-filter-result-count');
-  if (countElement) {
-    countElement.textContent = `${count} cliente${count !== 1 ? 's' : ''} encontrado${count !== 1 ? 's' : ''}`;
-  }
-}
-
-function applyProjectFilters() {
-  const search = document.getElementById('project-search')?.value.toLowerCase() || '';
-  const status = document.getElementById('project-status-filter')?.value || '';
-  const clientId = document.getElementById('project-client-filter')?.value || '';
-
-  const filtered = demoProjects.filter(project => {
-    const matchesSearch = !search ||
-      project.name.toLowerCase().includes(search) ||
-      project.description?.toLowerCase().includes(search);
-
-    const matchesStatus = !status || project.status === status;
-    const matchesClient = !clientId || project.clientId === clientId;
-
-    return matchesSearch && matchesStatus && matchesClient;
-  });
-
-  renderProjectsGrid(filtered);
-  updateProjectFilterCount(filtered.length);
-}
-
-function resetProjectFilters() {
-  document.getElementById('project-search').value = '';
-  document.getElementById('project-status-filter').value = '';
-  document.getElementById('project-client-filter').value = '';
-  applyProjectFilters();
-}
-
-function updateProjectFilterCount(count) {
-  const countElement = document.getElementById('project-filter-result-count');
-  if (countElement) {
-    countElement.textContent = `${count} proyecto${count !== 1 ? 's' : ''} encontrado${count !== 1 ? 's' : ''}`;
-  }
-}
-
-// Acciones
-function handleClientAction(e) {
-  const button = e.target.closest('[data-action]');
-  if (!button) return;
-
-  const action = button.dataset.action;
-  const clientId = button.dataset.id;
-
-  switch (action) {
-    case 'view-client':
-      alert(`Ver detalles del cliente ${clientId}`);
-      break;
-    case 'edit-client':
-      const client = demoClients.find(c => c.id === clientId);
-      openClientModal(client);
-      break;
-    case 'delete-client':
-      if (confirm('¿Estás seguro de que deseas eliminar este cliente?')) {
-        console.log('Eliminar cliente:', clientId);
-        // TODO: Implementar eliminación
-      }
-      break;
-  }
-}
-
-function handleProjectAction(e) {
-  const button = e.target.closest('[data-action]');
-  if (!button) return;
-
-  const action = button.dataset.action;
-  const projectId = button.dataset.id;
-
-  switch (action) {
-    case 'view-project':
-      alert(`Ver detalles del proyecto ${projectId}`);
-      break;
-    case 'edit-project':
-      const project = demoProjects.find(p => p.id === projectId);
-      openProjectModal(project);
-      break;
-    case 'delete-project':
-      if (confirm('¿Estás seguro de que deseas eliminar este proyecto?')) {
-        console.log('Eliminar proyecto:', projectId);
-        // TODO: Implementar eliminación
-      }
-      break;
-  }
-}
-
-// Utilidades
-function formatDate(dateString) {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-export default renderClients;

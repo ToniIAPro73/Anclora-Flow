@@ -304,6 +304,29 @@ class APIService {
     return this.get(endpoint);
   }
 
+  async getClientSummary() {
+    return this.get('/clients/summary');
+  }
+
+  async getRecentClients(limit = 6) {
+    if (limit) {
+      return this.get(`/clients/recent?limit=${limit}`);
+    }
+    return this.get('/clients/recent');
+  }
+
+  async getClientRevenueTrend(months = 6) {
+    return this.get(`/clients/analytics/revenue-trend?months=${months}`);
+  }
+
+  async getClientProjects(clientId) {
+    return this.get(`/clients/${clientId}/projects`);
+  }
+
+  async getClientSubscriptions(clientId) {
+    return this.get(`/clients/${clientId}/subscriptions`);
+  }
+
   async getClient(id) {
     return this.get(`/clients/${id}`);
   }
@@ -346,12 +369,45 @@ class APIService {
 
   // === PROYECTOS ===
 
-  async getProjects() {
-    return this.get('/projects');
+  async getProjects(filters = {}) {
+    const params = new URLSearchParams(
+      Object.entries(filters).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {})
+    ).toString();
+
+    const endpoint = params ? `/projects?${params}` : '/projects';
+    return this.get(endpoint);
   }
 
   async getProject(id) {
     return this.get(`/projects/${id}`);
+  }
+
+  async getProjectStatistics(id) {
+    return this.get(`/projects/${id}/statistics`);
+  }
+
+  async getProjectSubscriptions(id) {
+    return this.get(`/projects/${id}/subscriptions`);
+  }
+
+  async getProjectSummary() {
+    return this.get('/projects/summary');
+  }
+
+  async getProjectStatusMetrics() {
+    return this.get('/projects/status-metrics');
+  }
+
+  async getProjectUpcomingDeadlines(limit = 6) {
+    if (limit) {
+      return this.get(`/projects/upcoming-deadlines?limit=${limit}`);
+    }
+    return this.get('/projects/upcoming-deadlines');
   }
 
   async createProject(projectData) {
@@ -364,6 +420,97 @@ class APIService {
 
   async deleteProject(id) {
     return this.delete(`/projects/${id}`);
+  }
+
+  // === SUSCRIPCIONES ===
+
+  async getSubscriptions(filters = {}) {
+    const params = new URLSearchParams(
+      Object.entries(filters).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {})
+    ).toString();
+
+    const endpoint = params ? `/subscriptions?${params}` : '/subscriptions';
+    return this.get(endpoint);
+  }
+
+  async getSubscription(id) {
+    return this.get(`/subscriptions/${id}`);
+  }
+
+  async createSubscription(subscriptionData) {
+    return this.post('/subscriptions', subscriptionData);
+  }
+
+  async updateSubscription(id, subscriptionData) {
+    return this.put(`/subscriptions/${id}`, subscriptionData);
+  }
+
+  async deleteSubscription(id) {
+    return this.delete(`/subscriptions/${id}`);
+  }
+
+  async getSubscriptionSummary() {
+    return this.get('/subscriptions/summary');
+  }
+
+  async getSubscriptionUpcoming(limit = 8) {
+    if (limit) {
+      return this.get(`/subscriptions/upcoming?limit=${limit}`);
+    }
+    return this.get('/subscriptions/upcoming');
+  }
+
+  async getSubscriptionForecast(months = 6) {
+    return this.get(`/subscriptions/forecast?months=${months}`);
+  }
+
+  async getSubscriptionStatusBreakdown() {
+    return this.get('/subscriptions/status-breakdown');
+  }
+
+  // === PRESUPUESTOS ===
+
+  async getBudgets(params = {}) {
+    const query = new URLSearchParams(
+      Object.entries(params).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      }, {})
+    ).toString();
+
+    const endpoint = query ? `/budgets?${query}` : '/budgets';
+    return this.get(endpoint);
+  }
+
+  async getBudgetSummary(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = query ? `/budgets/summary?${query}` : '/budgets/summary';
+    return this.get(endpoint);
+  }
+
+  async getBudgetSuggestions(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = query ? `/budgets/suggestions?${query}` : '/budgets/suggestions';
+    return this.get(endpoint);
+  }
+
+  async createBudget(payload) {
+    return this.post('/budgets', payload);
+  }
+
+  async updateBudget(id, payload) {
+    return this.put(`/budgets/${id}`, payload);
+  }
+
+  async deleteBudget(id) {
+    return this.delete(`/budgets/${id}`);
   }
 }
 
