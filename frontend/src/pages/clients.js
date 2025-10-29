@@ -1,12 +1,3 @@
-const sidebarViews = {
-  CLIENT_DETAIL: 'client-detail',
-  CLIENT_FORM: 'client-form',
-  CLIENT_EMPTY: 'client-empty',
-  PROJECT_DETAIL: 'project-detail',
-  PROJECT_FORM: 'project-form',
-  PROJECT_EMPTY: 'project-empty',
-};
-
 const clientsState = {
   activeTab: 'clients',
   clients: [],
@@ -36,7 +27,6 @@ const clientsState = {
   },
   selectedClientId: null,
   selectedProjectId: null,
-  sidebarView: sidebarViews.CLIENT_DETAIL,
   clientFormEditingId: null,
   projectFormEditingId: null,
   projectPrefillClientId: null,
@@ -84,31 +74,37 @@ function debounce(callback, delay = 320) {
 
 function setLoading(isLoading) {
   clientsState.loading = isLoading;
-  const spinner = document.querySelector('[data-clients-loading]');
-  if (spinner) spinner.hidden = !isLoading;
+  ['[data-clients-loading]', '[data-projects-loading]'].forEach((selector) => {
+    const spinner = document.querySelector(selector);
+    if (spinner) {
+      spinner.hidden = !isLoading;
+    }
+  });
 }
 
 function setError(message) {
   clientsState.error = message;
-  const errorBox = document.querySelector('[data-clients-error]');
-  if (!errorBox) return;
-  if (!message) {
-    errorBox.hidden = true;
-    errorBox.innerHTML = '';
-    return;
-  }
+  ['[data-clients-error]', '[data-projects-error]'].forEach((selector) => {
+    const errorBox = document.querySelector(selector);
+    if (!errorBox) return;
+    if (!message) {
+      errorBox.hidden = true;
+      errorBox.innerHTML = '';
+      return;
+    }
 
-  errorBox.hidden = false;
-  errorBox.innerHTML = `
-    <div class="module-error__content">
-      <span class="module-error__icon">⚠️</span>
-      <div>
-        <p class="module-error__title">No se pudieron cargar los datos</p>
-        <p class="module-error__message">${escapeHtml(message)}</p>
+    errorBox.hidden = false;
+    errorBox.innerHTML = `
+      <div class="module-error__content">
+        <span class="module-error__icon">⚠️</span>
+        <div>
+          <p class="module-error__title">No se pudieron cargar los datos</p>
+          <p class="module-error__message">${escapeHtml(message)}</p>
+        </div>
+        <button type="button" class="btn btn-secondary" data-action="retry-clients">Reintentar</button>
       </div>
-      <button type="button" class="btn btn-secondary" data-action="retry-clients">Reintentar</button>
-    </div>
-  `;
+    `;
+  });
 }
 
 function showToast(message, type = 'info') {
@@ -127,45 +123,263 @@ function showToast(message, type = 'info') {
   window.setTimeout(() => toast.remove(), 3200);
 }
 
+const modalFocusableSelectors =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+let activeClientsModal = null;
+let clientsModalLastFocus = null;
+
+function getClientsModal(type) {
+  if (type === 'client') {
+    return document.getElementById('client-modal');
+  }
+  if (type === 'project') {
+    return document.getElementById('project-modal');
+  }
+  return null;
+}
+
+function trapClientsModalFocus(event) {
+  if (event.key !== 'Tab' || !activeClientsModal) return;
+
+  const focusable = Array.from(
+    activeClientsModal.querySelectorAll(modalFocusableSelectors)
+  ).filter((node) => !node.hasAttribute('disabled') && node.getAttribute('tabindex') !== '-1');
+
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const isShift = event.shiftKey;
+  const active = document.activeElement;
+
+  if (!isShift && active === last) {
+    event.preventDefault();
+    first.focus();
+  } else if (isShift && active === first) {
+    event.preventDefault();
+    last.focus();
+  }
+}
+
+function handleClientsModalKeydown(event) {
+  if (!activeClientsModal) return;
+
+  if (event.key === 'Escape' && !event.defaultPrevented) {
+    event.preventDefault();
+    closeClientsModal(activeClientsModal.dataset.modalType);
+    return;
+  }
+
+  trapClientsModalFocus(event);
+}
+
+function openClientsModal(type) {
+  const modal = getClientsModal(type);
+  if (!modal) return;
+
+  clientsModalLastFocus = document.activeElement;
+  activeClientsModal = modal;
+  modal.dataset.modalType = type;
+  modal.classList.add('is-open');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('is-lock-scroll');
+  modal.addEventListener('keydown', handleClientsModalKeydown);
+
+  const focusable = Array.from(
+    modal.querySelectorAll(modalFocusableSelectors)
+  ).filter((node) => !node.hasAttribute('disabled') && node.getAttribute('tabindex') !== '-1');
+
+  if (focusable.length) {
+    window.requestAnimationFrame(() => {
+      focusable[0].focus();
+    });
+  }
+}
+
+function closeClientsModal(type) {
+  const modal = type ? getClientsModal(type) : activeClientsModal;
+  if (!modal || !modal.classList.contains('is-open')) return;
+
+  modal.classList.remove('is-open');
+  modal.setAttribute('aria-hidden', 'true');
+  modal.removeEventListener('keydown', handleClientsModalKeydown);
+
+  if (activeClientsModal === modal) {
+    activeClientsModal = null;
+  }
+
+  if (!document.querySelector('.modal.is-open')) {
+    document.body.classList.remove('is-lock-scroll');
+  }
+
+  if (clientsModalLastFocus && typeof clientsModalLastFocus.focus === 'function') {
+    clientsModalLastFocus.focus();
+  }
+  clientsModalLastFocus = null;
+
+  if (modal.dataset.modalType === 'client') {
+    clientsState.clientFormEditingId = null;
+  }
+  if (modal.dataset.modalType === 'project') {
+    clientsState.projectFormEditingId = null;
+    clientsState.projectPrefillClientId = null;
+  }
+}
+
+function toInputDate(value) {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    const isoMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) {
+      return isoMatch[1];
+    }
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function populateClientModal(client) {
+  const modal = getClientsModal('client');
+  if (!modal) return;
+
+  const resolvedClient = client || {};
+  const form = modal.querySelector('form[data-form-type="client"]');
+  if (!form) return;
+
+  form.reset();
+
+  const title = modal.querySelector('[data-client-modal-title]');
+  const submit = modal.querySelector('[data-client-submit]');
+
+  if (title) {
+    title.textContent = resolvedClient.id ? 'Editar cliente' : 'Nuevo cliente';
+  }
+  if (submit) {
+    submit.textContent = resolvedClient.id ? 'Guardar cambios' : 'Crear cliente';
+  }
+
+  const nameInput = form.querySelector('[name="name"]');
+  const emailInput = form.querySelector('[name="email"]');
+  const phoneInput = form.querySelector('[name="phone"]');
+  const nifInput = form.querySelector('[name="nifCif"]');
+  const cityInput = form.querySelector('[name="city"]');
+  const notesInput = form.querySelector('[name="notes"]');
+  const activeCheckbox = form.querySelector('[name="isActive"]');
+
+  if (nameInput) nameInput.value = resolvedClient.name || '';
+  if (emailInput) emailInput.value = resolvedClient.email || '';
+  if (phoneInput) phoneInput.value = resolvedClient.phone || '';
+  if (nifInput) nifInput.value = resolvedClient.nifCif || '';
+  if (cityInput) cityInput.value = resolvedClient.city || '';
+  if (notesInput) notesInput.value = resolvedClient.notes || '';
+  if (activeCheckbox) activeCheckbox.checked = resolvedClient.isActive !== false;
+}
+
+function populateProjectModal(project) {
+  const modal = getClientsModal('project');
+  if (!modal) return;
+
+  const resolvedProject = project || {};
+  const form = modal.querySelector('form[data-form-type="project"]');
+  if (!form) return;
+
+  form.reset();
+
+  const title = modal.querySelector('[data-project-modal-title]');
+  const submit = modal.querySelector('[data-project-submit]');
+
+  if (title) {
+    title.textContent = resolvedProject.id ? 'Editar proyecto' : 'Nuevo proyecto';
+  }
+  if (submit) {
+    submit.textContent = resolvedProject.id ? 'Guardar cambios' : 'Crear proyecto';
+  }
+
+  const nameInput = form.querySelector('[name="name"]');
+  const clientSelect = form.querySelector('[name="clientId"]');
+  const statusSelect = form.querySelector('[name="status"]');
+  const budgetInput = form.querySelector('[name="budget"]');
+  const startDateInput = form.querySelector('[name="startDate"]');
+  const endDateInput = form.querySelector('[name="endDate"]');
+  const descriptionInput = form.querySelector('[name="description"]');
+
+  if (nameInput) nameInput.value = resolvedProject.name || '';
+
+  if (clientSelect) {
+    const options = [
+      '<option value="">Sin asignar</option>',
+      ...clientsState.clients.map(
+        (client) =>
+          `<option value="${client.id}">${escapeHtml(client.name || 'Cliente sin nombre')}</option>`
+      ),
+    ].join('');
+    clientSelect.innerHTML = options;
+
+    const preferredClient =
+      resolvedProject.clientId ||
+      (resolvedProject.id ? null : clientsState.projectPrefillClientId);
+    clientSelect.value = preferredClient ? String(preferredClient) : '';
+  }
+
+  if (statusSelect) {
+    const status = resolvedProject.status || 'active';
+    statusSelect.value = status;
+  }
+
+  if (budgetInput) {
+    budgetInput.value =
+      resolvedProject.budget === 0 || resolvedProject.budget
+        ? String(resolvedProject.budget)
+        : '';
+  }
+
+  if (startDateInput) startDateInput.value = toInputDate(resolvedProject.startDate);
+  if (endDateInput) endDateInput.value = toInputDate(resolvedProject.endDate);
+  if (descriptionInput) descriptionInput.value = resolvedProject.description || '';
+}
+
+function openClientModal(options = {}) {
+  const clientId = options.clientId ? String(options.clientId) : null;
+  const client = clientId ? clientsState.clients.find((item) => item.id === clientId) : null;
+  populateClientModal(client);
+  openClientsModal('client');
+}
+
+function openProjectModal(options = {}) {
+  const projectId = options.projectId ? String(options.projectId) : null;
+  const project = projectId ? clientsState.projects.find((item) => item.id === projectId) : null;
+  populateProjectModal(project);
+  openClientsModal('project');
+}
+
 function ensureSelection() {
   if (clientsState.clients.length) {
-    if (
-      !clientsState.selectedClientId ||
-      !clientsState.clients.some((client) => client.id === clientsState.selectedClientId)
-    ) {
+    const isValidSelection = clientsState.clients.some(
+      (client) => client.id === clientsState.selectedClientId
+    );
+    if (!isValidSelection) {
       clientsState.selectedClientId = clientsState.clients[0].id;
-    }
-    if (clientsState.sidebarView === sidebarViews.CLIENT_EMPTY) {
-      clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
     }
   } else {
     clientsState.selectedClientId = null;
-    if (
-      clientsState.sidebarView === sidebarViews.CLIENT_DETAIL ||
-      clientsState.sidebarView === sidebarViews.CLIENT_FORM
-    ) {
-      clientsState.sidebarView = sidebarViews.CLIENT_EMPTY;
-    }
   }
 
   if (clientsState.projects.length) {
-    if (
-      !clientsState.selectedProjectId ||
-      !clientsState.projects.some((project) => project.id === clientsState.selectedProjectId)
-    ) {
+    const isValidProject = clientsState.projects.some(
+      (project) => project.id === clientsState.selectedProjectId
+    );
+    if (!isValidProject) {
       clientsState.selectedProjectId = clientsState.projects[0].id;
-    }
-    if (clientsState.sidebarView === sidebarViews.PROJECT_EMPTY) {
-      clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
     }
   } else {
     clientsState.selectedProjectId = null;
-    if (
-      clientsState.sidebarView === sidebarViews.PROJECT_DETAIL ||
-      clientsState.sidebarView === sidebarViews.PROJECT_FORM
-    ) {
-      clientsState.sidebarView = sidebarViews.PROJECT_EMPTY;
-    }
   }
 }
 
@@ -302,6 +516,15 @@ function renderClientsTable() {
   const tbody = document.querySelector('[data-clients-table]');
   if (!tbody) return;
 
+  const total = clientsState.clients.length;
+  const countEl = document.querySelector('[data-clients-count]');
+  if (countEl) {
+    countEl.textContent =
+      total === 0
+        ? 'Sin clientes disponibles'
+        : `Mostrando ${total} ${total === 1 ? 'cliente' : 'clientes'}`;
+  }
+
   if (!clientsState.clients.length) {
     tbody.innerHTML = `
       <tr>
@@ -361,6 +584,15 @@ function renderClientsTable() {
 function renderProjectsTable() {
   const tbody = document.querySelector('[data-projects-table]');
   if (!tbody) return;
+
+  const total = clientsState.projects.length;
+  const countEl = document.querySelector('[data-projects-count]');
+  if (countEl) {
+    countEl.textContent =
+      total === 0
+        ? 'Sin proyectos disponibles'
+        : `Mostrando ${total} ${total === 1 ? 'proyecto' : 'proyectos'}`;
+  }
 
   if (!clientsState.projects.length) {
     tbody.innerHTML = `
@@ -503,288 +735,6 @@ function populateFilterControls() {
   }
 }
 
-function buildClientFormHTML(client = {}) {
-  return `
-    <form class="sidebar-form" data-form-type="client">
-      <header class="sidebar-form__header">
-        <h3>${client.id ? 'Editar cliente' : 'Nuevo cliente'}</h3>
-        <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
-      </header>
-      <div class="form-grid">
-        <label>
-          <span>Nombre *</span>
-          <input type="text" name="name" value="${escapeHtml(client.name || '')}" required />
-        </label>
-        <label>
-          <span>Email</span>
-          <input type="email" name="email" value="${escapeHtml(client.email || '')}" />
-        </label>
-        <label>
-          <span>Teléfono</span>
-          <input type="tel" name="phone" value="${escapeHtml(client.phone || '')}" />
-        </label>
-        <label>
-          <span>NIF / CIF</span>
-          <input type="text" name="nifCif" value="${escapeHtml(client.nifCif || '')}" />
-        </label>
-        <label>
-          <span>Ciudad</span>
-          <input type="text" name="city" value="${escapeHtml(client.city || '')}" />
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" name="isActive" ${client.isActive !== false ? 'checked' : ''} />
-          <span>Cliente activo</span>
-        </label>
-        <label class="wide">
-          <span>Notas</span>
-          <textarea name="notes" rows="3">${escapeHtml(client.notes || '')}</textarea>
-        </label>
-      </div>
-      <footer class="sidebar-form__footer">
-        <button type="submit" class="btn btn-primary">${client.id ? 'Guardar cambios' : 'Crear cliente'}</button>
-      </footer>
-    </form>
-  `;
-}
-
-function buildProjectFormHTML(project = {}) {
-  const selectedClientId = project.id
-    ? project.clientId
-    : clientsState.projectPrefillClientId || null;
-
-  const clientOptions = [
-    '<option value="">Sin asignar</option>',
-    ...clientsState.clients.map(
-      (client) =>
-        `<option value="${client.id}" ${
-          selectedClientId === client.id ? 'selected' : ''
-        }>${escapeHtml(client.name)}</option>`
-    ),
-  ].join('');
-
-  return `
-    <form class="sidebar-form" data-form-type="project">
-      <header class="sidebar-form__header">
-        <h3>${project.id ? 'Editar proyecto' : 'Nuevo proyecto'}</h3>
-        <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
-      </header>
-      <div class="form-grid">
-        <label>
-          <span>Nombre *</span>
-          <input type="text" name="name" value="${escapeHtml(project.name || '')}" required />
-        </label>
-        <label>
-          <span>Cliente</span>
-          <select name="clientId">
-            ${clientOptions}
-          </select>
-        </label>
-        <label>
-          <span>Estado</span>
-          <select name="status">
-            <option value="active" ${project.status === 'active' ? 'selected' : ''}>Activo</option>
-            <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>En pausa</option>
-            <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completado</option>
-            <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancelado</option>
-          </select>
-        </label>
-        <label>
-          <span>Presupuesto (€)</span>
-          <input type="number" min="0" step="0.01" name="budget" value="${project.budget != null ? project.budget : ''}" />
-        </label>
-        <label>
-          <span>Inicio</span>
-          <input type="date" name="startDate" value="${project.startDate ? project.startDate.split('T')[0] : ''}" />
-        </label>
-        <label>
-          <span>Entrega prevista</span>
-          <input type="date" name="endDate" value="${project.endDate ? project.endDate.split('T')[0] : ''}" />
-        </label>
-        <label class="wide">
-          <span>Descripción</span>
-          <textarea name="description" rows="3">${escapeHtml(project.description || '')}</textarea>
-        </label>
-      </div>
-      <footer class="sidebar-form__footer">
-        <button type="submit" class="btn btn-primary">${project.id ? 'Guardar cambios' : 'Crear proyecto'}</button>
-      </footer>
-    </form>
-  `;
-}
-
-function buildClientDetailHTML(client) {
-  if (!client) {
-    return `
-      <div class="sidebar-empty">
-        <span class="sidebar-empty__icon">👥</span>
-        <p>Selecciona un cliente para revisar su actividad.</p>
-      </div>
-    `;
-  }
-
-  return `
-    <article class="sidebar-card">
-      <header class="sidebar-card__header">
-        <div>
-          <h3>${escapeHtml(client.name)}</h3>
-          <p>${escapeHtml(client.email || 'Sin email principal')}</p>
-        </div>
-        <span class="badge badge--${client.isActive ? 'success' : 'neutral'}">
-          ${client.isActive ? 'Activo' : 'Inactivo'}
-        </span>
-      </header>
-      <dl class="detail-grid">
-        <div>
-          <dt>Teléfono</dt>
-          <dd>${escapeHtml(client.phone || 'Sin teléfono')}</dd>
-        </div>
-        <div>
-          <dt>NIF / CIF</dt>
-          <dd>${escapeHtml(client.nifCif || '—')}</dd>
-        </div>
-        <div>
-          <dt>Ciudad</dt>
-          <dd>${escapeHtml(client.city || '—')}</dd>
-        </div>
-        <div>
-          <dt>Proyectos</dt>
-          <dd>${client.projectsCount}</dd>
-        </div>
-        <div>
-          <dt>Facturación</dt>
-          <dd>${formatCurrency(client.totalInvoiced)}</dd>
-        </div>
-        <div>
-          <dt>Pendiente de cobro</dt>
-          <dd>${formatCurrency(client.totalPending)}</dd>
-        </div>
-      </dl>
-      <footer class="sidebar-card__footer">
-        <button type="button" class="btn btn-secondary" data-client-edit="${client.id}">Editar cliente</button>
-        <button type="button" class="btn btn-outline" data-open-project data-rel-client="${client.id}">
-          Nuevo proyecto
-        </button>
-      </footer>
-    </article>
-  `;
-}
-
-function buildProjectDetailHTML(project) {
-  if (!project) {
-    return `
-      <div class="sidebar-empty">
-        <span class="sidebar-empty__icon">📁</span>
-        <p>Selecciona un proyecto para visualizar su estado.</p>
-      </div>
-    `;
-  }
-
-  const statusBadge =
-    project.status === 'completed'
-      ? 'success'
-      : project.status === 'cancelled'
-      ? 'danger'
-      : project.status === 'on-hold'
-      ? 'warning'
-      : 'info';
-
-  return `
-    <article class="sidebar-card">
-      <header class="sidebar-card__header">
-        <div>
-          <h3>${escapeHtml(project.name)}</h3>
-          <p>${escapeHtml(project.clientName || 'Sin cliente')}</p>
-        </div>
-        <span class="badge badge--${statusBadge}">
-          ${
-            project.status === 'completed'
-              ? 'Completado'
-              : project.status === 'cancelled'
-              ? 'Cancelado'
-              : project.status === 'on-hold'
-              ? 'En pausa'
-              : 'Activo'
-          }
-        </span>
-      </header>
-      <dl class="detail-grid">
-        <div>
-          <dt>Presupuesto</dt>
-          <dd>${formatCurrency(project.budget ?? 0)}</dd>
-        </div>
-        <div>
-          <dt>Facturación</dt>
-          <dd>${formatCurrency(project.totalInvoiced ?? 0)}</dd>
-        </div>
-        <div>
-          <dt>Facturas emitidas</dt>
-          <dd>${project.invoiceCount ?? 0}</dd>
-        </div>
-        <div>
-          <dt>Inicio</dt>
-          <dd>${formatDate(project.startDate)}</dd>
-        </div>
-        <div>
-          <dt>Entrega</dt>
-          <dd>${formatDate(project.endDate)}</dd>
-        </div>
-      </dl>
-      <footer class="sidebar-card__footer">
-        <button type="button" class="btn btn-secondary" data-project-edit="${project.id}">
-          Editar proyecto
-        </button>
-      </footer>
-    </article>
-  `;
-}
-
-function renderSidebar() {
-  const container = document.querySelector('[data-sidebar]');
-  if (!container) return;
-
-  let html = '';
-
-  if (clientsState.sidebarView === sidebarViews.CLIENT_EMPTY) {
-    html = `
-      <div class="sidebar-empty">
-        <span class="sidebar-empty__icon">🧾</span>
-        <p>No hay clientes registrados todavía.</p>
-        <button type="button" class="btn btn-primary" data-open-client>Crear cliente</button>
-      </div>
-    `;
-  } else if (clientsState.sidebarView === sidebarViews.PROJECT_EMPTY) {
-    html = `
-      <div class="sidebar-empty">
-        <span class="sidebar-empty__icon">📂</span>
-        <p>No hay proyectos registrados todavía.</p>
-        <button type="button" class="btn btn-primary" data-open-project>Crear proyecto</button>
-      </div>
-    `;
-  } else if (clientsState.sidebarView === sidebarViews.CLIENT_FORM) {
-    const client =
-      clientsState.clientFormEditingId &&
-      clientsState.clients.find((item) => item.id === clientsState.clientFormEditingId);
-    html = buildClientFormHTML(client);
-  } else if (clientsState.sidebarView === sidebarViews.PROJECT_FORM) {
-    const project =
-      clientsState.projectFormEditingId &&
-      clientsState.projects.find((item) => item.id === clientsState.projectFormEditingId);
-    html = buildProjectFormHTML(project);
-  } else if (clientsState.sidebarView === sidebarViews.PROJECT_DETAIL) {
-    const project = clientsState.projects.find(
-      (item) => item.id === clientsState.selectedProjectId
-    );
-    html = buildProjectDetailHTML(project);
-  } else {
-    const client = clientsState.clients.find(
-      (item) => item.id === clientsState.selectedClientId
-    );
-    html = buildClientDetailHTML(client);
-  }
-
-  container.innerHTML = html;
-}
-
 async function refreshClientsModule(options = {}) {
   if (options.focusClientId) {
     clientsState.selectedClientId = String(options.focusClientId);
@@ -820,7 +770,6 @@ async function refreshClientsModule(options = {}) {
     renderProjectsTable();
     renderInsights();
     populateFilterControls();
-    renderSidebar();
   } catch (error) {
     console.error('Error loading clients module', error);
     setError('Ocurrió un problema al cargar los datos.');
@@ -833,9 +782,12 @@ function setActiveTab(tab) {
   if (clientsState.activeTab === tab) return;
   clientsState.activeTab = tab;
 
-  document
-    .querySelectorAll('[data-clients-tab]')
-    .forEach((button) => button.classList.toggle('active', button.dataset.clientsTab === tab));
+  document.querySelectorAll('[data-clients-tab]').forEach((button) => {
+    const isActive = button.dataset.clientsTab === tab;
+    button.classList.toggle('active', isActive);
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
 
   document
     .querySelectorAll('[data-clients-panel]')
@@ -843,32 +795,25 @@ function setActiveTab(tab) {
       panel.hidden = panel.dataset.clientsPanel !== tab;
     });
 
-  if (tab === 'clients') {
-    if (clientsState.sidebarView === sidebarViews.PROJECT_DETAIL) {
-      clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
-    }
-    if (clientsState.sidebarView === sidebarViews.PROJECT_FORM) {
-      clientsState.sidebarView = sidebarViews.CLIENT_FORM;
-    }
-    if (clientsState.sidebarView === sidebarViews.PROJECT_EMPTY) {
-      clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
-    }
-  } else {
-    if (clientsState.sidebarView === sidebarViews.CLIENT_DETAIL) {
-      clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
-    }
-    if (clientsState.sidebarView === sidebarViews.CLIENT_FORM) {
-      clientsState.sidebarView = sidebarViews.PROJECT_FORM;
-    }
-    if (clientsState.sidebarView === sidebarViews.CLIENT_EMPTY) {
-      clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
-    }
-  }
-
-  renderSidebar();
+  renderClientsTable();
+  renderProjectsTable();
 }
 
 function handleClick(event) {
+  const modalDismiss = event.target.closest('[data-modal-dismiss]');
+  if (modalDismiss) {
+    event.preventDefault();
+    closeClientsModal(modalDismiss.dataset.modalDismiss);
+    return;
+  }
+
+  const modalCloseBtn = event.target.closest('[data-modal-close]');
+  if (modalCloseBtn) {
+    event.preventDefault();
+    closeClientsModal(modalCloseBtn.dataset.modalClose);
+    return;
+  }
+
   const tabButton = event.target.closest('[data-clients-tab]');
   if (tabButton) {
     event.preventDefault();
@@ -882,48 +827,46 @@ function handleClick(event) {
     return;
   }
 
+  const refreshClients = event.target.closest('[data-action="refresh-clients"]');
+  if (refreshClients) {
+    event.preventDefault();
+    void refreshClientsModule();
+    return;
+  }
+
+  const refreshProjects = event.target.closest('[data-action="refresh-projects"]');
+  if (refreshProjects) {
+    event.preventDefault();
+    void refreshClientsModule();
+    return;
+  }
+
   const newClientBtn = event.target.closest('[data-open-client]');
   if (newClientBtn) {
+    event.preventDefault();
     clientsState.clientFormEditingId = null;
-    clientsState.sidebarView = sidebarViews.CLIENT_FORM;
-    renderSidebar();
+    openClientModal();
     return;
   }
 
   const newProjectBtn = event.target.closest('[data-open-project]');
   if (newProjectBtn) {
+    event.preventDefault();
     clientsState.projectFormEditingId = null;
     const relClient = newProjectBtn.dataset.relClient;
     clientsState.projectPrefillClientId = relClient ? String(relClient) : null;
-    clientsState.sidebarView = sidebarViews.PROJECT_FORM;
-    renderSidebar();
-    return;
-  }
-
-  const cancelBtn = event.target.closest('[data-action="cancel-form"]');
-  if (cancelBtn) {
-    clientsState.clientFormEditingId = null;
-    clientsState.projectFormEditingId = null;
-    clientsState.projectPrefillClientId = null;
-    if (clientsState.activeTab === 'clients') {
-      clientsState.sidebarView = clientsState.clients.length
-        ? sidebarViews.CLIENT_DETAIL
-        : sidebarViews.CLIENT_EMPTY;
-    } else {
-      clientsState.sidebarView = clientsState.projects.length
-        ? sidebarViews.PROJECT_DETAIL
-        : sidebarViews.PROJECT_EMPTY;
-    }
-    renderSidebar();
+    openProjectModal();
     return;
   }
 
   const clientEditBtn = event.target.closest('[data-client-edit]');
   if (clientEditBtn) {
     event.stopPropagation();
-    clientsState.clientFormEditingId = String(clientEditBtn.dataset.clientEdit);
-    clientsState.sidebarView = sidebarViews.CLIENT_FORM;
-    renderSidebar();
+    event.preventDefault();
+    const clientId = String(clientEditBtn.dataset.clientEdit);
+    clientsState.clientFormEditingId = clientId;
+    clientsState.selectedClientId = clientId;
+    openClientModal({ clientId });
     return;
   }
 
@@ -937,9 +880,11 @@ function handleClick(event) {
   const projectEditBtn = event.target.closest('[data-project-edit]');
   if (projectEditBtn) {
     event.stopPropagation();
-    clientsState.projectFormEditingId = String(projectEditBtn.dataset.projectEdit);
-    clientsState.sidebarView = sidebarViews.PROJECT_FORM;
-    renderSidebar();
+    event.preventDefault();
+    const projectId = String(projectEditBtn.dataset.projectEdit);
+    clientsState.projectFormEditingId = projectId;
+    clientsState.selectedProjectId = projectId;
+    openProjectModal({ projectId });
     return;
   }
 
@@ -953,18 +898,14 @@ function handleClick(event) {
   const clientRow = event.target.closest('[data-client-row]');
   if (clientRow) {
     clientsState.selectedClientId = String(clientRow.dataset.clientRow);
-    clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
     renderClientsTable();
-    renderSidebar();
     return;
   }
 
   const projectRow = event.target.closest('[data-project-row]');
   if (projectRow) {
     clientsState.selectedProjectId = String(projectRow.dataset.projectRow);
-    clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
     renderProjectsTable();
-    renderSidebar();
   }
 }
 
@@ -1026,7 +967,7 @@ async function handleClientFormSubmit(event) {
       showToast('Cliente creado correctamente', 'success');
     }
     clientsState.clientFormEditingId = null;
-    clientsState.sidebarView = sidebarViews.CLIENT_DETAIL;
+    closeClientsModal('client');
     await refreshClientsModule({
       focusClientId: clientsState.selectedClientId || response?.id,
     });
@@ -1069,7 +1010,7 @@ async function handleProjectFormSubmit(event) {
     }
     clientsState.projectFormEditingId = null;
     clientsState.projectPrefillClientId = null;
-    clientsState.sidebarView = sidebarViews.PROJECT_DETAIL;
+    closeClientsModal('project');
     await refreshClientsModule({
       focusProjectId: clientsState.selectedProjectId || response?.id,
     });
@@ -1119,7 +1060,7 @@ async function handleProjectDelete(id) {
 
 
 export function initClients() {
-  const module = document.querySelector('.clients-module');
+  const module = document.querySelector('.clients');
   if (!module) return;
 
   module.addEventListener('click', handleClick);
@@ -1134,176 +1075,277 @@ export function initClients() {
 
 export default function renderClients() {
   return `
-    <section class="module clients-module">
-      <header class="module-header">
-        <div class="module-title-section">
-          <h1>Clientes &amp; Proyectos</h1>
-          <p>Visión 360º de tu cartera y estado de ejecución.</p>
+    <section class="clients" aria-labelledby="clients-title">
+      <header class="invoices__hero clients__hero">
+        <div class="invoices__hero-copy">
+          <h1 id="clients-title">Clientes &amp; Proyectos</h1>
+          <p>Gestiona tu cartera y proyectos con los mismos patrones que Facturas.</p>
         </div>
-        <div class="module-actions">
-          <button type="button" class="btn btn-secondary" data-open-project>＋ Nuevo proyecto</button>
-          <button type="button" class="btn btn-primary" data-open-client>＋ Nuevo cliente</button>
+        <div class="invoices__hero-actions">
+          <button type="button" class="btn-primary" data-open-client>Nuevo cliente</button>
+          <button type="button" class="btn-ghost" data-open-project>Nuevo proyecto</button>
         </div>
       </header>
 
-      <div class="summary-wrap">
-        <div class="summary-grid summary-grid--compact">
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-primary-light);">👥</div>
-            <div class="card-content">
-              <span class="card-label">Clientes totales</span>
-              <span class="card-value" id="clients-summary-total">0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-success-light);">✅</div>
-            <div class="card-content">
-              <span class="card-label">Clientes activos</span>
-              <span class="card-value" id="clients-summary-active">0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-warning-light);">💳</div>
-            <div class="card-content">
-              <span class="card-label">Pendiente de cobro</span>
-              <span class="card-value" id="clients-summary-pending">€0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-info-light);">📈</div>
-            <div class="card-content">
-              <span class="card-label">Facturación total</span>
-              <span class="card-value" id="clients-summary-revenue">€0</span>
-            </div>
-          </article>
-        </div>
-        <div class="summary-grid summary-grid--compact">
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-tertiary-light);">📂</div>
-            <div class="card-content">
-              <span class="card-label">Proyectos totales</span>
-              <span class="card-value" id="projects-summary-total">0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-secondary-light);">🚀</div>
-            <div class="card-content">
-              <span class="card-label">Proyectos activos</span>
-              <span class="card-value" id="projects-summary-active">0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-tertiary-muted);">💰</div>
-            <div class="card-content">
-              <span class="card-label">Presupuesto asignado</span>
-              <span class="card-value" id="projects-summary-budget">€0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-secondary-muted);">📊</div>
-            <div class="card-content">
-              <span class="card-label">Facturación proyectos</span>
-              <span class="card-value" id="projects-summary-revenue">€0</span>
-            </div>
-          </article>
-        </div>
+      <div class="clients-tabs" role="tablist">
+        <button
+          type="button"
+          class="btn-ghost clients-tab is-active"
+          data-clients-tab="clients"
+          aria-pressed="true"
+        >
+          Clientes
+        </button>
+        <button
+          type="button"
+          class="btn-ghost clients-tab"
+          data-clients-tab="projects"
+          aria-pressed="false"
+        >
+          Proyectos
+        </button>
       </div>
 
-      <div class="module-tabs module-tabs--pill">
-        <button type="button" class="tab-button active" data-clients-tab="clients">Clientes</button>
-        <button type="button" class="tab-button" data-clients-tab="projects">Proyectos</button>
-      </div>
+      <section
+        class="invoices__filters clients__filters"
+        data-clients-panel="clients"
+        aria-label="Filtros de clientes"
+      >
+        <div class="invoices__filters-group">
+          <label class="visually-hidden" for="clients-search">Buscar clientes</label>
+          <input
+            type="search"
+            id="clients-search"
+            class="invoices__search"
+            placeholder="Buscar clientes..."
+            autocomplete="off"
+            data-clients-search
+          />
+        </div>
+        <div class="invoices__filters-group">
+          <label class="visually-hidden" for="clients-status">Filtrar por estado</label>
+          <select id="clients-status" class="invoices__select" data-clients-status>
+            <option value="all">Todos</option>
+            <option value="active">Activos</option>
+            <option value="inactive">Inactivos</option>
+          </select>
+        </div>
+        <div class="invoices__filters-group">
+          <button type="button" class="btn-ghost" data-action="refresh-clients">
+            <span>🔄</span>
+            Recargar
+          </button>
+        </div>
+      </section>
 
-      <div class="module-body module-body--split">
-        <div class="module-main">
-          <div class="module-toolbar" data-clients-panel="clients">
-            <label class="input input--search">
-              <span class="input__icon">🔍</span>
-              <input type="search" data-clients-search placeholder="Buscar clientes..." autocomplete="off" />
-            </label>
-            <label class="input input--select">
-              <span>Estado</span>
-              <select data-clients-status>
-                <option value="all">Todos</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
-              </select>
-            </label>
-          </div>
+      <section
+        class="invoices__filters clients__filters"
+        data-clients-panel="projects"
+        aria-label="Filtros de proyectos"
+        hidden
+      >
+        <div class="invoices__filters-group">
+          <label class="visually-hidden" for="projects-search">Buscar proyectos</label>
+          <input
+            type="search"
+            id="projects-search"
+            class="invoices__search"
+            placeholder="Buscar proyectos..."
+            autocomplete="off"
+            data-projects-search
+          />
+        </div>
+        <div class="invoices__filters-group">
+          <label class="visually-hidden" for="projects-status">Estado del proyecto</label>
+          <select id="projects-status" class="invoices__select" data-projects-status>
+            <option value="all">Todos</option>
+            <option value="active">Activos</option>
+            <option value="on-hold">En pausa</option>
+            <option value="completed">Completados</option>
+            <option value="cancelled">Cancelados</option>
+          </select>
+        </div>
+        <div class="invoices__filters-group">
+          <button type="button" class="btn-ghost" data-action="refresh-projects">
+            <span>🔄</span>
+            Recargar
+          </button>
+        </div>
+      </section>
 
-          <div class="module-toolbar" data-clients-panel="projects" hidden>
-            <label class="input input--search">
-              <span class="input__icon">🔍</span>
-              <input type="search" data-projects-search placeholder="Buscar proyectos..." autocomplete="off" />
-            </label>
-            <label class="input input--select">
-              <span>Estado</span>
-              <select data-projects-status>
-                <option value="all">Todos</option>
-                <option value="active">Activos</option>
-                <option value="on-hold">En pausa</option>
-                <option value="completed">Completados</option>
-                <option value="cancelled">Cancelados</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="table-wrapper" data-clients-panel="clients">
-            <table class="data-table data-table--compact">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Contacto</th>
-                  <th>Facturación</th>
-                  <th>Proyectos</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody data-clients-table></tbody>
-            </table>
-          </div>
-
-          <div class="table-wrapper" data-clients-panel="projects" hidden>
-            <table class="data-table data-table--compact">
-              <thead>
-                <tr>
-                  <th>Proyecto</th>
-                  <th>Estado</th>
-                  <th>Facturación</th>
-                  <th>Facturas</th>
-                  <th>Fechas</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody data-projects-table></tbody>
-            </table>
-          </div>
-
+      <section
+        class="invoices-table clients-table"
+        data-clients-panel="clients"
+        aria-label="Listado de clientes"
+      >
+        <div class="invoices-table__surface">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Cliente</th>
+                <th scope="col">Contacto</th>
+                <th scope="col">Facturación</th>
+                <th scope="col">Proyectos</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody data-clients-table></tbody>
+          </table>
+        </div>
+        <footer class="invoices-table__footer">
           <div class="module-loading" data-clients-loading hidden>
             <span class="spinner"></span>
-            <p>Cargando información...</p>
+            <p>Cargando clientes...</p>
           </div>
           <div class="module-error" data-clients-error hidden></div>
-        </div>
+          <p data-clients-count>Sin clientes cargados</p>
+        </footer>
+      </section>
 
-        <aside class="module-sidebar" data-sidebar></aside>
+      <section
+        class="invoices-table clients-table"
+        data-clients-panel="projects"
+        aria-label="Listado de proyectos"
+        hidden
+      >
+        <div class="invoices-table__surface">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Proyecto</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Facturación</th>
+                <th scope="col">Facturas</th>
+                <th scope="col">Fechas</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody data-projects-table></tbody>
+          </table>
+        </div>
+        <footer class="invoices-table__footer">
+          <div class="module-loading" data-projects-loading hidden>
+            <span class="spinner"></span>
+            <p>Cargando proyectos...</p>
+          </div>
+          <div class="module-error" data-projects-error hidden></div>
+          <p data-projects-count>Sin proyectos cargados</p>
+        </footer>
+      </section>
+
+      <div class="modal" id="client-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="client-modal-title">
+        <div class="modal__backdrop" data-modal-dismiss="client"></div>
+        <div class="modal__panel" role="document">
+          <header class="modal__head">
+            <div>
+              <h2 id="client-modal-title" data-client-modal-title>Nuevo cliente</h2>
+              <p class="modal__subtitle">Introduce la información fiscal del cliente.</p>
+            </div>
+            <button type="button" class="modal__close" data-modal-close="client" aria-label="Cerrar modal">
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
+          <form class="invoice-form" data-form-type="client" novalidate>
+            <div class="modal__body">
+              <div class="invoice-form__grid">
+                <label class="form-field">
+                  <span>Nombre *</span>
+                  <input type="text" name="name" required placeholder="Razón social o nombre comercial" />
+                </label>
+                <label class="form-field">
+                  <span>Email</span>
+                  <input type="email" name="email" placeholder="cliente@empresa.com" />
+                </label>
+                <label class="form-field">
+                  <span>Teléfono</span>
+                  <input type="tel" name="phone" placeholder="+34 600 000 000" />
+                </label>
+                <label class="form-field">
+                  <span>NIF / CIF</span>
+                  <input type="text" name="nifCif" placeholder="B12345678" />
+                </label>
+                <label class="form-field">
+                  <span>Ciudad</span>
+                  <input type="text" name="city" placeholder="Madrid, Barcelona..." />
+                </label>
+                <label class="form-field">
+                  <span>Notas</span>
+                  <textarea name="notes" rows="4" placeholder="Información adicional para el equipo"></textarea>
+                </label>
+              </div>
+              <label class="checkbox">
+                <input type="checkbox" name="isActive" checked />
+                <span>Cliente activo</span>
+              </label>
+            </div>
+            <footer class="invoice-form__footer modal__footer">
+              <button type="button" class="btn-secondary" data-modal-close="client">Cancelar</button>
+              <button type="submit" class="btn-primary" data-client-submit>Crear cliente</button>
+            </footer>
+          </form>
+        </div>
       </div>
 
-      <footer class="module-footer">
-        <section>
-          <h4>Clientes recientes</h4>
-          <ul class="insight-list" data-recent-clients></ul>
-        </section>
-        <section>
-          <h4>Hitos de proyectos</h4>
-          <ul class="insight-list" data-upcoming-projects></ul>
-        </section>
-        <section>
-          <h4>Estado por proyectos</h4>
-          <ul class="insight-list" data-status-metrics></ul>
-        </section>
-      </footer>
+      <div class="modal" id="project-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="project-modal-title">
+        <div class="modal__backdrop" data-modal-dismiss="project"></div>
+        <div class="modal__panel" role="document">
+          <header class="modal__head">
+            <div>
+              <h2 id="project-modal-title" data-project-modal-title>Nuevo proyecto</h2>
+              <p class="modal__subtitle">Planifica el proyecto y vincúlalo a un cliente existente.</p>
+            </div>
+            <button type="button" class="modal__close" data-modal-close="project" aria-label="Cerrar modal">
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
+          <form class="invoice-form" data-form-type="project" novalidate>
+            <div class="modal__body">
+              <div class="invoice-form__grid">
+                <label class="form-field">
+                  <span>Nombre *</span>
+                  <input type="text" name="name" required placeholder="Nombre interno del proyecto" />
+                </label>
+                <label class="form-field">
+                  <span>Cliente</span>
+                  <select name="clientId">
+                    <option value="">Sin asignar</option>
+                  </select>
+                </label>
+                <label class="form-field">
+                  <span>Estado</span>
+                  <select name="status">
+                    <option value="active">Activo</option>
+                    <option value="on-hold">En pausa</option>
+                    <option value="completed">Completado</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                </label>
+                <label class="form-field">
+                  <span>Presupuesto (€)</span>
+                  <input type="number" name="budget" min="0" step="0.01" placeholder="0,00" />
+                </label>
+                <label class="form-field">
+                  <span>Inicio</span>
+                  <input type="date" name="startDate" />
+                </label>
+                <label class="form-field">
+                  <span>Entrega prevista</span>
+                  <input type="date" name="endDate" />
+                </label>
+                <label class="form-field">
+                  <span>Descripción</span>
+                  <textarea name="description" rows="4" placeholder="Resumen del alcance y entregables"></textarea>
+                </label>
+              </div>
+            </div>
+            <footer class="invoice-form__footer modal__footer">
+              <button type="button" class="btn-secondary" data-modal-close="project">Cancelar</button>
+              <button type="submit" class="btn-primary" data-project-submit>Crear proyecto</button>
+            </footer>
+          </form>
+        </div>
+      </div>
     </section>
   `;
 }
