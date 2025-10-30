@@ -554,8 +554,8 @@ function buildExpenseModalHtml(mode, expense) {
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px; max-height: 95vh; display: flex; flex-direction: column;">
-        <header class="modal__head" style="flex-shrink: 0;">
+      <div class="modal__panel" style="width: min(95vw, 1000px); max-width: 1000px;">
+        <header class="modal__head">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
             <p class="modal__subtitle">${
@@ -566,8 +566,7 @@ function buildExpenseModalHtml(mode, expense) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
-        <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 1.5rem;">
-          <form id="expense-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.25rem;">
+              <div class="modal__body">          <form id="expense-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.25rem;">
             <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div class="form-group">
                 <label for="expense-date">Fecha del gasto</label>
@@ -707,7 +706,7 @@ function buildExpenseModalHtml(mode, expense) {
             </div>
           </form>
         </div>
-        <footer class="modal__footer" style="display: flex; gap: 0.75rem; flex-shrink: 0;">
+          <footer class="modal__footer">          
           <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cancelar</button>
           <button type="submit" form="expense-form" class="btn-primary" style="flex: 1;">${actionLabel}</button>
         </footer>
@@ -818,8 +817,8 @@ async function viewExpense(expenseId) {
     const modalHtml = `
       <div class="modal is-open" id="expense-view-modal" role="dialog" aria-modal="true">
         <div class="modal__backdrop"></div>
-        <div class="modal__panel" style="width: min(95vw, 700px); max-width: 700px; max-height: 95vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="flex-shrink: 0;">
+         <div class="modal__panel" style="width: min(95vw, 800px); max-width: 800px;">
+          <header class="modal__head">
             <div>
               <h2 class="modal__title">Detalle del gasto</h2>
               <p class="modal__subtitle">${formatDate(
@@ -830,7 +829,7 @@ async function viewExpense(expenseId) {
             </div>
             <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
           </header>
-          <div class="modal__body" style="overflow-y: auto; flex: 1;">
+          <div class="modal__body">
             <dl class="detail-list">
               <div><dt>Descripción</dt><dd>${escapeHtml(
                 expense.description || "-"
@@ -869,7 +868,7 @@ async function viewExpense(expenseId) {
               }</dd></div>
             </dl>
           </div>
-          <footer class="modal__footer" style="flex-shrink: 0;">
+          <footer class="modal__footer">
             <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
             <button type="button" class="btn-primary" onclick="openExpenseModal('edit', '${
               expense.id
