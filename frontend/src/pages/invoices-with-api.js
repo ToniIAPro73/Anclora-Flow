@@ -707,6 +707,19 @@ function showNotification(message, type = 'info') {
 
 // === FUNCIONES DE API ===
 
+function ensureInvoiceSelection() {
+  if (invoicesData.length > 0) {
+    const isValidSelection = invoicesData.some(
+      (invoice) => String(invoice.id) === String(selectedInvoiceId)
+    );
+    if (!isValidSelection) {
+      selectedInvoiceId = String(invoicesData[0].id);
+    }
+  } else {
+    selectedInvoiceId = null;
+  }
+}
+
 async function loadInvoices() {
   isLoading = true;
   renderLoadingState();
@@ -747,6 +760,9 @@ async function loadInvoices() {
       verifactuHash: invoice.verifactu_hash,
       verifactuError: invoice.verifactu_error_message
     }));
+
+    // Asegurar que la primera factura esté seleccionada
+    ensureInvoiceSelection();
 
     renderInvoicesTable();
     updateSummaryCards();
@@ -2046,9 +2062,12 @@ function setupFilters() {
       const row = e.target.closest('tr[data-invoice-id]');
       if (row) {
         const invoiceId = String(row.dataset.invoiceId);
-        selectedInvoiceId = selectedInvoiceId === invoiceId ? null : invoiceId;
-        console.log('Factura seleccionada:', selectedInvoiceId);
-        renderInvoicesTable();
+        // Solo cambiar si es diferente (no deseleccionar)
+        if (selectedInvoiceId !== invoiceId) {
+          selectedInvoiceId = invoiceId;
+          console.log('Factura seleccionada:', selectedInvoiceId);
+          renderInvoicesTable();
+        }
       }
     });
   }

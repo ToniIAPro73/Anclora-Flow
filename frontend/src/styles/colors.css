@@ -1414,6 +1414,7 @@ a:hover {
 .budgets-table tbody td:last-child,
 .subscriptions-table tbody td:last-child {
   border-right: none;
+  border-bottom: none;
 }
 
 .invoices-table tr.is-selected,
