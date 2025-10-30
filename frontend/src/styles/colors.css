@@ -1557,6 +1557,8 @@ a:hover {
 .expenses-table__actions {
   display: inline-flex;
   gap: 0.4rem;
+  border-bottom: none !important;
+  border-right: none !important;
 }
 
 .expenses-table__client {
