@@ -34,6 +34,10 @@ const clientsState = {
   error: null,
 };
 
+const PAGE_SIZE = 10;
+let clientsPage = 1;
+let projectsPage = 1;
+
 const money = new Intl.NumberFormat('es-ES', {
   style: 'currency',
   currency: 'EUR',
@@ -517,12 +521,17 @@ function renderClientsTable() {
   if (!tbody) return;
 
   const total = clientsState.clients.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (clientsPage > totalPages) clientsPage = totalPages;
+  if (clientsPage < 1) clientsPage = 1;
+
   const countEl = document.querySelector('[data-clients-count]');
+  const start = total === 0 ? 0 : (clientsPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(clientsPage * PAGE_SIZE, total);
   if (countEl) {
-    countEl.textContent =
-      total === 0
-        ? 'Sin clientes disponibles'
-        : `Mostrando ${total} ${total === 1 ? 'cliente' : 'clientes'}`;
+    countEl.textContent = total
+      ? `Mostrando ${start}-${end} de ${total} ${total === 1 ? 'cliente' : 'clientes'}`
+      : 'Sin clientes disponibles';
   }
 
   if (!clientsState.clients.length) {
@@ -538,14 +547,17 @@ function renderClientsTable() {
         </td>
       </tr>
     `;
+    renderClientsPagination(totalPages);
     return;
   }
 
-  tbody.innerHTML = clientsState.clients
+  const rows = clientsState.clients.slice(start - 1, start - 1 + PAGE_SIZE);
+
+  tbody.innerHTML = rows
     .map((client) => {
       const isSelected = client.id === clientsState.selectedClientId;
       return `
-        <tr data-client-row="${client.id}" class="${isSelected ? 'is-selected' : ''}">
+        <tr data-client-row="${client.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(client.name)}</strong>
@@ -579,6 +591,8 @@ function renderClientsTable() {
       `;
     })
     .join('');
+
+  renderClientsPagination(totalPages);
 }
 
 function renderProjectsTable() {
@@ -586,12 +600,17 @@ function renderProjectsTable() {
   if (!tbody) return;
 
   const total = clientsState.projects.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (projectsPage > totalPages) projectsPage = totalPages;
+  if (projectsPage < 1) projectsPage = 1;
+
   const countEl = document.querySelector('[data-projects-count]');
+  const start = total === 0 ? 0 : (projectsPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(projectsPage * PAGE_SIZE, total);
   if (countEl) {
-    countEl.textContent =
-      total === 0
-        ? 'Sin proyectos disponibles'
-        : `Mostrando ${total} ${total === 1 ? 'proyecto' : 'proyectos'}`;
+    countEl.textContent = total
+      ? `Mostrando ${start}-${end} de ${total} ${total === 1 ? 'proyecto' : 'proyectos'}`
+      : 'Sin proyectos disponibles';
   }
 
   if (!clientsState.projects.length) {
@@ -607,10 +626,13 @@ function renderProjectsTable() {
         </td>
       </tr>
     `;
+    renderProjectsPagination(totalPages);
     return;
   }
 
-  tbody.innerHTML = clientsState.projects
+  const rows = clientsState.projects.slice(start - 1, start - 1 + PAGE_SIZE);
+
+  tbody.innerHTML = rows
     .map((project) => {
       const isSelected = project.id === clientsState.selectedProjectId;
       const statusBadge =
@@ -623,7 +645,7 @@ function renderProjectsTable() {
           : 'info';
 
       return `
-        <tr data-project-row="${project.id}" class="${isSelected ? 'is-selected' : ''}">
+        <tr data-project-row="${project.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(project.name)}</strong>
@@ -665,6 +687,8 @@ function renderProjectsTable() {
       `;
     })
     .join('');
+
+  renderProjectsPagination(totalPages);
 }
 
 function renderInsights() {
@@ -724,6 +748,46 @@ function renderInsights() {
   }
 }
 
+function renderClientsPagination(totalPages) {
+  const pager = document.querySelector('[data-pagination="clients"]');
+  if (!pager) return;
+
+  if (clientsState.clients.length <= PAGE_SIZE) {
+    pager.innerHTML = '';
+    return;
+  }
+
+  pager.innerHTML = `
+    <button type="button" class="pager-btn" onclick="window.changeClientsPage(-1)" ${clientsPage === 1 ? 'disabled' : ''}>
+      Anterior
+    </button>
+    <span class="pager-status">Página ${clientsPage} de ${totalPages}</span>
+    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeClientsPage(1)" ${clientsPage === totalPages ? 'disabled' : ''}>
+      Siguiente
+    </button>
+  `;
+}
+
+function renderProjectsPagination(totalPages) {
+  const pager = document.querySelector('[data-pagination="projects"]');
+  if (!pager) return;
+
+  if (clientsState.projects.length <= PAGE_SIZE) {
+    pager.innerHTML = '';
+    return;
+  }
+
+  pager.innerHTML = `
+    <button type="button" class="pager-btn" onclick="window.changeProjectsPage(-1)" ${projectsPage === 1 ? 'disabled' : ''}>
+      Anterior
+    </button>
+    <span class="pager-status">Página ${projectsPage} de ${totalPages}</span>
+    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeProjectsPage(1)" ${projectsPage === totalPages ? 'disabled' : ''}>
+      Siguiente
+    </button>
+  `;
+}
+
 function populateFilterControls() {
   const statusSelect = document.querySelector('[data-clients-status]');
   if (statusSelect) {
@@ -764,6 +828,8 @@ async function refreshClientsModule(options = {}) {
       loadRecentClients(),
       loadProjectInsights(),
     ]);
+    clientsPage = 1;
+    projectsPage = 1;
     ensureSelection();
     renderSummaryCards();
     renderClientsTable();
@@ -779,21 +845,28 @@ async function refreshClientsModule(options = {}) {
 }
 
 function setActiveTab(tab) {
-  if (clientsState.activeTab === tab) return;
-  clientsState.activeTab = tab;
+  const resolvedTab = tab === 'projects' ? 'projects' : 'clients';
+  const isSameTab = clientsState.activeTab === resolvedTab;
+  clientsState.activeTab = resolvedTab;
 
   document.querySelectorAll('[data-clients-tab]').forEach((button) => {
-    const isActive = button.dataset.clientsTab === tab;
-    button.classList.toggle('active', isActive);
+    const isActive = button.dataset.clientsTab === resolvedTab;
     button.classList.toggle('is-active', isActive);
-    button.setAttribute('aria-pressed', String(isActive));
+    button.setAttribute('aria-selected', String(isActive));
+    button.setAttribute('tabindex', isActive ? '0' : '-1');
   });
 
   document
     .querySelectorAll('[data-clients-panel]')
     .forEach((panel) => {
-      panel.hidden = panel.dataset.clientsPanel !== tab;
+      const isActive = panel.dataset.clientsPanel === resolvedTab;
+      panel.hidden = !isActive;
+      panel.setAttribute('aria-hidden', String(!isActive));
     });
+
+  if (isSameTab) {
+    return;
+  }
 
   renderClientsTable();
   renderProjectsTable();
@@ -818,6 +891,7 @@ function handleClick(event) {
   if (tabButton) {
     event.preventDefault();
     setActiveTab(tabButton.dataset.clientsTab);
+    tabButton.focus();
     return;
   }
 
@@ -1058,6 +1132,22 @@ async function handleProjectDelete(id) {
   }
 }
 
+function changeClientsPage(delta) {
+  const totalPages = Math.max(1, Math.ceil(clientsState.clients.length / PAGE_SIZE));
+  const next = Math.min(Math.max(1, clientsPage + delta), totalPages);
+  if (next === clientsPage) return;
+  clientsPage = next;
+  renderClientsTable();
+}
+
+function changeProjectsPage(delta) {
+  const totalPages = Math.max(1, Math.ceil(clientsState.projects.length / PAGE_SIZE));
+  const next = Math.min(Math.max(1, projectsPage + delta), totalPages);
+  if (next === projectsPage) return;
+  projectsPage = next;
+  renderProjectsTable();
+}
+
 
 export function initClients() {
   const module = document.querySelector('.clients');
@@ -1068,9 +1158,14 @@ export function initClients() {
   module.addEventListener('change', handleChange);
   module.addEventListener('submit', handleSubmit);
 
+  setActiveTab(clientsState.activeTab);
+
   window.requestAnimationFrame(() => {
     void refreshClientsModule();
   });
+
+  window.changeClientsPage = changeClientsPage;
+  window.changeProjectsPage = changeProjectsPage;
 }
 
 export default function renderClients() {
@@ -1087,12 +1182,16 @@ export default function renderClients() {
         </div>
       </header>
 
-      <div class="clients-tabs" role="tablist">
+      <div class="clients-tabs" role="tablist" aria-label="Secciones del módulo">
         <button
           type="button"
           class="btn-ghost clients-tab is-active"
           data-clients-tab="clients"
-          aria-pressed="true"
+          id="clients-tab-clients"
+          role="tab"
+          aria-selected="true"
+          aria-controls="clients-panel-clients"
+          tabindex="0"
         >
           Clientes
         </button>
@@ -1100,139 +1199,146 @@ export default function renderClients() {
           type="button"
           class="btn-ghost clients-tab"
           data-clients-tab="projects"
-          aria-pressed="false"
+          id="clients-tab-projects"
+          role="tab"
+          aria-selected="false"
+          aria-controls="clients-panel-projects"
+          tabindex="-1"
         >
           Proyectos
         </button>
       </div>
 
-      <section
-        class="invoices__filters clients__filters"
+      <div
+        class="clients-panel"
         data-clients-panel="clients"
-        aria-label="Filtros de clientes"
+        role="tabpanel"
+        id="clients-panel-clients"
+        aria-labelledby="clients-tab-clients"
+        aria-hidden="false"
       >
-        <div class="invoices__filters-group">
-          <label class="visually-hidden" for="clients-search">Buscar clientes</label>
-          <input
-            type="search"
-            id="clients-search"
-            class="invoices__search"
-            placeholder="Buscar clientes..."
-            autocomplete="off"
-            data-clients-search
-          />
-        </div>
-        <div class="invoices__filters-group">
-          <label class="visually-hidden" for="clients-status">Filtrar por estado</label>
-          <select id="clients-status" class="invoices__select" data-clients-status>
-            <option value="all">Todos</option>
-            <option value="active">Activos</option>
-            <option value="inactive">Inactivos</option>
-          </select>
-        </div>
-        <div class="invoices__filters-group">
-          <button type="button" class="btn-ghost" data-action="refresh-clients">
-            <span>🔄</span>
-            Recargar
-          </button>
-        </div>
-      </section>
+        <section class="invoices__filters clients__filters" aria-label="Filtros de clientes">
+          <div class="invoices__filters-group">
+            <label class="visually-hidden" for="clients-search">Buscar clientes</label>
+            <input
+              type="search"
+              id="clients-search"
+              class="invoices__search"
+              placeholder="Buscar clientes..."
+              autocomplete="off"
+              data-clients-search
+            />
+          </div>
+          <div class="invoices__filters-group">
+            <label class="visually-hidden" for="clients-status">Filtrar por estado</label>
+            <select id="clients-status" class="invoices__select" data-clients-status>
+              <option value="all">Todos</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
+          </div>
+          <div class="invoices__filters-group">
+            <button type="button" class="btn-ghost" data-action="refresh-clients">
+              <span>🔄</span>
+              Recargar
+            </button>
+          </div>
+        </section>
 
-      <section
-        class="invoices__filters clients__filters"
-        data-clients-panel="projects"
-        aria-label="Filtros de proyectos"
-        hidden
-      >
-        <div class="invoices__filters-group">
-          <label class="visually-hidden" for="projects-search">Buscar proyectos</label>
-          <input
-            type="search"
-            id="projects-search"
-            class="invoices__search"
-            placeholder="Buscar proyectos..."
-            autocomplete="off"
-            data-projects-search
-          />
-        </div>
-        <div class="invoices__filters-group">
-          <label class="visually-hidden" for="projects-status">Estado del proyecto</label>
-          <select id="projects-status" class="invoices__select" data-projects-status>
-            <option value="all">Todos</option>
-            <option value="active">Activos</option>
-            <option value="on-hold">En pausa</option>
-            <option value="completed">Completados</option>
-            <option value="cancelled">Cancelados</option>
-          </select>
-        </div>
-        <div class="invoices__filters-group">
-          <button type="button" class="btn-ghost" data-action="refresh-projects">
-            <span>🔄</span>
-            Recargar
-          </button>
-        </div>
-      </section>
-
-      <section
-        class="invoices-table clients-table"
-        data-clients-panel="clients"
-        aria-label="Listado de clientes"
-      >
-        <div class="invoices-table__surface">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Cliente</th>
-                <th scope="col">Contacto</th>
-                <th scope="col">Facturación</th>
-                <th scope="col">Proyectos</th>
-                <th scope="col">Estado</th>
-                <th scope="col"><span class="visually-hidden">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody data-clients-table></tbody>
-          </table>
-        </div>
-        <footer class="invoices-table__footer">
+        <section class="invoices-table clients-table" aria-label="Listado de clientes">
+          <div class="invoices-table__surface">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Contacto</th>
+                  <th scope="col">Facturación</th>
+                  <th scope="col">Proyectos</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody data-clients-table></tbody>
+            </table>
+          </div>
+          <footer class="invoices-table__footer">
+            <p data-clients-count>Sin clientes cargados</p>
+            <div class="invoices-table__pager" data-pagination="clients"></div>
+          </footer>
           <div class="module-loading" data-clients-loading hidden>
             <span class="spinner"></span>
-            <p>Cargando clientes...</p>
+            <p>Sincronizando clientes...</p>
           </div>
           <div class="module-error" data-clients-error hidden></div>
-          <p data-clients-count>Sin clientes cargados</p>
-        </footer>
-      </section>
+        </section>
+      </div>
 
-      <section
-        class="invoices-table clients-table"
+      <div
+        class="clients-panel"
         data-clients-panel="projects"
-        aria-label="Listado de proyectos"
+        role="tabpanel"
+        id="clients-panel-projects"
+        aria-labelledby="clients-tab-projects"
+        aria-hidden="true"
         hidden
       >
-        <div class="invoices-table__surface">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Proyecto</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Facturación</th>
-                <th scope="col">Facturas</th>
-                <th scope="col">Fechas</th>
-                <th scope="col"><span class="visually-hidden">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody data-projects-table></tbody>
-          </table>
-        </div>
-        <footer class="invoices-table__footer">
+        <section class="invoices__filters clients__filters" aria-label="Filtros de proyectos">
+          <div class="invoices__filters-group">
+            <label class="visually-hidden" for="projects-search">Buscar proyectos</label>
+            <input
+              type="search"
+              id="projects-search"
+              class="invoices__search"
+              placeholder="Buscar proyectos..."
+              autocomplete="off"
+              data-projects-search
+            />
+          </div>
+          <div class="invoices__filters-group">
+            <label class="visually-hidden" for="projects-status">Estado del proyecto</label>
+            <select id="projects-status" class="invoices__select" data-projects-status>
+              <option value="all">Todos</option>
+              <option value="active">Activos</option>
+              <option value="on-hold">En pausa</option>
+              <option value="completed">Completados</option>
+              <option value="cancelled">Cancelados</option>
+            </select>
+          </div>
+          <div class="invoices__filters-group">
+            <button type="button" class="btn-ghost" data-action="refresh-projects">
+              <span>🔄</span>
+              Recargar
+            </button>
+          </div>
+        </section>
+
+        <section class="invoices-table clients-table" aria-label="Listado de proyectos">
+          <div class="invoices-table__surface">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Proyecto</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Facturación</th>
+                  <th scope="col">Facturas</th>
+                  <th scope="col">Fechas</th>
+                  <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody data-projects-table></tbody>
+            </table>
+          </div>
+          <footer class="invoices-table__footer">
+            <p data-projects-count>Sin proyectos cargados</p>
+            <div class="invoices-table__pager" data-pagination="projects"></div>
+          </footer>
           <div class="module-loading" data-projects-loading hidden>
             <span class="spinner"></span>
-            <p>Cargando proyectos...</p>
+            <p>Actualizando proyectos...</p>
           </div>
           <div class="module-error" data-projects-error hidden></div>
-          <p data-projects-count>Sin proyectos cargados</p>
-        </footer>
-      </section>
+        </section>
+      </div>
 
       <div class="modal" id="client-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="client-modal-title">
         <div class="modal__backdrop" data-modal-dismiss="client"></div>
