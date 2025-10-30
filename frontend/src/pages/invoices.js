@@ -216,6 +216,407 @@ async function registerInvoiceVerifactu(invoiceId) {
   }
 }
 
+// === MODALES DE FACTURAS ===
+
+async function openInvoiceModal(mode = "create", invoiceId = null) {
+  let invoice = null;
+
+  if ((mode === "edit" || mode === "view") && invoiceId) {
+    try {
+      invoice = await window.api.getInvoice(invoiceId);
+    } catch (error) {
+      console.error("Error obteniendo factura:", error);
+      showNotification("No se pudo cargar la factura seleccionada", "error");
+      return;
+    }
+  }
+
+  const modalHtml = buildInvoiceModalHtml(mode, invoice);
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+  const modal = document.getElementById("invoice-modal");
+  if (!modal) return;
+
+  modal.querySelectorAll("[data-modal-close]").forEach((btn) => {
+    btn.addEventListener("click", closeInvoiceModal);
+  });
+  modal
+    .querySelector(".modal__backdrop")
+    ?.addEventListener("click", closeInvoiceModal);
+
+  if (mode !== "view") {
+    const form = document.getElementById("invoice-form");
+    if (form) setupInvoiceForm(form, invoice);
+  }
+}
+
+function closeInvoiceModal() {
+  const modal = document.getElementById("invoice-modal");
+  if (modal) modal.remove();
+}
+
+function buildInvoiceModalHtml(mode, invoice) {
+  const isView = mode === "view";
+  const isEdit = mode === "edit";
+  const title = isView
+    ? "Detalles de la factura"
+    : isEdit
+    ? "Editar factura"
+    : "Nueva factura";
+  const actionLabel = isEdit ? "Guardar cambios" : "Crear factura";
+
+  if (isView) {
+    const verifactuInfo =
+      verifactuStatusMap[invoice?.verifactuStatus] ||
+      verifactuStatusMap.not_registered;
+    return `
+      <div class="modal is-open" id="invoice-modal" role="dialog" aria-modal="true">
+        <div class="modal__backdrop"></div>
+        <div class="modal__panel" style="width: min(95vw, 700px); max-width: 700px; max-height: 95vh; display: flex; flex-direction: column;">
+          <header class="modal__head" style="flex-shrink: 0;">
+            <div>
+              <h2 class="modal__title">${title}</h2>
+              <p class="modal__subtitle">Factura ${invoice.number} · ${formatDate(
+      invoice.issueDate
+    )}</p>
+            </div>
+            <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
+          </header>
+          <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 1.5rem;">
+            <dl class="detail-list" style="display: grid; gap: 1rem;">
+              <div><dt>Cliente</dt><dd>${invoice.client}</dd></div>
+              <div><dt>Número de factura</dt><dd>${invoice.number}</dd></div>
+              <div><dt>Fecha de emisión</dt><dd>${formatDate(
+                invoice.issueDate
+              )}</dd></div>
+              <div><dt>Fecha de vencimiento</dt><dd>${formatDate(
+                invoice.dueDate
+              )}</dd></div>
+              <div><dt>Estado</dt><dd>${
+                statusMap[invoice.status]?.label || invoice.status
+              }</dd></div>
+              <div><dt>Subtotal</dt><dd>${currencyFormatter.format(
+                invoice.subtotal
+              )}</dd></div>
+              <div><dt>IVA</dt><dd>${currencyFormatter.format(
+                invoice.tax
+              )}</dd></div>
+              <div><dt>Total</dt><dd><strong>${currencyFormatter.format(
+                invoice.total
+              )}</strong></dd></div>
+              <div><dt>Verifactu</dt><dd>
+                <span class="status-pill status-pill--${verifactuInfo.tone}">
+                  ${verifactuInfo.icon} ${verifactuInfo.label}
+                </span>
+              </dd></div>
+            </dl>
+          </div>
+          <footer class="modal__footer" style="flex-shrink: 0; display: flex; gap: 0.75rem;">
+            <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cerrar</button>
+            <button type="button" class="btn-primary" style="flex: 1;" onclick="closeInvoiceModal(); openInvoiceModal('edit', '${
+              invoice.id
+            }')">Editar</button>
+          </footer>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="modal is-open" id="invoice-modal" role="dialog" aria-modal="true" aria-labelledby="invoice-modal-title">
+      <div class="modal__backdrop"></div>
+      <div class="modal__panel" style="width: min(95vw, 1000px); max-width: 1000px; max-height: 95vh; display: flex; flex-direction: column;">
+        <header class="modal__head" style="flex-shrink: 0;">
+          <div>
+            <h2 class="modal__title" id="invoice-modal-title">${title}</h2>
+            <p class="modal__subtitle">Completa los datos y conceptos para generar la factura</p>
+          </div>
+          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
+        </header>
+        <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 1.5rem;">
+          <form id="invoice-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div class="form-group">
+                <label for="invoice-number">Número de factura</label>
+                <input type="text" id="invoice-number" name="invoiceNumber" class="form-input" placeholder="Ej. 2024-001" value="${
+                  invoice?.number || ""
+                }" required />
+              </div>
+              <div class="form-group">
+                <label for="invoice-status">Estado</label>
+                <select id="invoice-status" name="status" class="form-input" required>
+                  <option value="draft" ${
+                    !invoice || invoice.status === "draft" ? "selected" : ""
+                  }>Borrador</option>
+                  <option value="pending" ${
+                    invoice?.status === "pending" ? "selected" : ""
+                  }>Pendiente</option>
+                  <option value="sent" ${
+                    invoice?.status === "sent" ? "selected" : ""
+                  }>Enviada</option>
+                  <option value="paid" ${
+                    invoice?.status === "paid" ? "selected" : ""
+                  }>Cobrada</option>
+                  <option value="overdue" ${
+                    invoice?.status === "overdue" ? "selected" : ""
+                  }>Vencida</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
+              <div class="form-group">
+                <label for="invoice-issue-date">Fecha de emisión</label>
+                <input type="date" id="invoice-issue-date" name="issueDate" class="form-input" value="${
+                  invoice?.issueDate || new Date().toISOString().split("T")[0]
+                }" required />
+              </div>
+              <div class="form-group">
+                <label for="invoice-due-date">Fecha de vencimiento</label>
+                <input type="date" id="invoice-due-date" name="dueDate" class="form-input" value="${
+                  invoice?.dueDate || ""
+                }" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="invoice-client">Cliente</label>
+              <select id="invoice-client" name="clientId" class="form-input" required>
+                <option value="" disabled ${
+                  !invoice ? "selected" : ""
+                }>Sin cliente asignado</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="invoice-notes">Notas</label>
+              <textarea id="invoice-notes" name="notes" rows="2" class="form-input" placeholder="Observaciones internas o para el cliente">${
+                invoice?.notes || ""
+              }</textarea>
+            </div>
+
+            <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Conceptos facturados</h3>
+                <button type="button" class="btn-primary" id="add-line-btn" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                  Añadir línea
+                </button>
+              </div>
+              <div id="invoice-lines-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              </div>
+            </div>
+
+            <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1.25rem;">
+              <div style="display: grid; gap: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                  <span style="font-size: 0.95rem; color: var(--text-secondary);">Importe</span>
+                  <span style="font-size: 0.95rem; font-weight: 500;" id="invoice-subtotal">0.00 €</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                  <span style="font-size: 0.95rem; color: var(--text-secondary);">Subtotal</span>
+                  <span style="font-size: 0.95rem; font-weight: 500;" id="invoice-subtotal-display">0.00 €</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                  <span style="font-size: 0.95rem; color: var(--text-secondary);">IVA estimado (0.00%)</span>
+                  <span style="font-size: 0.95rem; font-weight: 500;" id="invoice-vat">0.00 €</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-top: 2px solid var(--border-color);">
+                  <label for="invoice-irpf" style="font-size: 0.95rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+                    IRPF (%)
+                    <input type="number" id="invoice-irpf" name="irpf" class="form-input" style="width: 80px; padding: 0.375rem 0.5rem; font-size: 0.875rem;" value="0" min="0" max="100" step="0.1" />
+                  </label>
+                  <span style="font-size: 0.95rem; font-weight: 500;" id="invoice-irpf-amount">0.00 €</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-top: 2px solid var(--border-color);">
+                  <span style="font-size: 1.125rem; font-weight: 700;">Total</span>
+                  <span style="font-size: 1.5rem; font-weight: 700; color: var(--primary-600);" id="invoice-total">0.00 €</span>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <footer class="modal__footer" style="display: flex; gap: 0.75rem; flex-shrink: 0;">
+          <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cancelar</button>
+          <button type="submit" form="invoice-form" class="btn-primary" style="flex: 1;">${actionLabel}</button>
+        </footer>
+      </div>
+    </div>
+  `;
+}
+
+function setupInvoiceForm(form, invoice) {
+  let lineItems = invoice?.items || [];
+
+  const addLineBtn = form.querySelector("#add-line-btn");
+  const linesContainer = form.querySelector("#invoice-lines-container");
+  const irpfInput = form.querySelector("#invoice-irpf");
+
+  function renderLines() {
+    if (lineItems.length === 0) {
+      lineItems.push({
+        concept: "",
+        unit: "unidad",
+        quantity: 1,
+        unitPrice: 0,
+        vatPercentage: 21,
+      });
+    }
+
+    linesContainer.innerHTML = lineItems
+      .map(
+        (item, index) => `
+        <div class="invoice-line" data-line-index="${index}" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 0.5rem; align-items: end; padding: 0.75rem; background: var(--bg-primary); border-radius: 6px;">
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.8rem; margin-bottom: 0.25rem;">Concepto</label>
+            <input type="text" class="form-input line-concept" style="font-size: 0.875rem; padding: 0.5rem;" placeholder="Servicio o producto" value="${
+              item.concept || ""
+            }" required />
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.8rem; margin-bottom: 0.25rem;">Unidad</label>
+            <input type="text" class="form-input line-unit" style="font-size: 0.875rem; padding: 0.5rem;" placeholder="unidad" value="${
+              item.unit || "unidad"
+            }" />
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.8rem; margin-bottom: 0.25rem;">Cantidad</label>
+            <input type="number" class="form-input line-quantity" style="font-size: 0.875rem; padding: 0.5rem;" min="0" step="0.01" value="${
+              item.quantity || 1
+            }" required />
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.8rem; margin-bottom: 0.25rem;">Precio unitario</label>
+            <input type="number" class="form-input line-price" style="font-size: 0.875rem; padding: 0.5rem;" min="0" step="0.01" value="${
+              item.unitPrice || 0
+            }" required />
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.8rem; margin-bottom: 0.25rem;">IVA (%)</label>
+            <input type="number" class="form-input line-vat" style="font-size: 0.875rem; padding: 0.5rem;" min="0" step="0.1" value="${
+              item.vatPercentage || 21
+            }" />
+          </div>
+          <button type="button" class="btn-secondary remove-line-btn" style="padding: 0.5rem; font-size: 1.2rem; height: 38px; width: 38px; display: flex; align-items: center; justify-content: center;" title="Eliminar línea">×</button>
+        </div>
+      `
+      )
+      .join("");
+
+    linesContainer.querySelectorAll(".remove-line-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const lineDiv = e.target.closest(".invoice-line");
+        const index = parseInt(lineDiv.dataset.lineIndex);
+        lineItems.splice(index, 1);
+        renderLines();
+        calculateTotals();
+      });
+    });
+
+    linesContainer.querySelectorAll(".invoice-line input").forEach((input) => {
+      input.addEventListener("input", calculateTotals);
+    });
+
+    calculateTotals();
+  }
+
+  function calculateTotals() {
+    const lines = Array.from(linesContainer.querySelectorAll(".invoice-line"));
+    let subtotal = 0;
+    let totalVat = 0;
+
+    lines.forEach((line) => {
+      const quantity = parseFloat(line.querySelector(".line-quantity").value) || 0;
+      const price = parseFloat(line.querySelector(".line-price").value) || 0;
+      const vatPct = parseFloat(line.querySelector(".line-vat").value) || 0;
+
+      const lineSubtotal = quantity * price;
+      const lineVat = lineSubtotal * (vatPct / 100);
+
+      subtotal += lineSubtotal;
+      totalVat += lineVat;
+    });
+
+    const irpfPct = parseFloat(irpfInput?.value) || 0;
+    const irpfAmount = subtotal * (irpfPct / 100);
+    const total = subtotal + totalVat - irpfAmount;
+
+    form.querySelector("#invoice-subtotal").textContent =
+      currencyFormatter.format(subtotal);
+    form.querySelector("#invoice-subtotal-display").textContent =
+      currencyFormatter.format(subtotal);
+    form.querySelector("#invoice-vat").textContent =
+      currencyFormatter.format(totalVat);
+    form.querySelector("#invoice-irpf-amount").textContent =
+      currencyFormatter.format(irpfAmount);
+    form.querySelector("#invoice-total").textContent =
+      currencyFormatter.format(total);
+  }
+
+  addLineBtn?.addEventListener("click", () => {
+    lineItems.push({
+      concept: "",
+      unit: "unidad",
+      quantity: 1,
+      unitPrice: 0,
+      vatPercentage: 21,
+    });
+    renderLines();
+  });
+
+  irpfInput?.addEventListener("input", calculateTotals);
+
+  renderLines();
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await handleInvoiceSubmit(form);
+  });
+}
+
+async function handleInvoiceSubmit(form) {
+  const formData = new FormData(form);
+  const mode = form.dataset.mode || "create";
+
+  const lines = Array.from(
+    form.querySelectorAll(".invoice-line")
+  ).map((line) => ({
+    concept: line.querySelector(".line-concept").value,
+    unit: line.querySelector(".line-unit").value || "unidad",
+    quantity: parseFloat(line.querySelector(".line-quantity").value) || 0,
+    unitPrice: parseFloat(line.querySelector(".line-price").value) || 0,
+    vatPercentage: parseFloat(line.querySelector(".line-vat").value) || 0,
+  }));
+
+  const payload = {
+    invoiceNumber: formData.get("invoiceNumber"),
+    clientId: formData.get("clientId"),
+    issueDate: formData.get("issueDate"),
+    dueDate: formData.get("dueDate"),
+    status: formData.get("status"),
+    notes: formData.get("notes") || "",
+    items: lines,
+    irpf: parseFloat(formData.get("irpf")) || 0,
+  };
+
+  try {
+    if (mode === "edit" && selectedInvoiceId) {
+      await window.api.updateInvoice(selectedInvoiceId, payload);
+      showNotification("Factura actualizada correctamente", "success");
+    } else {
+      await window.api.createInvoice(payload);
+      showNotification("Factura creada correctamente", "success");
+    }
+    closeInvoiceModal();
+    await loadInvoices();
+  } catch (error) {
+    console.error("Error guardando factura:", error);
+    showNotification(
+      error?.message || "No se pudo guardar la factura",
+      "error"
+    );
+  }
+}
+
 // === MODALES DE VERIFACTU ===
 
 function showVerifactuQRModal(invoice) {
@@ -513,10 +914,10 @@ function renderInvoiceRows() {
           <span class="invoices-table__days">${invoice.daysLate || "-"}</span>
         </td>
         <td data-column="Acciones" class="invoices-table__actions">
-          <button type="button" class="table-action" title="Ver factura">
+          <button type="button" class="table-action" title="Ver factura" onclick="openInvoiceModal('view', '${invoice.id}')">
             <span>👁️</span>
           </button>
-          <button type="button" class="table-action" title="Editar factura">
+          <button type="button" class="table-action" title="Editar factura" onclick="openInvoiceModal('edit', '${invoice.id}')">
             <span>✏️</span>
           </button>
           <button type="button" class="table-action" title="Descargar PDF">
@@ -621,11 +1022,19 @@ export function initInvoicesPage() {
 
   // Hacer funciones globales para que funcionen los onclick en el HTML
   window.loadInvoices = loadInvoices;
+  window.openInvoiceModal = openInvoiceModal;
+  window.closeInvoiceModal = closeInvoiceModal;
   window.registerInvoiceVerifactu = registerInvoiceVerifactu;
   window.showVerifactuQRModal = showVerifactuQRModal;
   window.showVerifactuCSVModal = showVerifactuCSVModal;
   window.showNotification = showNotification;
   window.changeInvoicesPage = changeInvoicesPage;
+
+  // Configurar botón de nueva factura
+  const newInvoiceBtn = document.querySelector('[data-modal-open="invoice"]');
+  if (newInvoiceBtn) {
+    newInvoiceBtn.addEventListener("click", () => openInvoiceModal("create"));
+  }
 
   // Cargar facturas automáticamente
   loadInvoices();
