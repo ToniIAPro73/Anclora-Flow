@@ -12,6 +12,9 @@ let currentFilters = {
 };
 let filterRefreshTimeout = null;
 let activeExpenseId = null;
+let filteredExpenses = [];
+const PAGE_SIZE = 10;
+let currentPage = 1;
 
 // === CONSTANTES ===
 const EXPENSE_CATEGORIES = {
@@ -210,9 +213,9 @@ async function loadExpenses() {
       notes: expense.notes
     }));
 
+    currentPage = 1;
     renderExpensesTable();
     updateSummaryCards();
-    updateFilterCount(response?.count ?? expensesData.length);
   } catch (error) {
     console.error('Error cargando gastos:', error);
     let message = error?.message || 'Se produjo un error al cargar los gastos';
@@ -242,7 +245,18 @@ function renderExpensesTable() {
   const tbody = document.querySelector('[data-expenses-tbody]');
   if (!tbody) return;
 
-  if (!expensesData.length) {
+  filteredExpenses = Array.isArray(expensesData) ? [...expensesData] : [];
+
+  const total = filteredExpenses.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const start = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, total);
+  updateFilterCount(total, start, end);
+
+  if (!filteredExpenses.length) {
     tbody.innerHTML = `
       <tr>
         <td colspan="8" class="empty-state">
@@ -250,14 +264,17 @@ function renderExpensesTable() {
         </td>
       </tr>
     `;
+    renderExpensesPagination(totalPages);
     return;
   }
 
-  tbody.innerHTML = expensesData.map(expense => {
+  const pageItems = filteredExpenses.slice(start - 1, start - 1 + PAGE_SIZE);
+
+  tbody.innerHTML = pageItems.map(expense => {
     const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || 'Sin categoría';
     const paymentLabel = PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || 'N/A';
     return `
-      <tr class="expenses-table__row" data-expense-id="${expense.id}">
+      <tr class="invoices-table__row expenses-table__row" data-expense-id="${expense.id}">
         <td>
           <time datetime="${escapeHtml(expense.expenseDate || '')}">
             ${formatDate(expense.expenseDate)}
@@ -294,13 +311,39 @@ function renderExpensesTable() {
       </tr>
     `;
   }).join('');
+
+  renderExpensesPagination(totalPages);
 }
 
-function updateFilterCount(count) {
+function updateFilterCount(total, start = 0, end = 0) {
   const counter = document.querySelector('[data-expenses-count]');
   if (!counter) return;
-  const label = count === 1 ? 'gasto' : 'gastos';
-  counter.textContent = `${count} ${label} encontrados`;
+  if (!total) {
+    counter.textContent = 'Sin gastos disponibles';
+    return;
+  }
+  const label = total === 1 ? 'gasto' : 'gastos';
+  counter.textContent = `Mostrando ${start}-${end} de ${total} ${label}`;
+}
+
+function renderExpensesPagination(totalPages) {
+  const pager = document.querySelector('[data-pagination="expenses"]');
+  if (!pager) return;
+
+  if (filteredExpenses.length <= PAGE_SIZE) {
+    pager.innerHTML = '';
+    return;
+  }
+
+  pager.innerHTML = `
+    <button type="button" class="pager-btn" onclick="window.changeExpensesPage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+      Anterior
+    </button>
+    <span class="pager-status">Página ${currentPage} de ${totalPages}</span>
+    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeExpensesPage(1)" ${currentPage === totalPages ? 'disabled' : ''}>
+      Siguiente
+    </button>
+  `;
 }
 
 // === TARJETAS RESUMEN ===
@@ -397,6 +440,14 @@ function scheduleExpenseReload() {
   filterRefreshTimeout = setTimeout(() => {
     loadExpenses();
   }, 250);
+}
+
+function changeExpensesPage(delta) {
+  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / PAGE_SIZE));
+  const next = Math.min(Math.max(1, currentPage + delta), totalPages);
+  if (next === currentPage) return;
+  currentPage = next;
+  renderExpensesTable();
 }
 
 // === MODALES ===
@@ -813,10 +864,11 @@ export default function renderExpenses() {
           </table>
         </div>
         <footer class="invoices-table__footer">
-          <p data-expenses-count>0 gastos encontrados</p>
+          <p data-expenses-count>Sin gastos disponibles</p>
+          <div class="invoices-table__pager" data-pagination="expenses"></div>
         </footer>
         <div class="module-loading" data-expenses-loading hidden>
-          <span class="loader"></span>
+          <span class="spinner"></span>
           <p>Sincronizando gastos...</p>
         </div>
         <div class="module-error" data-expenses-error hidden></div>
@@ -837,4 +889,5 @@ export function initExpenses() {
 
   setupFilters();
   loadExpenses();
+  window.changeExpensesPage = changeExpensesPage;
 }

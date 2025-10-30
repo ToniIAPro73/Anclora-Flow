@@ -3,12 +3,15 @@
 
 // Estado global del módulo
 let invoicesData = [];
+let filteredInvoices = [];
 let isLoading = false;
 let currentFilters = {
   search: '',
   status: 'all',
   client: 'all'
 };
+const PAGE_SIZE = 10;
+let currentPage = 1;
 
 // Formatters
 const currencyFormatter = new Intl.NumberFormat("es-ES", {
@@ -155,6 +158,7 @@ async function loadInvoices() {
       verifactuError: invoice.verifactu_error_message
     }));
 
+    currentPage = 1;
     renderInvoicesTable();
     updateSummaryCards();
 
@@ -337,7 +341,9 @@ function renderErrorState(message) {
 }
 
 function renderInvoiceRows() {
-  if (!invoicesData || invoicesData.length === 0) {
+  filteredInvoices = Array.isArray(invoicesData) ? [...invoicesData] : [];
+
+  if (filteredInvoices.length === 0) {
     return `
       <tr>
         <td colspan="9" style="text-align: center; padding: 3rem;">
@@ -348,15 +354,14 @@ function renderInvoiceRows() {
     `;
   }
 
-  // Aplicar filtros
-  let filteredInvoices = invoicesData;
-
+  // Aplicar filtros activos sobre la copia local
   if (currentFilters.search) {
-    const search = currentFilters.search.toLowerCase();
-    filteredInvoices = filteredInvoices.filter(inv =>
-      inv.number.toLowerCase().includes(search) ||
-      inv.client.toLowerCase().includes(search)
-    );
+    const search = currentFilters.search.trim().toLowerCase();
+    filteredInvoices = filteredInvoices.filter((inv = {}) => {
+      const invoiceNumber = (inv.number ?? '').toString().toLowerCase();
+      const clientName = (inv.client ?? '').toString().toLowerCase();
+      return invoiceNumber.includes(search) || clientName.includes(search);
+    });
   }
 
   if (currentFilters.status !== 'all') {
@@ -370,6 +375,7 @@ function renderInvoiceRows() {
   }
 
   if (filteredInvoices.length === 0) {
+    currentPage = 1;
     return `
       <tr>
         <td colspan="9" style="text-align: center; padding: 3rem;">
@@ -379,7 +385,17 @@ function renderInvoiceRows() {
     `;
   }
 
-  return filteredInvoices.map(invoice => {
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / PAGE_SIZE));
+  if (currentPage > totalPages) {
+    currentPage = totalPages;
+  } else if (currentPage < 1) {
+    currentPage = 1;
+  }
+
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const pageInvoices = filteredInvoices.slice(startIndex, startIndex + PAGE_SIZE);
+
+  return pageInvoices.map((invoice) => {
     const statusInfo = statusMap[invoice.status] || statusMap.draft;
     const verifactuInfo = verifactuStatusMap[invoice.verifactuStatus] || verifactuStatusMap.not_registered;
 
@@ -416,7 +432,7 @@ function renderInvoiceRows() {
     }
 
     return `
-      <tr data-invoice-id="${invoice.id}">
+      <tr data-invoice-id="${invoice.id}" class="invoices-table__row">
         <td data-column="Factura">
           <span class="invoices-table__number">${invoice.number}</span>
         </td>
@@ -472,13 +488,46 @@ function renderInvoicesTable() {
 
   // Actualizar contador
   updateResultCount();
+  renderInvoicePagination();
 }
 
 function updateResultCount() {
   const countEl = document.querySelector('[data-result-count]');
-  if (countEl && invoicesData) {
-    countEl.textContent = `Mostrando ${invoicesData.length} factura(s)`;
+  if (!countEl) return;
+
+  const total = filteredInvoices.length;
+  if (!total) {
+    countEl.textContent = 'Sin facturas disponibles';
+    return;
   }
+
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, total);
+  const label = total === 1 ? 'factura' : 'facturas';
+  countEl.textContent = `Mostrando ${start}-${end} de ${total} ${label}`;
+}
+
+function renderInvoicePagination() {
+  const pager = document.querySelector('[data-pagination="invoices"]');
+  if (!pager) return;
+
+  const total = filteredInvoices.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  if (total <= PAGE_SIZE) {
+    pager.innerHTML = '';
+    return;
+  }
+
+  pager.innerHTML = `
+    <button type="button" class="pager-btn" onclick="window.changeInvoicesPage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+      Anterior
+    </button>
+    <span class="pager-status">Página ${currentPage} de ${totalPages}</span>
+    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeInvoicesPage(1)" ${currentPage === totalPages ? 'disabled' : ''}>
+      Siguiente
+    </button>
+  `;
 }
 
 function updateSummaryCards() {
@@ -517,6 +566,7 @@ export function initInvoicesPage() {
   window.showVerifactuQRModal = showVerifactuQRModal;
   window.showVerifactuCSVModal = showVerifactuCSVModal;
   window.showNotification = showNotification;
+  window.changeInvoicesPage = changeInvoicesPage;
 
   // Cargar facturas automáticamente
   loadInvoices();
@@ -531,6 +581,7 @@ function setupFilters() {
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       currentFilters.search = e.target.value;
+      currentPage = 1;
       renderInvoicesTable();
     });
   }
@@ -540,6 +591,7 @@ function setupFilters() {
   if (statusFilter) {
     statusFilter.addEventListener('change', (e) => {
       currentFilters.status = e.target.value;
+      currentPage = 1;
       renderInvoicesTable();
     });
   }
@@ -549,9 +601,18 @@ function setupFilters() {
   if (clientFilter) {
     clientFilter.addEventListener('change', (e) => {
       currentFilters.client = e.target.value;
+      currentPage = 1;
       renderInvoicesTable();
     });
   }
+}
+
+function changeInvoicesPage(delta) {
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / PAGE_SIZE));
+  const next = Math.min(Math.max(1, currentPage + delta), totalPages);
+  if (next === currentPage) return;
+  currentPage = next;
+  renderInvoicesTable();
 }
 
 // Export para uso en módulos
@@ -626,6 +687,7 @@ export function renderInvoices() {
         </div>
         <footer class="invoices-table__footer">
           <p data-result-count>Cargando...</p>
+          <div class="invoices-table__pager" data-pagination="invoices"></div>
         </footer>
       </section>
     </section>
