@@ -1557,8 +1557,19 @@ a:hover {
 .expenses-table__actions {
   display: inline-flex;
   gap: 0.4rem;
+}
+
+.invoices-table tbody td.invoices-table__actions,
+.expenses-table tbody td.expenses-table__actions {
   border-bottom: none !important;
   border-right: none !important;
+}
+
+.clients-table tbody td .table-actions,
+.invoices-table tbody td .table-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
 }
 
 .expenses-table__client {

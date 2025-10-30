@@ -1,0 +1,97 @@
+=============================================
+CÓMO APLICAR LOS CAMBIOS EN TU PROYECTO LOCAL
+=============================================
+
+Los cambios ya están aplicados en los archivos de este directorio.
+
+OPCIÓN 1: Copiar directamente este directorio completo
+-------------------------------------------------------
+
+1. Copia todo el contenido de este directorio a tu proyecto local
+
+   Desde WSL/Git Bash:
+   cp -r /tmp/cc-agent/59463152/project/* /mnt/c/ruta/a/tu/proyecto/
+
+   O desde Windows Explorer:
+   Navega a: C:\tmp\cc-agent\59463152\project
+   Copia todos los archivos a tu proyecto
+
+2. Ejecuta el script de confirmación:
+   .\APLICAR_CAMBIOS_MODALES.ps1
+
+3. Reinicia el servidor y prueba los cambios
+
+
+OPCIÓN 2: Copiar solo los archivos modificados
+-----------------------------------------------
+
+Archivos a copiar:
+
+1. frontend/src/pages/expenses.js
+2. frontend/src/pages/invoices-with-api.js
+3. frontend/src/pages/subscriptions.js
+4. frontend/src/pages/budget.js
+5. frontend/src/styles/colors.css
+
+Desde WSL/Git Bash:
+  cp /tmp/cc-agent/59463152/project/frontend/src/pages/expenses.js /mnt/c/tu/proyecto/frontend/src/pages/
+  cp /tmp/cc-agent/59463152/project/frontend/src/pages/invoices-with-api.js /mnt/c/tu/proyecto/frontend/src/pages/
+  cp /tmp/cc-agent/59463152/project/frontend/src/pages/subscriptions.js /mnt/c/tu/proyecto/frontend/src/pages/
+  cp /tmp/cc-agent/59463152/project/frontend/src/pages/budget.js /mnt/c/tu/proyecto/frontend/src/pages/
+  cp /tmp/cc-agent/59463152/project/frontend/src/styles/colors.css /mnt/c/tu/proyecto/frontend/src/styles/
+
+
+CAMBIOS REALIZADOS
+------------------
+
+✓ Modales de facturas: 900-950px, estructura flex, botones fijos
+✓ Modales de gastos: 700-900px, estructura flex, botones fijos
+✓ Formularios de suscripciones: max-height 95vh, scroll optimizado
+✓ Formularios de presupuesto: max-height 95vh, scroll optimizado
+✓ Estilos: Bordes eliminados en columna de acciones
+
+
+VERIFICACIÓN
+------------
+
+Después de aplicar los cambios:
+
+1. Reinicia el servidor:
+   cd frontend
+   npm run dev
+
+2. Abre la aplicación
+
+3. Prueba todos los modales:
+   - Crear/editar factura
+   - Crear/editar gasto
+   - Crear/editar suscripción
+   - Crear/editar presupuesto
+
+4. Verifica:
+   ✓ Modales más grandes
+   ✓ Botones siempre visibles
+   ✓ Sin scroll innecesario
+   ✓ Tablas con bordes limpios
+
+
+UBICACIÓN DE ARCHIVOS
+---------------------
+
+Archivos modificados están en:
+  /tmp/cc-agent/59463152/project/
+
+O en Windows:
+  C:\tmp\cc-agent\59463152\project\
+
+Si no puedes acceder a esa ruta, pídeme que te muestre el contenido
+de cada archivo para copiarlo manualmente.
+
+
+SOPORTE
+-------
+
+Si tienes problemas:
+1. Verifica que WSL esté instalado
+2. Intenta copiar manualmente con Windows Explorer
+3. Pide ver el contenido de cada archivo para copiar/pegar

@@ -438,6 +438,7 @@ function buildSubscriptionFormHTML(subscription = {}) {
         <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
       </header>
       <div class="form-grid" style="flex: 1; overflow-y: auto; padding: 1rem;">
+      <div class="form-grid" style="flex: 1; overflow-y: auto; padding: 1rem;">
         <label>
           <span>Nombre *</span>
           <input type="text" name="name" value="${escapeHtml(
