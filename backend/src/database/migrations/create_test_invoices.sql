@@ -12,8 +12,20 @@ BEGIN
     SELECT id INTO demo_user_id FROM users WHERE email = 'demo@anclora.test' LIMIT 1;
 
     IF demo_user_id IS NULL THEN
-        RAISE EXCEPTION 'Usuario demo no encontrado. Asegúrate de que el usuario demo@anclora.test existe.';
+        RAISE EXCEPTION 'Usuario demo no encontrado. Asegúrate de que el usuario demo@anclora.test exists.';
     END IF;
+
+    -- Habilitar Verifactu para el usuario demo
+    INSERT INTO verifactu_config (user_id, enabled, test_mode, software_nif, software_name, software_version)
+    VALUES (demo_user_id, true, true, 'B12345678', 'Anclora Flow', '1.0.0')
+    ON CONFLICT (user_id) DO UPDATE SET
+        enabled = true,
+        test_mode = true,
+        software_nif = 'B12345678',
+        software_name = 'Anclora Flow',
+        software_version = '1.0.0';
+
+    RAISE NOTICE 'Verifactu habilitado para usuario demo';
 
 -- ========================================
 -- PASO 1: CREAR CLIENTES DE PRUEBA
