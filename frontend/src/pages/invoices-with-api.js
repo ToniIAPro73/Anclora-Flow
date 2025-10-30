@@ -1130,7 +1130,7 @@ async function editInvoice(invoiceId) {
     const modalHTML = `
       <div class="modal is-open" id="edit-invoice-modal">
         <div class="modal__backdrop" onclick="closeEditInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px;">
+        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Editar factura ${invoice.invoice_number}</h2>
@@ -1138,8 +1138,8 @@ async function editInvoice(invoiceId) {
             </div>
             <button type="button" class="modal__close" onclick="closeEditInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body">
-            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="modal__body" style="overflow-y: auto; flex: 1;">
+            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
               ${invoice.verifactu_status === 'registered' ? `
                 <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
                   <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
@@ -1162,6 +1162,8 @@ async function editInvoice(invoiceId) {
                   <label for="edit-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de emision</label>
                   <input type="date" id="edit-issue-date" name="issue_date" class="form-input" value="${issueDateValue || ''}" />
                 </div>
+              </div>
+              <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
                 <div>
                   <label for="edit-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de vencimiento</label>
                   <input type="date" id="edit-due-date" name="due_date" class="form-input" value="${dueDateValue || ''}" />
@@ -1173,22 +1175,22 @@ async function editInvoice(invoiceId) {
               </div>
               <div>
                 <label for="edit-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Notas</label>
-                <textarea id="edit-notes" name="notes" rows="4" class="form-input" style="resize: vertical;">${invoice.notes || ''}</textarea>
+                <textarea id="edit-notes" name="notes" rows="3" class="form-input" style="resize: vertical;">${invoice.notes || ''}</textarea>
               </div>
               <div id="edit-lock-message" style="display: ${invoice.status === 'draft' ? 'none' : 'flex'}; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); font-size: 0.9rem; color: var(--text-secondary);">
                 Para editar conceptos e importes cambia el estado a Borrador.
               </div>
-              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: var(--bg-secondary);">
+              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background: var(--bg-secondary);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                   <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Conceptos facturados</h3>
                   <button type="button" class="btn-secondary" id="add-edit-invoice-item">Anadir linea</button>
                 </div>
-                <div id="edit-invoice-items"></div>
-                <div id="edit-invoice-totals" style="margin-top: 1.5rem;"></div>
+                <div id="edit-invoice-items" style="max-height: 300px; overflow-y: auto;"></div>
+                <div id="edit-invoice-totals" style="margin-top: 1.25rem;"></div>
               </section>
             </form>
           </div>
-          <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
+          <footer class="modal__footer" style="display: flex; gap: 0.75rem; flex-shrink: 0;">
             <button class="btn-secondary" style="flex: 1;" onclick="closeEditInvoiceModal()">Cancelar</button>
             <button type="button" class="btn-primary" style="flex: 1;" onclick="saveInvoiceChanges('${invoice.id}')">Guardar cambios</button>
           </footer>
@@ -1272,7 +1274,7 @@ async function openNewInvoiceModal() {
     const modalHTML = `
       <div class="modal is-open" id="new-invoice-modal">
         <div class="modal__backdrop" onclick="closeNewInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px;">
+        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Nueva factura</h2>
@@ -1280,8 +1282,8 @@ async function openNewInvoiceModal() {
             </div>
             <button type="button" class="modal__close" onclick="closeNewInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body">
-            <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="modal__body" style="overflow-y: auto; flex: 1;">
+            <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
               <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
                 <div>
                   <label for="new-invoice-number" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Numero de factura</label>
@@ -1297,6 +1299,8 @@ async function openNewInvoiceModal() {
                     <option value="overdue">Vencida</option>
                   </select>
                 </div>
+              </div>
+              <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
                 <div>
                   <label for="new-invoice-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de emision</label>
                   <input type="date" id="new-invoice-issue-date" name="issue_date" class="form-input" value="${today}" required />
@@ -1305,6 +1309,8 @@ async function openNewInvoiceModal() {
                   <label for="new-invoice-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de vencimiento</label>
                   <input type="date" id="new-invoice-due-date" name="due_date" class="form-input" value="${dueDefaultDate}" required />
                 </div>
+              </div>
+              <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
                 <div id="new-payment-date-container" style="display: none;">
                   <label for="new-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de pago</label>
                   <input type="date" id="new-payment-date" name="payment_date" class="form-input" />
@@ -1319,19 +1325,19 @@ async function openNewInvoiceModal() {
               </div>
               <div>
                 <label for="new-invoice-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Notas</label>
-                <textarea id="new-invoice-notes" name="notes" rows="4" class="form-input" style="resize: vertical;" placeholder="Observaciones internas o para el cliente"></textarea>
+                <textarea id="new-invoice-notes" name="notes" rows="3" class="form-input" style="resize: vertical;" placeholder="Observaciones internas o para el cliente"></textarea>
               </div>
-              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: var(--bg-secondary);">
+              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background: var(--bg-secondary);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                   <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Conceptos facturados</h3>
                   <button type="button" class="btn-secondary" id="add-new-invoice-item">Anadir linea</button>
                 </div>
-                <div id="new-invoice-items"></div>
-                <div id="new-invoice-totals" style="margin-top: 1.5rem;"></div>
+                <div id="new-invoice-items" style="max-height: 300px; overflow-y: auto;"></div>
+                <div id="new-invoice-totals" style="margin-top: 1.25rem;"></div>
               </section>
             </form>
           </div>
-          <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
+          <footer class="modal__footer" style="display: flex; gap: 0.75rem; flex-shrink: 0;">
             <button class="btn-secondary" style="flex: 1;" onclick="closeNewInvoiceModal()">Cancelar</button>
             <button type="button" class="btn-primary" style="flex: 1;" onclick="submitNewInvoice()">Crear factura</button>
           </footer>
