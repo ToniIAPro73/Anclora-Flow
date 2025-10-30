@@ -656,22 +656,33 @@ async function handleExpenseSubmit(form) {
   const payload = {
     expenseDate: formData.get('expenseDate'),
     category: formData.get('category'),
-    subcategory: (formData.get('subcategory') || '').trim() || null,
     description: (formData.get('description') || '').trim(),
     amount: sanitizeNumber(formData.get('amount'), 0),
     vatPercentage: sanitizeNumber(formData.get('vatPercentage'), 0),
     vatAmount: sanitizeNumber(formData.get('vatAmount'), 0),
-    paymentMethod: formData.get('paymentMethod') || null,
-    vendor: (formData.get('vendor') || '').trim() || null,
-    receiptUrl: (formData.get('receiptUrl') || '').trim() || null,
-    notes: (formData.get('notes') || '').trim() || null
+    isDeductible: formData.get('isDeductible') === 'on'
   };
 
-  const isDeductible = formData.get('isDeductible') === 'on';
-  payload.isDeductible = isDeductible;
-  payload.deductiblePercentage = isDeductible
-    ? sanitizeNumber(formData.get('deductiblePercentage'), 0)
-    : 0;
+  if (payload.isDeductible) {
+    payload.deductiblePercentage = sanitizeNumber(formData.get('deductiblePercentage'), 0);
+  } else {
+    payload.deductiblePercentage = 0;
+  }
+
+  const subcategory = (formData.get('subcategory') || '').trim();
+  if (subcategory) payload.subcategory = subcategory;
+
+  const paymentMethod = formData.get('paymentMethod');
+  if (paymentMethod) payload.paymentMethod = paymentMethod;
+
+  const vendor = (formData.get('vendor') || '').trim();
+  if (vendor) payload.vendor = vendor;
+
+  const receiptUrl = (formData.get('receiptUrl') || '').trim();
+  if (receiptUrl) payload.receiptUrl = receiptUrl;
+
+  const notes = (formData.get('notes') || '').trim();
+  if (notes) payload.notes = notes;
 
   if (!payload.expenseDate) {
     showNotification('Selecciona la fecha del gasto', 'warning');
@@ -685,6 +696,11 @@ async function handleExpenseSubmit(form) {
 
   if (!payload.description) {
     showNotification('Añade una descripción del gasto', 'warning');
+    return;
+  }
+
+  if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+    showNotification('Introduce un importe mayor que 0', 'warning');
     return;
   }
 
