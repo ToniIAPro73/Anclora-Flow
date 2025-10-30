@@ -495,7 +495,7 @@ function buildExpenseModalHtml(mode, expense) {
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(95vw, 960px); max-width: 960px;">
+      <div class="modal__panel" style="width: min(95vw, 860px); max-width: 860px; max-height: 90vh; display: flex; flex-direction: column;">
         <header class="modal__head">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
@@ -503,9 +503,9 @@ function buildExpenseModalHtml(mode, expense) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
-        <div class="modal__body">
-          <form id="expense-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.25rem;">
-            <div class="grid grid--three">
+        <div class="modal__body" style="overflow-y: auto; flex: 1;">
+          <form id="expense-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div class="form-group">
                 <label for="expense-date">Fecha del gasto</label>
                 <input type="date" id="expense-date" name="expenseDate" class="form-input" value="${formatDateForInput(expense?.expense_date)}" required />
@@ -521,7 +521,7 @@ function buildExpenseModalHtml(mode, expense) {
               </div>
             </div>
 
-            <div class="grid grid--three">
+            <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div class="form-group">
                 <label for="expense-description">Descripción</label>
                 <input type="text" id="expense-description" name="description" class="form-input" placeholder="Describe el gasto" value="${escapeHtml(expense?.description || '')}" required maxlength="200" />
@@ -532,7 +532,7 @@ function buildExpenseModalHtml(mode, expense) {
               </div>
             </div>
 
-            <div class="grid grid--three">
+            <div style="display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr));">
               <div class="form-group">
                 <label for="expense-amount">Importe base (€)</label>
                 <input type="number" step="0.01" min="0" id="expense-amount" name="amount" class="form-input" value="${expense ? sanitizeNumber(expense.amount, 0) : ''}" required />
@@ -543,12 +543,11 @@ function buildExpenseModalHtml(mode, expense) {
               </div>
               <div class="form-group">
                 <label for="expense-vat-amount">IVA calculado (€)</label>
-                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" class="form-input" value="${expense ? sanitizeNumber(expense.vat_amount || expense.vatAmount, 0) : 0}" />
-                <small class="form-hint">Se actualiza al modificar importe o IVA</small>
+                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" class="form-input" value="${expense ? sanitizeNumber(expense.vat_amount || expense.vatAmount, 0) : 0}" readonly style="background: var(--bg-secondary);" />
               </div>
             </div>
 
-            <div class="grid grid--two">
+            <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div class="form-group">
                 <label for="expense-payment-method">Método de pago</label>
                 <select id="expense-payment-method" name="paymentMethod" class="form-input">
@@ -564,14 +563,14 @@ function buildExpenseModalHtml(mode, expense) {
               </div>
             </div>
 
-            <div class="grid grid--two">
+            <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div class="form-group">
-                <label for="expense-deductible">Tratamiento fiscal</label>
+                <label for="expense-deductible">Deducible fiscalmente</label>
                 <div class="toggle-group">
                   <label class="toggle">
                     <input type="checkbox" id="expense-deductible" name="isDeductible" ${expense?.is_deductible || expense?.isDeductible !== false ? 'checked' : ''} />
                     <span class="toggle__slider"></span>
-                    <span class="toggle__label">Deducible</span>
+                    <span class="toggle__label">Sí, es deducible</span>
                   </label>
                 </div>
               </div>
@@ -587,16 +586,15 @@ function buildExpenseModalHtml(mode, expense) {
             </div>
 
             <div class="form-group">
-              <label for="expense-notes">Notas</label>
-              <textarea id="expense-notes" name="notes" rows="3" class="form-input" placeholder="Información adicional">${escapeHtml(expense?.notes || '')}</textarea>
-            </div>
-
-            <div class="modal__footer" style="display: flex; gap: 0.75rem;">
-              <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cancelar</button>
-              <button type="submit" class="btn-primary" style="flex: 1;">${actionLabel}</button>
+              <label for="expense-notes">Notas adicionales</label>
+              <textarea id="expense-notes" name="notes" rows="2" class="form-input" placeholder="Información adicional sobre el gasto">${escapeHtml(expense?.notes || '')}</textarea>
             </div>
           </form>
         </div>
+        <footer class="modal__footer" style="display: flex; gap: 0.75rem; flex-shrink: 0;">
+          <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cancelar</button>
+          <button type="submit" form="expense-form" class="btn-primary" style="flex: 1;">${actionLabel}</button>
+        </footer>
       </div>
     </div>
   `;
