@@ -1570,7 +1570,8 @@ a:hover {
   color: var(--text-dark-secondary);
 }
 
-.table-action {
+.table-action,
+.btn-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1578,25 +1579,28 @@ a:hover {
   height: 36px;
   border-radius: 10px;
   border: 1px solid transparent;
-  background: rgba(51, 102, 255, 0.35);
+  background: rgba(30, 41, 59, 0.75);
   cursor: pointer;
   transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease;
 }
 
-.table-action:hover {
+.table-action:hover,
+.btn-icon:hover {
   transform: translateY(-2px);
   border-color: rgba(51, 102, 255, 0.4);
-  background: rgba(51, 102, 255, 0.45);
+  background: rgba(30, 41, 59, 0.85);
 }
 
-[data-theme="dark"] .table-action {
-  background: rgba(148, 163, 184, 0.35);
+[data-theme="dark"] .table-action,
+[data-theme="dark"] .btn-icon {
+  background: rgba(30, 41, 59, 0.85);
   color: var(--text-dark-primary);
 }
 
-[data-theme="dark"] .table-action:hover {
+[data-theme="dark"] .table-action:hover,
+[data-theme="dark"] .btn-icon:hover {
   border-color: rgba(148, 163, 184, 0.45);
-  background: rgba(148, 163, 184, 0.45);
+  background: rgba(30, 41, 59, 0.95);
 }
 
 .status-pill {
