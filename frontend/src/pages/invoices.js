@@ -272,8 +272,8 @@ function buildInvoiceModalHtml(mode, invoice) {
     return `
       <div class="modal is-open" id="invoice-modal" role="dialog" aria-modal="true">
         <div class="modal__backdrop"></div>
-        <div class="modal__panel" style="width: min(95vw, 700px); max-width: 700px; max-height: 95vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="flex-shrink: 0;">
+        <div class="modal__panel" style="width: min(95vw, 800px); max-width: 800px;">
+          <header class="modal__head">
             <div>
               <h2 class="modal__title">${title}</h2>
               <p class="modal__subtitle">Factura ${invoice.number} · ${formatDate(
@@ -282,7 +282,7 @@ function buildInvoiceModalHtml(mode, invoice) {
             </div>
             <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
           </header>
-          <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 1.5rem;">
+          <div class="modal__body">
             <dl class="detail-list" style="display: grid; gap: 1rem;">
               <div><dt>Cliente</dt><dd>${invoice.client}</dd></div>
               <div><dt>Número de factura</dt><dd>${invoice.number}</dd></div>
@@ -311,7 +311,7 @@ function buildInvoiceModalHtml(mode, invoice) {
               </dd></div>
             </dl>
           </div>
-          <footer class="modal__footer" style="flex-shrink: 0; display: flex; gap: 0.75rem;">
+          <footer class="modal__footer">
             <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cerrar</button>
             <button type="button" class="btn-primary" style="flex: 1;" onclick="closeInvoiceModal(); openInvoiceModal('edit', '${
               invoice.id
@@ -325,15 +325,15 @@ function buildInvoiceModalHtml(mode, invoice) {
   return `
     <div class="modal is-open" id="invoice-modal" role="dialog" aria-modal="true" aria-labelledby="invoice-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(95vw, 1000px); max-width: 1000px; max-height: 95vh; display: flex; flex-direction: column;">
-        <header class="modal__head" style="flex-shrink: 0;">
+      <div class="modal__panel" style="width: min(95vw, 1100px); max-width: 1100px;">
+        <header class="modal__head">
           <div>
             <h2 class="modal__title" id="invoice-modal-title">${title}</h2>
             <p class="modal__subtitle">Completa los datos y conceptos para generar la factura</p>
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
-        <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 1.5rem;">
+        <div class="modal__body">
           <form id="invoice-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.5rem;">
             <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div class="form-group">
@@ -435,7 +435,7 @@ function buildInvoiceModalHtml(mode, invoice) {
             </div>
           </form>
         </div>
-        <footer class="modal__footer" style="display: flex; gap: 0.75rem; flex-shrink: 0;">
+        <footer class="modal__footer">
           <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cancelar</button>
           <button type="submit" form="invoice-form" class="btn-primary" style="flex: 1;">${actionLabel}</button>
         </footer>
