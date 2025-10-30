@@ -20,17 +20,20 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
 ```
 
 #### 1.2 Contenedor de Botones
-- **DEBE** usar un contenedor con clase apropiada para los botones
-- Opciones válidas:
+- **DEBE** usar un `<div>` contenedor dentro de `<td>` con clase apropiada
+- La clase **NO DEBE** aplicarse directamente al `<td>`
+- Opciones válidas para la clase del contenedor:
   - `.invoices-table__actions` para tabla de facturas
   - `.expenses-table__actions` para tabla de gastos
   - `.table-actions` para otras tablas (clientes, proyectos)
 
 ```html
 <!-- ✅ CORRECTO -->
-<td class="invoices-table__actions">
-  <button type="button" class="table-action">...</button>
-  <button type="button" class="table-action">...</button>
+<td>
+  <div class="invoices-table__actions">
+    <button type="button" class="table-action">...</button>
+    <button type="button" class="table-action">...</button>
+  </div>
 </td>
 
 <td>
@@ -40,7 +43,13 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
   </div>
 </td>
 
-<!-- ❌ INCORRECTO -->
+<!-- ❌ INCORRECTO - Clase en <td> directamente -->
+<td class="invoices-table__actions">
+  <button type="button" class="table-action">...</button>
+  <button type="button" class="table-action">...</button>
+</td>
+
+<!-- ❌ INCORRECTO - Sin contenedor -->
 <td>
   <button type="button" class="table-action">...</button>
   <button type="button" class="table-action">...</button>
@@ -52,14 +61,21 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
 - Se logra mediante `display: inline-flex` en el contenedor
 - **NO** apilar botones verticalmente
 
-#### 1.4 Bordes
+#### 1.4 Flexibilidad del Contenedor
+- El contenedor **DEBE** ajustarse al tamaño de la celda de la tabla
+- Al hacer zoom o cambiar el tamaño de la ventana, el contenedor se adapta
+- Esto se logra usando `<td>` normal + `<div>` interno con `display: inline-flex`
+- **NUNCA** aplicar `display: inline-flex` directamente al `<td>` (causa tamaño fijo)
+
+#### 1.5 Bordes
 - El contenedor de botones **NO DEBE** tener bordes visibles
-- Los bordes deben ajustarse exactamente al espacio de la celda
-- Si la celda crece o disminuye, el contenedor debe hacerlo igual
+- Los bordes de la celda deben ajustarse al contenido
+- El contenedor interno no debe tener bordes adicionales
 
 ```css
 .table-actions,
-.invoices-table__actions {
+.invoices-table__actions,
+.expenses-table__actions {
   display: inline-flex;
   gap: 0.4rem;
   border-bottom: none !important;
@@ -150,10 +166,11 @@ tbody.addEventListener('click', (e) => {
 Antes de crear una nueva tabla, verifica:
 
 - [ ] ✅ Columna "ACCIONES" con encabezado visible
-- [ ] ✅ Contenedor de botones con clase apropiada
+- [ ] ✅ Contenedor `<div>` con clase apropiada DENTRO de `<td>` (no en el `<td>`)
 - [ ] ✅ Botones alineados horizontalmente
+- [ ] ✅ Contenedor se ajusta al tamaño de la celda (flexible, no fijo)
 - [ ] ✅ Sin bordes en contenedor de botones
-- [ ] ✅ Fondo azul claro en botones
+- [ ] ✅ Fondo azul claro en botones (`rgba(51, 102, 255, 0.35)`)
 - [ ] ✅ Bordes verticales entre columnas (excepto última)
 - [ ] ✅ Primera fila seleccionada por defecto
 - [ ] ✅ Color de selección unificado

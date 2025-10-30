@@ -1931,17 +1931,19 @@ function renderInvoiceRows() {
         <td data-column="Dias">
           <span class="invoices-table__days">${invoice.daysLate || "-"}</span>
         </td>
-        <td data-column="Acciones" class="invoices-table__actions">
-          <button type="button" class="table-action" title="Ver factura" onclick="viewInvoice('${invoice.id}')">
-            <span>👁️</span>
-          </button>
-          <button type="button" class="table-action" title="Editar factura" onclick="editInvoice('${invoice.id}')">
-            <span>✏️</span>
-          </button>
-          <button type="button" class="table-action" title="Descargar PDF" onclick="downloadInvoicePDF('${invoice.id}')">
-            <span>📄</span>
-          </button>
-          ${verifactuActions}
+        <td data-column="Acciones">
+          <div class="invoices-table__actions">
+            <button type="button" class="table-action" title="Ver factura" onclick="viewInvoice('${invoice.id}')">
+              <span>👁️</span>
+            </button>
+            <button type="button" class="table-action" title="Editar factura" onclick="editInvoice('${invoice.id}')">
+              <span>✏️</span>
+            </button>
+            <button type="button" class="table-action" title="Descargar PDF" onclick="downloadInvoicePDF('${invoice.id}')">
+              <span>📄</span>
+            </button>
+            ${verifactuActions}
+          </div>
         </td>
       </tr>
     `;

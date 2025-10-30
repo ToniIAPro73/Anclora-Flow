@@ -303,10 +303,12 @@ function renderExpensesTable() {
         </td>
         <td class="expenses-table__client">${escapeHtml(paymentLabel)}</td>
         <td class="expenses-table__client">${expense.projectName ? escapeHtml(expense.projectName) : '-'}</td>
-        <td class="expenses-table__actions">
-          <button type="button" class="table-action" title="Ver gasto" onclick="viewExpense('${expense.id}')">👁️</button>
-          <button type="button" class="table-action" title="Editar gasto" onclick="openExpenseModal('edit', '${expense.id}')">✏️</button>
-          <button type="button" class="table-action" title="Eliminar gasto" onclick="confirmDeleteExpense('${expense.id}')">🗑️</button>
+        <td>
+          <div class="expenses-table__actions">
+            <button type="button" class="table-action" title="Ver gasto" onclick="viewExpense('${expense.id}')">👁️</button>
+            <button type="button" class="table-action" title="Editar gasto" onclick="openExpenseModal('edit', '${expense.id}')">✏️</button>
+            <button type="button" class="table-action" title="Eliminar gasto" onclick="confirmDeleteExpense('${expense.id}')">🗑️</button>
+          </div>
         </td>
       </tr>
     `;
