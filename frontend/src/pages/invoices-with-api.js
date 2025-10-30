@@ -1000,7 +1000,7 @@ async function viewInvoice(invoiceId) {
     const modalHTML = `
       <div class="modal is-open" id="view-invoice-modal">
         <div class="modal__backdrop" onclick="document.getElementById('view-invoice-modal').remove()"></div>
-        <div class="modal__panel" style="max-width: 800px;">
+        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Factura ${invoice.invoice_number}</h2>
@@ -1008,7 +1008,7 @@ async function viewInvoice(invoiceId) {
             </div>
             <button type="button" class="modal__close" onclick="document.getElementById('view-invoice-modal').remove()">×</button>
           </header>
-          <div class="modal__body">
+          <div class="modal__body" style="overflow-y: auto; flex: 1;">
             <!-- Información general -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
               <div>
@@ -1130,7 +1130,7 @@ async function editInvoice(invoiceId) {
     const modalHTML = `
       <div class="modal is-open" id="edit-invoice-modal">
         <div class="modal__backdrop" onclick="closeEditInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px;">
+        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Editar factura ${invoice.invoice_number}</h2>
@@ -1138,7 +1138,7 @@ async function editInvoice(invoiceId) {
             </div>
             <button type="button" class="modal__close" onclick="closeEditInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body">
+          <div class="modal__body" style="overflow-y: auto; flex: 1;">
             <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
               ${invoice.verifactu_status === 'registered' ? `
                 <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
@@ -1272,7 +1272,7 @@ async function openNewInvoiceModal() {
     const modalHTML = `
       <div class="modal is-open" id="new-invoice-modal">
         <div class="modal__backdrop" onclick="closeNewInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px;">
+        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Nueva factura</h2>
@@ -1280,7 +1280,7 @@ async function openNewInvoiceModal() {
             </div>
             <button type="button" class="modal__close" onclick="closeNewInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body">
+          <div class="modal__body" style="overflow-y: auto; flex: 1;">
             <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
               <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
                 <div>
