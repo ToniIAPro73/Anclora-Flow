@@ -5,6 +5,7 @@
 let invoicesData = [];
 let filteredInvoices = [];
 let isLoading = false;
+let selectedInvoiceId = null;  // Estado para rastrear factura seleccionada
 let currentFilters = {
   search: '',
   status: 'all',
@@ -431,8 +432,9 @@ function renderInvoiceRows() {
       `;
     }
 
+    const isSelected = invoice.id === selectedInvoiceId;
     return `
-      <tr data-invoice-id="${invoice.id}" class="invoices-table__row">
+      <tr data-invoice-id="${invoice.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
         <td data-column="Factura">
           <span class="invoices-table__number">${invoice.number}</span>
         </td>
@@ -603,6 +605,19 @@ function setupFilters() {
       currentFilters.client = e.target.value;
       currentPage = 1;
       renderInvoicesTable();
+    });
+  }
+
+  // Manejar selección de filas
+  const tbody = document.querySelector('.invoices-table tbody');
+  if (tbody) {
+    tbody.addEventListener('click', (e) => {
+      const row = e.target.closest('tr[data-invoice-id]');
+      if (row) {
+        const invoiceId = row.dataset.invoiceId;
+        selectedInvoiceId = selectedInvoiceId === invoiceId ? null : invoiceId;
+        renderInvoicesTable();
+      }
     });
   }
 }
