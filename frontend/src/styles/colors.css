@@ -1332,14 +1332,20 @@ a:hover {
 }
 
 .invoices-table,
-.expenses-table {
+.clients-table,
+.expenses-table,
+.budgets-table,
+.subscriptions-table {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
 }
 
 .invoices-table__surface,
-.expenses-table__surface {
+.clients-table__surface,
+.expenses-table__surface,
+.budgets-table__surface,
+.subscriptions-table__surface {
   border-radius: 22px;
   border: 1px solid rgba(51, 102, 255, 0.16);
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(248, 250, 252, 0.8) 100%);
@@ -1348,21 +1354,30 @@ a:hover {
 }
 
 [data-theme="dark"] .invoices-table__surface,
-[data-theme="dark"] .expenses-table__surface {
+[data-theme="dark"] .clients-table__surface,
+[data-theme="dark"] .expenses-table__surface,
+[data-theme="dark"] .budgets-table__surface,
+[data-theme="dark"] .subscriptions-table__surface {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.92) 100%);
   border-color: rgba(148, 163, 184, 0.2);
   box-shadow: 0 25px 60px rgba(8, 18, 44, 0.65);
 }
 
 .invoices-table table,
-.expenses-table table {
+.clients-table table,
+.expenses-table table,
+.budgets-table table,
+.subscriptions-table table {
   width: 100%;
   border-collapse: collapse;
   min-width: 780px;
 }
 
 .invoices-table thead th,
-.expenses-table thead th {
+.clients-table thead th,
+.expenses-table thead th,
+.budgets-table thead th,
+.subscriptions-table thead th {
   text-align: left;
   font-size: 0.8rem;
   letter-spacing: 0.08em;
@@ -1374,16 +1389,31 @@ a:hover {
 }
 
 [data-theme="dark"] .invoices-table thead th,
-[data-theme="dark"] .expenses-table thead th {
+[data-theme="dark"] .clients-table thead th,
+[data-theme="dark"] .expenses-table thead th,
+[data-theme="dark"] .budgets-table thead th,
+[data-theme="dark"] .subscriptions-table thead th {
   color: rgba(226, 232, 240, 0.65);
   background: rgba(15, 23, 42, 0.65);
 }
 
 .invoices-table tbody td,
-.expenses-table tbody td {
+.clients-table tbody td,
+.expenses-table tbody td,
+.budgets-table tbody td,
+.subscriptions-table tbody td {
   padding: 1.05rem 1.5rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
   font-weight: 500;
+}
+
+.invoices-table tbody td:last-child,
+.clients-table tbody td:last-child,
+.expenses-table tbody td:last-child,
+.budgets-table tbody td:last-child,
+.subscriptions-table tbody td:last-child {
+  border-right: none;
 }
 
 .invoices-table tr.is-selected,
@@ -1396,7 +1426,7 @@ a:hover {
 .expenses-table__row.is-selected,
 .budgets-table__row.is-selected,
 .subscriptions-table__row.is-selected {
-  background: rgba(51, 102, 255, 0.08) !important;
+  background: rgba(59, 130, 246, 0.15) !important;
 }
 
 [data-theme="dark"] .invoices-table tr.is-selected,
@@ -1409,7 +1439,7 @@ a:hover {
 [data-theme="dark"] .expenses-table__row.is-selected,
 [data-theme="dark"] .budgets-table__row.is-selected,
 [data-theme="dark"] .subscriptions-table__row.is-selected {
-  background: rgba(30, 64, 175, 0.25) !important;
+  background: rgba(37, 99, 235, 0.35) !important;
 }
 
 .invoices-table tr.is-selected td,
@@ -1439,8 +1469,12 @@ a:hover {
 }
 
 [data-theme="dark"] .invoices-table tbody td,
-[data-theme="dark"] .expenses-table tbody td {
+[data-theme="dark"] .clients-table tbody td,
+[data-theme="dark"] .expenses-table tbody td,
+[data-theme="dark"] .budgets-table tbody td,
+[data-theme="dark"] .subscriptions-table tbody td {
   border-bottom-color: rgba(71, 85, 105, 0.35);
+  border-right-color: rgba(71, 85, 105, 0.35);
 }
 
 .invoices-table__row,
@@ -1707,7 +1741,11 @@ a:hover {
   background: rgba(15, 23, 42, 0.62);
 }
 
-.invoices-table__footer {
+.invoices-table__footer,
+.clients-table__footer,
+.expenses-table__footer,
+.budgets-table__footer,
+.subscriptions-table__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1716,11 +1754,19 @@ a:hover {
   color: var(--text-secondary);
 }
 
-[data-theme="dark"] .invoices-table__footer {
+[data-theme="dark"] .invoices-table__footer,
+[data-theme="dark"] .clients-table__footer,
+[data-theme="dark"] .expenses-table__footer,
+[data-theme="dark"] .budgets-table__footer,
+[data-theme="dark"] .subscriptions-table__footer {
   color: var(--text-dark-secondary);
 }
 
-.invoices-table__pager {
+.invoices-table__pager,
+.clients-table__pager,
+.expenses-table__pager,
+.budgets-table__pager,
+.subscriptions-table__pager {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;

@@ -1248,8 +1248,8 @@ export default function renderClients() {
           </div>
         </section>
 
-        <section class="invoices-table clients-table" aria-label="Listado de clientes">
-          <div class="invoices-table__surface">
+        <section class="clients-table" aria-label="Listado de clientes">
+          <div class="clients-table__surface">
             <table>
               <thead>
                 <tr>
@@ -1266,9 +1266,9 @@ export default function renderClients() {
               <tbody data-clients-table></tbody>
             </table>
           </div>
-          <footer class="invoices-table__footer">
+          <footer class="clients-table__footer">
             <p data-clients-count>Sin clientes cargados</p>
-            <div class="invoices-table__pager" data-pagination="clients"></div>
+            <div class="clients-table__pager" data-pagination="clients"></div>
           </footer>
           <div class="module-loading" data-clients-loading hidden>
             <span class="spinner"></span>
@@ -1317,8 +1317,8 @@ export default function renderClients() {
           </div>
         </section>
 
-        <section class="invoices-table clients-table" aria-label="Listado de proyectos">
-          <div class="invoices-table__surface">
+        <section class="clients-table" aria-label="Listado de proyectos">
+          <div class="clients-table__surface">
             <table>
               <thead>
                 <tr>
@@ -1333,9 +1333,9 @@ export default function renderClients() {
               <tbody data-projects-table></tbody>
             </table>
           </div>
-          <footer class="invoices-table__footer">
+          <footer class="clients-table__footer">
             <p data-projects-count>Sin proyectos cargados</p>
-            <div class="invoices-table__pager" data-pagination="projects"></div>
+            <div class="clients-table__pager" data-pagination="projects"></div>
           </footer>
           <div class="module-loading" data-projects-loading hidden>
             <span class="spinner"></span>
