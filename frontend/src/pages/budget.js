@@ -259,12 +259,12 @@ function renderSuggestions() {
 
 function buildBudgetFormHTML(budget = {}) {
   return `
-    <form class="sidebar-form" data-form-type="budget">
-      <header class="sidebar-form__header">
+    <form class="sidebar-form" data-form-type="budget" style="display: flex; flex-direction: column; max-height: 95vh; overflow: hidden;">
+      <header class="sidebar-form__header" style="flex-shrink: 0;">
         <h3>${budget.id ? 'Editar presupuesto' : 'Nuevo presupuesto'}</h3>
         <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
       </header>
-      <div class="form-grid">
+      <div class="form-grid" style="flex: 1; overflow-y: auto; padding: 1rem;">
         <label>
           <span>Categoría *</span>
           <input type="text" name="category" value="${escapeHtml(budget.category || '')}" required />
@@ -282,7 +282,7 @@ function buildBudgetFormHTML(budget = {}) {
           <textarea name="notes" rows="3">${escapeHtml(budget.notes || '')}</textarea>
         </label>
       </div>
-      <footer class="sidebar-form__footer">
+      <footer class="sidebar-form__footer" style="flex-shrink: 0; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0;">
         <button type="submit" class="btn btn-primary">${budget.id ? 'Guardar cambios' : 'Crear presupuesto'}</button>
       </footer>
     </form>
