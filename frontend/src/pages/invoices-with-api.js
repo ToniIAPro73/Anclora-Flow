@@ -2135,7 +2135,7 @@ export function renderInvoices() {
                 <th scope="col">Estado</th>
                 <th scope="col">Verifactu</th>
                 <th scope="col">Días</th>
-                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                <th scope="col">ACCIONES</th>
               </tr>
             </thead>
             <tbody>

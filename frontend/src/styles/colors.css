@@ -1554,7 +1554,8 @@ a:hover {
 }
 
 .invoices-table__actions,
-.expenses-table__actions {
+.expenses-table__actions,
+.table-actions {
   display: inline-flex;
   gap: 0.4rem;
   border-bottom: none !important;
