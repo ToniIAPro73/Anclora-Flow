@@ -5,11 +5,11 @@
 let invoicesData = [];
 let filteredInvoices = [];
 let isLoading = false;
-let selectedInvoiceId = null;  // Estado para rastrear factura seleccionada
+let selectedInvoiceId = null; // Estado para rastrear factura seleccionada
 let currentFilters = {
-  search: '',
-  status: 'all',
-  client: 'all'
+  search: "",
+  status: "all",
+  client: "all",
 };
 const PAGE_SIZE = 10;
 let currentPage = 1;
@@ -18,7 +18,7 @@ let currentPage = 1;
 const currencyFormatter = new Intl.NumberFormat("es-ES", {
   style: "currency",
   currency: "EUR",
-  maximumFractionDigits: 2
+  maximumFractionDigits: 2,
 });
 
 // Mapeo de estados de factura
@@ -27,7 +27,7 @@ const statusMap = {
   sent: { label: "Enviada", tone: "sent" },
   pending: { label: "Pendiente", tone: "pending" },
   overdue: { label: "Vencida", tone: "overdue" },
-  draft: { label: "Borrador", tone: "draft" }
+  draft: { label: "Borrador", tone: "draft" },
 };
 
 // Mapeo de estados de Verifactu
@@ -35,22 +35,22 @@ const verifactuStatusMap = {
   registered: { label: "Registrada", tone: "success", icon: "✅" },
   pending: { label: "Pendiente", tone: "warning", icon: "⏳" },
   error: { label: "Error", tone: "error", icon: "❌" },
-  not_registered: { label: "No registrada", tone: "neutral", icon: "⚪" }
+  not_registered: { label: "No registrada", tone: "neutral", icon: "⚪" },
 };
 
 // === UTILIDADES ===
 
 function formatDate(dateString) {
-  if (!dateString) return '-';
+  if (!dateString) return "-";
   const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 }
 
 function calculateDaysLate(dueDate, status) {
-  if (status === 'paid' || status === 'draft') return '';
+  if (status === "paid" || status === "draft") return "";
 
   const due = new Date(dueDate);
   const today = new Date();
@@ -60,13 +60,13 @@ function calculateDaysLate(dueDate, status) {
   if (diffDays > 0) {
     return `${diffDays} días tarde`;
   }
-  return '';
+  return "";
 }
 
 // Mostrar notificación
-function showNotification(message, type = 'info') {
+function showNotification(message, type = "info") {
   // Crear elemento de notificación
-  const notification = document.createElement('div');
+  const notification = document.createElement("div");
   notification.className = `notification notification--${type}`;
   notification.innerHTML = `
     <span>${message}</span>
@@ -74,9 +74,9 @@ function showNotification(message, type = 'info') {
   `;
 
   // Añadir estilos si no existen
-  if (!document.getElementById('notification-styles')) {
-    const style = document.createElement('style');
-    style.id = 'notification-styles';
+  if (!document.getElementById("notification-styles")) {
+    const style = document.createElement("style");
+    style.id = "notification-styles";
     style.textContent = `
       .notification {
         position: fixed;
@@ -130,15 +130,17 @@ async function loadInvoices() {
 
   try {
     // Verificar que api esté disponible
-    if (typeof window.api === 'undefined') {
-      throw new Error('Servicio API no disponible. Asegúrate de que api.js esté cargado.');
+    if (typeof window.api === "undefined") {
+      throw new Error(
+        "Servicio API no disponible. Asegúrate de que api.js esté cargado."
+      );
     }
 
     const response = await window.api.getInvoices();
     invoicesData = response.invoices || response || [];
 
     // Mapear datos de API a formato del componente
-    invoicesData = invoicesData.map(invoice => ({
+    invoicesData = invoicesData.map((invoice) => ({
       id: invoice.id,
       number: invoice.invoice_number,
       client: invoice.client_name,
@@ -151,22 +153,21 @@ async function loadInvoices() {
       tax: invoice.tax,
       status: invoice.status,
       daysLate: calculateDaysLate(invoice.due_date, invoice.status),
-      verifactuStatus: invoice.verifactu_status || 'not_registered',
+      verifactuStatus: invoice.verifactu_status || "not_registered",
       verifactuCsv: invoice.verifactu_csv,
       verifactuQrCode: invoice.verifactu_qr_code,
       verifactuUrl: invoice.verifactu_url,
       verifactuHash: invoice.verifactu_hash,
-      verifactuError: invoice.verifactu_error_message
+      verifactuError: invoice.verifactu_error_message,
     }));
 
     currentPage = 1;
     renderInvoicesTable();
     updateSummaryCards();
-
   } catch (error) {
-    console.error('Error cargando facturas:', error);
+    console.error("Error cargando facturas:", error);
     renderErrorState(error.message);
-    showNotification(error.message || 'Error al cargar facturas', 'error');
+    showNotification(error.message || "Error al cargar facturas", "error");
   } finally {
     isLoading = false;
   }
@@ -175,12 +176,12 @@ async function loadInvoices() {
 // Registrar factura en Verifactu
 async function registerInvoiceVerifactu(invoiceId) {
   try {
-    showNotification('Registrando factura en Verifactu...', 'info');
+    showNotification("Registrando factura en Verifactu...", "info");
 
     // Actualizar estado a pendiente inmediatamente
-    const invoice = invoicesData.find(inv => inv.id === invoiceId);
+    const invoice = invoicesData.find((inv) => inv.id === invoiceId);
     if (invoice) {
-      invoice.verifactuStatus = 'pending';
+      invoice.verifactuStatus = "pending";
       renderInvoicesTable();
     }
 
@@ -188,7 +189,7 @@ async function registerInvoiceVerifactu(invoiceId) {
 
     // Actualizar factura con los datos devueltos
     if (invoice) {
-      invoice.verifactuStatus = 'registered';
+      invoice.verifactuStatus = "registered";
       invoice.verifactuCsv = result.invoice.verifactu_csv;
       invoice.verifactuQrCode = result.invoice.verifactu_qr_code;
       invoice.verifactuUrl = result.invoice.verifactu_url;
@@ -196,20 +197,22 @@ async function registerInvoiceVerifactu(invoiceId) {
     }
 
     renderInvoicesTable();
-    showNotification('Factura registrada en Verifactu correctamente', 'success');
-
+    showNotification(
+      "Factura registrada en Verifactu correctamente",
+      "success"
+    );
   } catch (error) {
-    console.error('Error registrando en Verifactu:', error);
+    console.error("Error registrando en Verifactu:", error);
 
     // Actualizar estado a error
-    const invoice = invoicesData.find(inv => inv.id === invoiceId);
+    const invoice = invoicesData.find((inv) => inv.id === invoiceId);
     if (invoice) {
-      invoice.verifactuStatus = 'error';
+      invoice.verifactuStatus = "error";
       invoice.verifactuError = error.message;
       renderInvoicesTable();
     }
 
-    showNotification(`Error: ${error.message}`, 'error');
+    showNotification(`Error: ${error.message}`, "error");
   }
 }
 
@@ -231,19 +234,29 @@ function showVerifactuQRModal(invoice) {
         </header>
         <div class="modal__body" style="padding: 2rem; text-align: center;">
           <div style="margin-bottom: 1.5rem;">
-            <p><strong>CSV:</strong> <code style="background: #f7fafc; padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">${invoice.verifactuCsv}</code></p>
+            <p><strong>CSV:</strong> <code style="background: #f7fafc; padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">${
+              invoice.verifactuCsv
+            }</code></p>
           </div>
           <div style="display: flex; justify-content: center; margin-bottom: 1.5rem;">
-            <img src="${invoice.verifactuQrCode}" alt="QR Verifactu" style="max-width: 300px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; background: white;">
+            <img src="${
+              invoice.verifactuQrCode
+            }" alt="QR Verifactu" style="max-width: 300px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; background: white;">
           </div>
           <p style="font-size: 0.9rem; color: #718096;">
             Escanea este código QR para verificar la factura en la web de la Agencia Tributaria.
           </p>
-          ${invoice.verifactuUrl ? `<p style="font-size: 0.85rem; margin-top: 1rem;"><a href="${invoice.verifactuUrl}" target="_blank" style="color: #4299e1;">Verificar en AEAT →</a></p>` : ''}
+          ${
+            invoice.verifactuUrl
+              ? `<p style="font-size: 0.85rem; margin-top: 1rem;"><a href="${invoice.verifactuUrl}" target="_blank" style="color: #4299e1;">Verificar en AEAT →</a></p>`
+              : ""
+          }
         </div>
         <footer class="modal__footer">
           <button class="btn-secondary" onclick="document.getElementById('verifactu-qr-modal').remove()">Cerrar</button>
-          <a href="${invoice.verifactuQrCode}" download="qr-${invoice.number}.png" class="btn-primary" style="text-decoration: none; display: inline-block;">
+          <a href="${invoice.verifactuQrCode}" download="qr-${
+    invoice.number
+  }.png" class="btn-primary" style="text-decoration: none; display: inline-block;">
             Descargar QR
           </a>
         </footer>
@@ -251,7 +264,7 @@ function showVerifactuQRModal(invoice) {
     </div>
   `;
 
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  document.body.insertAdjacentHTML("beforeend", modalHTML);
 }
 
 function showVerifactuCSVModal(invoice) {
@@ -277,21 +290,27 @@ function showVerifactuCSVModal(invoice) {
               </p>
             </div>
           </div>
-          ${invoice.verifactuHash ? `
+          ${
+            invoice.verifactuHash
+              ? `
           <div style="margin-top: 1.5rem; font-size: 0.85rem;">
             <p><strong>Hash SHA-256:</strong></p>
             <p style="font-family: monospace; background: #f7fafc; padding: 0.5rem; border-radius: 4px; word-break: break-all; color: #4a5568;">
               ${invoice.verifactuHash}
             </p>
           </div>
-          ` : ''}
+          `
+              : ""
+          }
           <p style="font-size: 0.9rem; color: #718096; margin-top: 1.5rem;">
             Este código CSV identifica de forma única esta factura en el sistema Verifactu de la AEAT.
           </p>
         </div>
         <footer class="modal__footer">
           <button class="btn-secondary" onclick="document.getElementById('verifactu-csv-modal').remove()">Cerrar</button>
-          <button class="btn-primary" onclick="navigator.clipboard.writeText('${invoice.verifactuCsv}').then(() => showNotification('CSV copiado al portapapeles', 'success'))">
+          <button class="btn-primary" onclick="navigator.clipboard.writeText('${
+            invoice.verifactuCsv
+          }').then(() => showNotification('CSV copiado al portapapeles', 'success'))">
             Copiar CSV
           </button>
         </footer>
@@ -299,13 +318,13 @@ function showVerifactuCSVModal(invoice) {
     </div>
   `;
 
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  document.body.insertAdjacentHTML("beforeend", modalHTML);
 }
 
 // === RENDERIZADO ===
 
 function renderLoadingState() {
-  const tbody = document.querySelector('.invoices-table tbody');
+  const tbody = document.querySelector(".invoices-table tbody");
   if (tbody) {
     tbody.innerHTML = `
       <tr>
@@ -318,16 +337,17 @@ function renderLoadingState() {
   }
 
   // Añadir animación de spinner si no existe
-  if (!document.getElementById('spinner-animation')) {
-    const style = document.createElement('style');
-    style.id = 'spinner-animation';
-    style.textContent = '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+  if (!document.getElementById("spinner-animation")) {
+    const style = document.createElement("style");
+    style.id = "spinner-animation";
+    style.textContent =
+      "@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }";
     document.head.appendChild(style);
   }
 }
 
 function renderErrorState(message) {
-  const tbody = document.querySelector('.invoices-table tbody');
+  const tbody = document.querySelector(".invoices-table tbody");
   if (tbody) {
     tbody.innerHTML = `
       <tr>
@@ -359,19 +379,21 @@ function renderInvoiceRows() {
   if (currentFilters.search) {
     const search = currentFilters.search.trim().toLowerCase();
     filteredInvoices = filteredInvoices.filter((inv = {}) => {
-      const invoiceNumber = (inv.number ?? '').toString().toLowerCase();
-      const clientName = (inv.client ?? '').toString().toLowerCase();
+      const invoiceNumber = (inv.number ?? "").toString().toLowerCase();
+      const clientName = (inv.client ?? "").toString().toLowerCase();
       return invoiceNumber.includes(search) || clientName.includes(search);
     });
   }
 
-  if (currentFilters.status !== 'all') {
-    filteredInvoices = filteredInvoices.filter(inv => inv.status === currentFilters.status);
+  if (currentFilters.status !== "all") {
+    filteredInvoices = filteredInvoices.filter(
+      (inv) => inv.status === currentFilters.status
+    );
   }
 
-  if (currentFilters.client !== 'all') {
-    filteredInvoices = filteredInvoices.filter(inv =>
-      inv.client.toLowerCase() === currentFilters.client
+  if (currentFilters.client !== "all") {
+    filteredInvoices = filteredInvoices.filter(
+      (inv) => inv.client.toLowerCase() === currentFilters.client
     );
   }
 
@@ -386,7 +408,10 @@ function renderInvoiceRows() {
     `;
   }
 
-  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredInvoices.length / PAGE_SIZE)
+  );
   if (currentPage > totalPages) {
     currentPage = totalPages;
   } else if (currentPage < 1) {
@@ -394,47 +419,61 @@ function renderInvoiceRows() {
   }
 
   const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const pageInvoices = filteredInvoices.slice(startIndex, startIndex + PAGE_SIZE);
+  const pageInvoices = filteredInvoices.slice(
+    startIndex,
+    startIndex + PAGE_SIZE
+  );
 
-  return pageInvoices.map((invoice) => {
-    const statusInfo = statusMap[invoice.status] || statusMap.draft;
-    const verifactuInfo = verifactuStatusMap[invoice.verifactuStatus] || verifactuStatusMap.not_registered;
+  return pageInvoices
+    .map((invoice) => {
+      const statusInfo = statusMap[invoice.status] || statusMap.draft;
+      const verifactuInfo =
+        verifactuStatusMap[invoice.verifactuStatus] ||
+        verifactuStatusMap.not_registered;
 
-    // Determinar acciones de Verifactu
-    let verifactuActions = '';
+      // Determinar acciones de Verifactu
+      let verifactuActions = "";
 
-    if (invoice.verifactuStatus === 'registered') {
-      verifactuActions = `
-        <button type="button" class="table-action" title="Ver QR Verifactu" onclick="showVerifactuQRModal(${JSON.stringify(invoice).replace(/"/g, '&quot;')})">
+      if (invoice.verifactuStatus === "registered") {
+        verifactuActions = `
+        <button type="button" class="table-action" title="Ver QR Verifactu" onclick="showVerifactuQRModal(${JSON.stringify(
+          invoice
+        ).replace(/"/g, "&quot;")})">
           <span>🔲</span>
         </button>
-        <button type="button" class="table-action" title="Ver CSV" onclick="showVerifactuCSVModal(${JSON.stringify(invoice).replace(/"/g, '&quot;')})">
+        <button type="button" class="table-action" title="Ver CSV" onclick="showVerifactuCSVModal(${JSON.stringify(
+          invoice
+        ).replace(/"/g, "&quot;")})">
           <span>🔐</span>
         </button>
       `;
-    } else if (invoice.verifactuStatus === 'not_registered') {
-      verifactuActions = `
+      } else if (invoice.verifactuStatus === "not_registered") {
+        verifactuActions = `
         <button type="button" class="table-action table-action--primary" title="Registrar en Verifactu" onclick="registerInvoiceVerifactu('${invoice.id}')">
           <span>📋</span>
         </button>
       `;
-    } else if (invoice.verifactuStatus === 'pending') {
-      verifactuActions = `
+      } else if (invoice.verifactuStatus === "pending") {
+        verifactuActions = `
         <button type="button" class="table-action" disabled title="Registro pendiente">
           <span>⏳</span>
         </button>
       `;
-    } else if (invoice.verifactuStatus === 'error') {
-      verifactuActions = `
-        <button type="button" class="table-action table-action--retry" title="Reintentar registro - ${invoice.verifactuError || 'Error desconocido'}" onclick="registerInvoiceVerifactu('${invoice.id}')">
+      } else if (invoice.verifactuStatus === "error") {
+        verifactuActions = `
+        <button type="button" class="table-action table-action--retry" title="Reintentar registro - ${
+          invoice.verifactuError || "Error desconocido"
+        }" onclick="registerInvoiceVerifactu('${invoice.id}')">
           <span>🔄</span>
         </button>
       `;
-    }
+      }
 
-    const isSelected = invoice.id === selectedInvoiceId;
-    return `
-      <tr data-invoice-id="${invoice.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
+      const isSelected = invoice.id === selectedInvoiceId;
+      return `
+      <tr data-invoice-id="${invoice.id}" class="invoices-table__row${
+        isSelected ? " is-selected" : ""
+      }">
         <td data-column="Factura">
           <span class="invoices-table__number">${invoice.number}</span>
         </td>
@@ -442,13 +481,19 @@ function renderInvoiceRows() {
           <span class="invoices-table__client">${invoice.client}</span>
         </td>
         <td data-column="Emision">
-          <time datetime="${invoice.issueDate}">${formatDate(invoice.issueDate)}</time>
+          <time datetime="${invoice.issueDate}">${formatDate(
+        invoice.issueDate
+      )}</time>
         </td>
         <td data-column="Vencimiento">
-          <time datetime="${invoice.dueDate}">${formatDate(invoice.dueDate)}</time>
+          <time datetime="${invoice.dueDate}">${formatDate(
+        invoice.dueDate
+      )}</time>
         </td>
         <td data-column="Importe">
-          <span class="invoices-table__amount">${currencyFormatter.format(invoice.total)}</span>
+          <span class="invoices-table__amount">${currencyFormatter.format(
+            invoice.total
+          )}</span>
         </td>
         <td data-column="Estado">
           <span class="status-pill status-pill--${statusInfo.tone}">
@@ -457,7 +502,9 @@ function renderInvoiceRows() {
           </span>
         </td>
         <td data-column="Verifactu">
-          <span class="status-pill status-pill--${verifactuInfo.tone}" title="${verifactuInfo.label}">
+          <span class="status-pill status-pill--${verifactuInfo.tone}" title="${
+        verifactuInfo.label
+      }">
             <span>${verifactuInfo.icon}</span>
             ${verifactuInfo.label}
           </span>
@@ -479,11 +526,12 @@ function renderInvoiceRows() {
         </td>
       </tr>
     `;
-  }).join('');
+    })
+    .join("");
 }
 
 function renderInvoicesTable() {
-  const tbody = document.querySelector('.invoices-table tbody');
+  const tbody = document.querySelector(".invoices-table tbody");
   if (tbody) {
     tbody.innerHTML = renderInvoiceRows();
   }
@@ -494,18 +542,18 @@ function renderInvoicesTable() {
 }
 
 function updateResultCount() {
-  const countEl = document.querySelector('[data-result-count]');
+  const countEl = document.querySelector("[data-result-count]");
   if (!countEl) return;
 
   const total = filteredInvoices.length;
   if (!total) {
-    countEl.textContent = 'Sin facturas disponibles';
+    countEl.textContent = "Sin facturas disponibles";
     return;
   }
 
   const start = (currentPage - 1) * PAGE_SIZE + 1;
   const end = Math.min(currentPage * PAGE_SIZE, total);
-  const label = total === 1 ? 'factura' : 'facturas';
+  const label = total === 1 ? "factura" : "facturas";
   countEl.textContent = `Mostrando ${start}-${end} de ${total} ${label}`;
 }
 
@@ -517,16 +565,20 @@ function renderInvoicePagination() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   if (total <= PAGE_SIZE) {
-    pager.innerHTML = '';
+    pager.innerHTML = "";
     return;
   }
 
   pager.innerHTML = `
-    <button type="button" class="pager-btn" onclick="window.changeInvoicesPage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+    <button type="button" class="pager-btn" onclick="window.changeInvoicesPage(-1)" ${
+      currentPage === 1 ? "disabled" : ""
+    }>
       Anterior
     </button>
     <span class="pager-status">Página ${currentPage} de ${totalPages}</span>
-    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeInvoicesPage(1)" ${currentPage === totalPages ? 'disabled' : ''}>
+    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeInvoicesPage(1)" ${
+      currentPage === totalPages ? "disabled" : ""
+    }>
       Siguiente
     </button>
   `;
@@ -535,23 +587,28 @@ function renderInvoicePagination() {
 function updateSummaryCards() {
   // Calcular estadísticas reales
   const totalThisMonth = invoicesData
-    .filter(inv => {
+    .filter((inv) => {
       const issueDate = new Date(inv.issueDate);
       const now = new Date();
-      return issueDate.getMonth() === now.getMonth() &&
-             issueDate.getFullYear() === now.getFullYear();
+      return (
+        issueDate.getMonth() === now.getMonth() &&
+        issueDate.getFullYear() === now.getFullYear()
+      );
     })
     .reduce((sum, inv) => sum + inv.total, 0);
 
   const pendingTotal = invoicesData
-    .filter(inv => inv.status === 'pending' || inv.status === 'sent')
+    .filter((inv) => inv.status === "pending" || inv.status === "sent")
     .reduce((sum, inv) => sum + inv.total, 0);
 
-  const pendingCount = invoicesData.filter(inv => inv.status === 'pending' || inv.status === 'sent').length;
+  const pendingCount = invoicesData.filter(
+    (inv) => inv.status === "pending" || inv.status === "sent"
+  ).length;
 
-  const paidCount = invoicesData.filter(inv => inv.status === 'paid').length;
+  const paidCount = invoicesData.filter((inv) => inv.status === "paid").length;
   const totalCount = invoicesData.length;
-  const paymentRatio = totalCount > 0 ? ((paidCount / totalCount) * 100).toFixed(1) : 0;
+  const paymentRatio =
+    totalCount > 0 ? ((paidCount / totalCount) * 100).toFixed(1) : 0;
 
   // Puedes actualizar las tarjetas resumen aquí si quieres
   // Por ahora mantienen sus valores estáticos
@@ -560,7 +617,7 @@ function updateSummaryCards() {
 // === INICIALIZACIÓN ===
 
 export function initInvoicesPage() {
-  console.log('Inicializando módulo de facturas con API...');
+  console.log("Inicializando módulo de facturas con API...");
 
   // Hacer funciones globales para que funcionen los onclick en el HTML
   window.loadInvoices = loadInvoices;
@@ -579,9 +636,9 @@ export function initInvoicesPage() {
 
 function setupFilters() {
   // Buscar facturas
-  const searchInput = document.querySelector('[data-invoices-search]');
+  const searchInput = document.querySelector("[data-invoices-search]");
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
+    searchInput.addEventListener("input", (e) => {
       currentFilters.search = e.target.value;
       currentPage = 1;
       renderInvoicesTable();
@@ -589,9 +646,11 @@ function setupFilters() {
   }
 
   // Filtro por estado
-  const statusFilter = document.querySelector('[data-invoices-filter="status"]');
+  const statusFilter = document.querySelector(
+    '[data-invoices-filter="status"]'
+  );
   if (statusFilter) {
-    statusFilter.addEventListener('change', (e) => {
+    statusFilter.addEventListener("change", (e) => {
       currentFilters.status = e.target.value;
       currentPage = 1;
       renderInvoicesTable();
@@ -599,9 +658,11 @@ function setupFilters() {
   }
 
   // Filtro por cliente
-  const clientFilter = document.querySelector('[data-invoices-filter="client"]');
+  const clientFilter = document.querySelector(
+    '[data-invoices-filter="client"]'
+  );
   if (clientFilter) {
-    clientFilter.addEventListener('change', (e) => {
+    clientFilter.addEventListener("change", (e) => {
       currentFilters.client = e.target.value;
       currentPage = 1;
       renderInvoicesTable();
@@ -609,10 +670,10 @@ function setupFilters() {
   }
 
   // Manejar selección de filas
-  const tbody = document.querySelector('.invoices-table tbody');
+  const tbody = document.querySelector(".invoices-table tbody");
   if (tbody) {
-    tbody.addEventListener('click', (e) => {
-      const row = e.target.closest('tr[data-invoice-id]');
+    tbody.addEventListener("click", (e) => {
+      const row = e.target.closest("tr[data-invoice-id]");
       if (row) {
         const invoiceId = row.dataset.invoiceId;
         selectedInvoiceId = selectedInvoiceId === invoiceId ? null : invoiceId;
@@ -623,7 +684,10 @@ function setupFilters() {
 }
 
 function changeInvoicesPage(delta) {
-  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredInvoices.length / PAGE_SIZE)
+  );
   const next = Math.min(Math.max(1, currentPage + delta), totalPages);
   if (next === currentPage) return;
   currentPage = next;
@@ -631,7 +695,12 @@ function changeInvoicesPage(delta) {
 }
 
 // Export para uso en módulos
-export { loadInvoices, registerInvoiceVerifactu, showVerifactuQRModal, showVerifactuCSVModal };
+export {
+  loadInvoices,
+  registerInvoiceVerifactu,
+  showVerifactuQRModal,
+  showVerifactuCSVModal,
+};
 
 // Mantener la función de render original para compatibilidad
 export function renderInvoices() {

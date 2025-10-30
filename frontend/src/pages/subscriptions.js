@@ -1,7 +1,7 @@
 const sidebarViews = {
-  DETAIL: 'detail',
-  FORM: 'form',
-  EMPTY: 'empty',
+  DETAIL: "detail",
+  FORM: "form",
+  EMPTY: "empty",
 };
 
 const subscriptionState = {
@@ -19,10 +19,10 @@ const subscriptionState = {
   suggestions: [],
   clients: [],
   filters: {
-    search: '',
-    status: 'all',
-    billingCycle: 'all',
-    autoInvoice: 'all',
+    search: "",
+    status: "all",
+    billingCycle: "all",
+    autoInvoice: "all",
   },
   selectedId: null,
   sidebarView: sidebarViews.DETAIL,
@@ -31,9 +31,9 @@ const subscriptionState = {
   error: null,
 };
 
-const currencyFormatter = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'EUR',
+const currencyFormatter = new Intl.NumberFormat("es-ES", {
+  style: "currency",
+  currency: "EUR",
   maximumFractionDigits: 2,
 });
 
@@ -44,23 +44,23 @@ function formatCurrency(value) {
 }
 
 function formatDate(value) {
-  if (!value) return '—';
+  if (!value) return "—";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 }
 
-function escapeHtml(value = '') {
+function escapeHtml(value = "") {
   return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 let debounceTimer = null;
@@ -71,17 +71,17 @@ function debounce(callback, delay = 320) {
 
 function setLoading(isLoading) {
   subscriptionState.loading = isLoading;
-  const spinner = document.querySelector('[data-subscriptions-loading]');
+  const spinner = document.querySelector("[data-subscriptions-loading]");
   if (spinner) spinner.hidden = !isLoading;
 }
 
 function setError(message) {
   subscriptionState.error = message;
-  const box = document.querySelector('[data-subscriptions-error]');
+  const box = document.querySelector("[data-subscriptions-error]");
   if (!box) return;
   if (!message) {
     box.hidden = true;
-    box.innerHTML = '';
+    box.innerHTML = "";
     return;
   }
   box.hidden = false;
@@ -97,14 +97,16 @@ function setError(message) {
   `;
 }
 
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
+function showToast(message, type = "info") {
+  const toast = document.createElement("div");
   toast.className = `notification notification--${type}`;
   toast.innerHTML = `
     <span>${escapeHtml(message)}</span>
     <button type="button" class="notification__close" aria-label="Cerrar">×</button>
   `;
-  toast.querySelector('.notification__close').addEventListener('click', () => toast.remove());
+  toast
+    .querySelector(".notification__close")
+    .addEventListener("click", () => toast.remove());
   document.body.appendChild(toast);
   window.setTimeout(() => toast.remove(), 3200);
 }
@@ -113,7 +115,9 @@ function ensureSelection() {
   if (subscriptionState.subscriptions.length) {
     if (
       !subscriptionState.selectedId ||
-      !subscriptionState.subscriptions.some((item) => item.id === subscriptionState.selectedId)
+      !subscriptionState.subscriptions.some(
+        (item) => item.id === subscriptionState.selectedId
+      )
     ) {
       subscriptionState.selectedId = subscriptionState.subscriptions[0].id;
     }
@@ -134,14 +138,17 @@ function ensureSelection() {
 async function loadSubscriptions() {
   const response = await window.api.getSubscriptions({
     search: subscriptionState.filters.search || undefined,
-    status: subscriptionState.filters.status !== 'all' ? subscriptionState.filters.status : undefined,
+    status:
+      subscriptionState.filters.status !== "all"
+        ? subscriptionState.filters.status
+        : undefined,
     billingCycle:
-      subscriptionState.filters.billingCycle !== 'all'
+      subscriptionState.filters.billingCycle !== "all"
         ? subscriptionState.filters.billingCycle
         : undefined,
     autoInvoice:
-      subscriptionState.filters.autoInvoice !== 'all'
-        ? subscriptionState.filters.autoInvoice === 'true'
+      subscriptionState.filters.autoInvoice !== "all"
+        ? subscriptionState.filters.autoInvoice === "true"
         : undefined,
   });
   const { subscriptions = [] } = response || {};
@@ -152,7 +159,7 @@ async function loadSubscriptions() {
     clientId: item.client_id ? String(item.client_id) : null,
     clientName: item.client_name,
     amount: item.amount,
-    currency: item.currency || 'EUR',
+    currency: item.currency || "EUR",
     billingCycle: item.billing_cycle,
     nextBillingDate: item.next_billing_date,
     status: item.status,
@@ -188,7 +195,9 @@ async function loadBreakdown() {
 }
 
 function buildSuggestions() {
-  const active = subscriptionState.subscriptions.filter((item) => item.status === 'active');
+  const active = subscriptionState.subscriptions.filter(
+    (item) => item.status === "active"
+  );
   const upcomingSoon = subscriptionState.upcoming
     .slice()
     .sort(
@@ -205,13 +214,15 @@ function buildSuggestions() {
 
   subscriptionState.suggestions = [
     ...upcomingSoon.map((item) => ({
-      type: 'upcoming',
-      label: `Cobro próximo ${formatDate(item.next_billing_date || item.nextBillingDate)}`,
+      type: "upcoming",
+      label: `Cobro próximo ${formatDate(
+        item.next_billing_date || item.nextBillingDate
+      )}`,
       value: `${escapeHtml(item.name)} · ${formatCurrency(item.amount ?? 0)}`,
     })),
     ...highest.map((item) => ({
-      type: 'high',
-      label: 'Alta facturación recurrente',
+      type: "high",
+      label: "Alta facturación recurrente",
       value: `${escapeHtml(item.name)} · ${formatCurrency(item.amount ?? 0)}`,
     })),
   ];
@@ -233,23 +244,25 @@ async function loadClients() {
 
 function renderSummary() {
   const summary = subscriptionState.summary;
-  const total = document.getElementById('subscriptions-total');
-  const active = document.getElementById('subscriptions-active');
-  const paused = document.getElementById('subscriptions-paused');
-  const cancelled = document.getElementById('subscriptions-cancelled');
-  const mrr = document.getElementById('subscriptions-mrr');
-  const cashflow = document.getElementById('subscriptions-cashflow');
+  const total = document.getElementById("subscriptions-total");
+  const active = document.getElementById("subscriptions-active");
+  const paused = document.getElementById("subscriptions-paused");
+  const cancelled = document.getElementById("subscriptions-cancelled");
+  const mrr = document.getElementById("subscriptions-mrr");
+  const cashflow = document.getElementById("subscriptions-cashflow");
 
   if (total) total.textContent = summary.total_subscriptions ?? 0;
   if (active) active.textContent = summary.active_subscriptions ?? 0;
   if (paused) paused.textContent = summary.paused_subscriptions ?? 0;
   if (cancelled) cancelled.textContent = summary.cancelled_subscriptions ?? 0;
-  if (mrr) mrr.textContent = formatCurrency(summary.monthly_recurring_revenue ?? 0);
-  if (cashflow) cashflow.textContent = formatCurrency(summary.next_30_days_revenue ?? 0);
+  if (mrr)
+    mrr.textContent = formatCurrency(summary.monthly_recurring_revenue ?? 0);
+  if (cashflow)
+    cashflow.textContent = formatCurrency(summary.next_30_days_revenue ?? 0);
 }
 
 function renderSubscriptionsTable() {
-  const tbody = document.querySelector('[data-subscriptions-table]');
+  const tbody = document.querySelector("[data-subscriptions-table]");
   if (!tbody) return;
 
   if (!subscriptionState.subscriptions.length) {
@@ -272,30 +285,32 @@ function renderSubscriptionsTable() {
     .map((sub) => {
       const isSelected = sub.id === subscriptionState.selectedId;
       const statusBadge =
-        sub.status === 'active'
-          ? 'success'
-          : sub.status === 'paused'
-          ? 'warning'
-          : 'danger';
+        sub.status === "active"
+          ? "success"
+          : sub.status === "paused"
+          ? "warning"
+          : "danger";
       return `
-        <tr data-subscription-row="${sub.id}" class="subscriptions-table__row${isSelected ? ' is-selected' : ''}">
+        <tr data-subscription-row="${sub.id}" class="subscriptions-table__row${
+        isSelected ? " is-selected" : ""
+      }">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(sub.name)}</strong>
-              <span>${escapeHtml(sub.description || 'Sin descripción')}</span>
+              <span>${escapeHtml(sub.description || "Sin descripción")}</span>
             </div>
           </td>
-          <td>${escapeHtml(sub.clientName || 'Sin cliente')}</td>
+          <td>${escapeHtml(sub.clientName || "Sin cliente")}</td>
           <td>
             <span class="badge badge--info">
               ${
-                sub.billingCycle === 'monthly'
-                  ? 'Mensual'
-                  : sub.billingCycle === 'quarterly'
-                  ? 'Trimestral'
-                  : sub.billingCycle === 'yearly'
-                  ? 'Anual'
-                  : 'Personalizado'
+                sub.billingCycle === "monthly"
+                  ? "Mensual"
+                  : sub.billingCycle === "quarterly"
+                  ? "Trimestral"
+                  : sub.billingCycle === "yearly"
+                  ? "Anual"
+                  : "Personalizado"
               }
             </span>
           </td>
@@ -305,34 +320,48 @@ function renderSubscriptionsTable() {
           </td>
           <td>
             <strong>${formatCurrency(sub.amount ?? 0)}</strong>
-            <span class="meta">${escapeHtml(sub.currency || 'EUR')}</span>
+            <span class="meta">${escapeHtml(sub.currency || "EUR")}</span>
           </td>
           <td>
-            <span class="badge badge--${sub.autoInvoice ? 'success' : 'neutral'}">
-              ${sub.autoInvoice ? 'Automática' : 'Manual'}
+            <span class="badge badge--${
+              sub.autoInvoice ? "success" : "neutral"
+            }">
+              ${sub.autoInvoice ? "Automática" : "Manual"}
             </span>
           </td>
           <td>
             <span class="badge badge--${statusBadge}">
-              ${sub.status === 'active' ? 'Activa' : sub.status === 'paused' ? 'Pausada' : 'Cancelada'}
+              ${
+                sub.status === "active"
+                  ? "Activa"
+                  : sub.status === "paused"
+                  ? "Pausada"
+                  : "Cancelada"
+              }
             </span>
           </td>
           <td>
             <div class="table-actions">
-              <button type="button" class="btn-icon" data-subscription-edit="${sub.id}" aria-label="Editar">✏️</button>
-              <button type="button" class="btn-icon btn-icon--danger" data-subscription-delete="${sub.id}" aria-label="Eliminar">🗑️</button>
+              <button type="button" class="btn-icon" data-subscription-edit="${
+                sub.id
+              }" aria-label="Editar">✏️</button>
+              <button type="button" class="btn-icon btn-icon--danger" data-subscription-delete="${
+                sub.id
+              }" aria-label="Eliminar">🗑️</button>
             </div>
           </td>
         </tr>
       `;
     })
-    .join('');
+    .join("");
 }
 
 function renderInsights() {
-  const upcomingList = document.querySelector('[data-upcoming-subscriptions]');
-  const breakdownList = document.querySelector('[data-status-breakdown]');
-  const suggestionList = document.querySelector('[data-subscription-suggestions]');
+  const upcomingList = document.querySelector("[data-upcoming-subscriptions]");
+  const breakdownList = document.querySelector("[data-status-breakdown]");
+  const suggestionList = document.querySelector(
+    "[data-subscription-suggestions]"
+  );
 
   if (upcomingList) {
     if (!subscriptionState.upcoming.length) {
@@ -343,11 +372,13 @@ function renderInsights() {
           (item) => `
             <li>
               <span class="title">${escapeHtml(item.name)}</span>
-              <span class="meta">${formatDate(item.next_billing_date || item.nextBillingDate)} · ${formatCurrency(item.amount ?? 0)}</span>
+              <span class="meta">${formatDate(
+                item.next_billing_date || item.nextBillingDate
+              )} · ${formatCurrency(item.amount ?? 0)}</span>
             </li>
           `
         )
-        .join('');
+        .join("");
     }
   }
 
@@ -360,17 +391,20 @@ function renderInsights() {
           (item) => `
             <li>
               <span class="title">${escapeHtml(item.status)}</span>
-              <span class="meta">${item.count} · ${formatCurrency(item.total_amount ?? 0)}</span>
+              <span class="meta">${item.count} · ${formatCurrency(
+            item.total_amount ?? 0
+          )}</span>
             </li>
           `
         )
-        .join('');
+        .join("");
     }
   }
 
   if (suggestionList) {
     if (!subscriptionState.suggestions.length) {
-      suggestionList.innerHTML = '<li class="empty">Sin recomendaciones generadas</li>';
+      suggestionList.innerHTML =
+        '<li class="empty">Sin recomendaciones generadas</li>';
     } else {
       suggestionList.innerHTML = subscriptionState.suggestions
         .map(
@@ -381,7 +415,7 @@ function renderInsights() {
             </li>
           `
         )
-        .join('');
+        .join("");
     }
   }
 }
@@ -392,21 +426,23 @@ function buildSubscriptionFormHTML(subscription = {}) {
     ...subscriptionState.clients.map(
       (client) =>
         `<option value="${client.id}" ${
-          subscription.clientId === client.id ? 'selected' : ''
+          subscription.clientId === client.id ? "selected" : ""
         }>${escapeHtml(client.name)}</option>`
     ),
-  ].join('');
+  ].join("");
 
   return `
-    <form class="sidebar-form" data-form-type="subscription">
-      <header class="sidebar-form__header">
-        <h3>${subscription.id ? 'Editar suscripción' : 'Nueva suscripción'}</h3>
+    <form class="sidebar-form" data-form-type="subscription" style="display: flex; flex-direction: column; max-height: 95vh; overflow: hidden;">
+      <header class="sidebar-form__header" style="flex-shrink: 0;">
+        <h3>${subscription.id ? "Editar suscripción" : "Nueva suscripción"}</h3>
         <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
       </header>
-      <div class="form-grid">
+      <div class="form-grid" style="flex: 1; overflow-y: auto; padding: 1rem;">
         <label>
           <span>Nombre *</span>
-          <input type="text" name="name" value="${escapeHtml(subscription.name || '')}" required />
+          <input type="text" name="name" value="${escapeHtml(
+            subscription.name || ""
+          )}" required />
         </label>
         <label>
           <span>Cliente</span>
@@ -416,48 +452,78 @@ function buildSubscriptionFormHTML(subscription = {}) {
         </label>
         <label>
           <span>Importe (€)</span>
-          <input type="number" min="0" step="0.01" name="amount" value="${subscription.amount != null ? subscription.amount : ''}" required />
+          <input type="number" min="0" step="0.01" name="amount" value="${
+            subscription.amount != null ? subscription.amount : ""
+          }" required />
         </label>
         <label>
           <span>Moneda</span>
-          <input type="text" name="currency" value="${escapeHtml(subscription.currency || 'EUR')}" maxlength="5" />
+          <input type="text" name="currency" value="${escapeHtml(
+            subscription.currency || "EUR"
+          )}" maxlength="5" />
         </label>
         <label>
           <span>Ciclo</span>
           <select name="billingCycle">
-            <option value="monthly" ${subscription.billingCycle === 'monthly' ? 'selected' : ''}>Mensual</option>
-            <option value="quarterly" ${subscription.billingCycle === 'quarterly' ? 'selected' : ''}>Trimestral</option>
-            <option value="yearly" ${subscription.billingCycle === 'yearly' ? 'selected' : ''}>Anual</option>
-            <option value="custom" ${subscription.billingCycle === 'custom' ? 'selected' : ''}>Personalizado</option>
+            <option value="monthly" ${
+              subscription.billingCycle === "monthly" ? "selected" : ""
+            }>Mensual</option>
+            <option value="quarterly" ${
+              subscription.billingCycle === "quarterly" ? "selected" : ""
+            }>Trimestral</option>
+            <option value="yearly" ${
+              subscription.billingCycle === "yearly" ? "selected" : ""
+            }>Anual</option>
+            <option value="custom" ${
+              subscription.billingCycle === "custom" ? "selected" : ""
+            }>Personalizado</option>
           </select>
         </label>
         <label>
           <span>Inicio</span>
-          <input type="date" name="startDate" value="${subscription.startDate ? subscription.startDate.split('T')[0] : ''}" required />
+          <input type="date" name="startDate" value="${
+            subscription.startDate ? subscription.startDate.split("T")[0] : ""
+          }" required />
         </label>
         <label>
           <span>Próximo cobro</span>
-          <input type="date" name="nextBillingDate" value="${subscription.nextBillingDate ? subscription.nextBillingDate.split('T')[0] : ''}" required />
+          <input type="date" name="nextBillingDate" value="${
+            subscription.nextBillingDate
+              ? subscription.nextBillingDate.split("T")[0]
+              : ""
+          }" required />
         </label>
         <label>
           <span>Estado</span>
           <select name="status">
-            <option value="active" ${subscription.status === 'active' ? 'selected' : ''}>Activa</option>
-            <option value="paused" ${subscription.status === 'paused' ? 'selected' : ''}>Pausada</option>
-            <option value="cancelled" ${subscription.status === 'cancelled' ? 'selected' : ''}>Cancelada</option>
+            <option value="active" ${
+              subscription.status === "active" ? "selected" : ""
+            }>Activa</option>
+            <option value="paused" ${
+              subscription.status === "paused" ? "selected" : ""
+            }>Pausada</option>
+            <option value="cancelled" ${
+              subscription.status === "cancelled" ? "selected" : ""
+            }>Cancelada</option>
           </select>
         </label>
         <label class="checkbox">
-          <input type="checkbox" name="autoInvoice" ${subscription.autoInvoice !== false ? 'checked' : ''} />
+          <input type="checkbox" name="autoInvoice" ${
+            subscription.autoInvoice !== false ? "checked" : ""
+          } />
           <span>Generar factura automáticamente</span>
         </label>
         <label class="wide">
           <span>Descripción</span>
-          <textarea name="description" rows="3">${escapeHtml(subscription.description || '')}</textarea>
+          <textarea name="description" rows="3">${escapeHtml(
+            subscription.description || ""
+          )}</textarea>
         </label>
       </div>
-      <footer class="sidebar-form__footer">
-        <button type="submit" class="btn btn-primary">${subscription.id ? 'Guardar cambios' : 'Crear suscripción'}</button>
+      <footer class="sidebar-form__footer" style="flex-shrink: 0; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0;">
+        <button type="submit" class="btn btn-primary">${
+          subscription.id ? "Guardar cambios" : "Crear suscripción"
+        }</button>
       </footer>
     </form>
   `;
@@ -474,21 +540,29 @@ function buildSubscriptionDetailHTML(subscription) {
   }
 
   const statusBadge =
-    subscription.status === 'active'
-      ? 'success'
-      : subscription.status === 'paused'
-      ? 'warning'
-      : 'danger';
+    subscription.status === "active"
+      ? "success"
+      : subscription.status === "paused"
+      ? "warning"
+      : "danger";
 
   return `
     <article class="sidebar-card">
       <header class="sidebar-card__header">
         <div>
           <h3>${escapeHtml(subscription.name)}</h3>
-          <p>${escapeHtml(subscription.clientName || 'Sin cliente asociado')}</p>
+          <p>${escapeHtml(
+            subscription.clientName || "Sin cliente asociado"
+          )}</p>
         </div>
         <span class="badge badge--${statusBadge}">
-          ${subscription.status === 'active' ? 'Activa' : subscription.status === 'paused' ? 'Pausada' : 'Cancelada'}
+          ${
+            subscription.status === "active"
+              ? "Activa"
+              : subscription.status === "paused"
+              ? "Pausada"
+              : "Cancelada"
+          }
         </span>
       </header>
       <dl class="detail-grid">
@@ -498,18 +572,18 @@ function buildSubscriptionDetailHTML(subscription) {
         </div>
         <div>
           <dt>Moneda</dt>
-          <dd>${escapeHtml(subscription.currency || 'EUR')}</dd>
+          <dd>${escapeHtml(subscription.currency || "EUR")}</dd>
         </div>
         <div>
           <dt>Ciclo</dt>
           <dd>${
-            subscription.billingCycle === 'monthly'
-              ? 'Mensual'
-              : subscription.billingCycle === 'quarterly'
-              ? 'Trimestral'
-              : subscription.billingCycle === 'yearly'
-              ? 'Anual'
-              : 'Personalizado'
+            subscription.billingCycle === "monthly"
+              ? "Mensual"
+              : subscription.billingCycle === "quarterly"
+              ? "Trimestral"
+              : subscription.billingCycle === "yearly"
+              ? "Anual"
+              : "Personalizado"
           }</dd>
         </div>
         <div>
@@ -522,11 +596,13 @@ function buildSubscriptionDetailHTML(subscription) {
         </div>
         <div>
           <dt>Auto facturación</dt>
-          <dd>${subscription.autoInvoice ? 'Automática' : 'Manual'}</dd>
+          <dd>${subscription.autoInvoice ? "Automática" : "Manual"}</dd>
         </div>
       </dl>
       <footer class="sidebar-card__footer">
-        <button type="button" class="btn btn-secondary" data-subscription-edit="${subscription.id}">
+        <button type="button" class="btn btn-secondary" data-subscription-edit="${
+          subscription.id
+        }">
           Editar suscripción
         </button>
       </footer>
@@ -535,10 +611,10 @@ function buildSubscriptionDetailHTML(subscription) {
 }
 
 function renderSidebar() {
-  const container = document.querySelector('[data-subscriptions-sidebar]');
+  const container = document.querySelector("[data-subscriptions-sidebar]");
   if (!container) return;
 
-  let html = '';
+  let html = "";
 
   if (subscriptionState.sidebarView === sidebarViews.EMPTY) {
     html = `
@@ -551,7 +627,9 @@ function renderSidebar() {
   } else if (subscriptionState.sidebarView === sidebarViews.FORM) {
     const subscription =
       subscriptionState.editingId &&
-      subscriptionState.subscriptions.find((item) => item.id === subscriptionState.editingId);
+      subscriptionState.subscriptions.find(
+        (item) => item.id === subscriptionState.editingId
+      );
     html = buildSubscriptionFormHTML(subscription || {});
   } else {
     const subscription = subscriptionState.subscriptions.find(
@@ -564,13 +642,13 @@ function renderSidebar() {
 }
 
 async function refreshSubscriptionsModule() {
-  if (typeof window.api === 'undefined') {
-    setError('Servicio API no disponible. Comprueba la carga de api.js');
+  if (typeof window.api === "undefined") {
+    setError("Servicio API no disponible. Comprueba la carga de api.js");
     return;
   }
 
   if (!window.api.isAuthenticated()) {
-    setError('Inicia sesión para gestionar tus suscripciones.');
+    setError("Inicia sesión para gestionar tus suscripciones.");
     return;
   }
 
@@ -591,21 +669,23 @@ async function refreshSubscriptionsModule() {
     renderInsights();
     renderSidebar();
   } catch (error) {
-    console.error('Error loading subscriptions module', error);
-    setError('Ocurrió un problema al obtener las suscripciones.');
+    console.error("Error loading subscriptions module", error);
+    setError("Ocurrió un problema al obtener las suscripciones.");
   } finally {
     setLoading(false);
   }
 }
 
 function handleClick(event) {
-  const retryButton = event.target.closest('[data-action="retry-subscriptions"]');
+  const retryButton = event.target.closest(
+    '[data-action="retry-subscriptions"]'
+  );
   if (retryButton) {
     void refreshSubscriptionsModule();
     return;
   }
 
-  const newButton = event.target.closest('[data-open-subscription]');
+  const newButton = event.target.closest("[data-open-subscription]");
   if (newButton) {
     subscriptionState.editingId = null;
     subscriptionState.sidebarView = sidebarViews.FORM;
@@ -623,7 +703,7 @@ function handleClick(event) {
     return;
   }
 
-  const editBtn = event.target.closest('[data-subscription-edit]');
+  const editBtn = event.target.closest("[data-subscription-edit]");
   if (editBtn) {
     event.stopPropagation();
     subscriptionState.editingId = String(editBtn.dataset.subscriptionEdit);
@@ -632,14 +712,14 @@ function handleClick(event) {
     return;
   }
 
-  const deleteBtn = event.target.closest('[data-subscription-delete]');
+  const deleteBtn = event.target.closest("[data-subscription-delete]");
   if (deleteBtn) {
     event.stopPropagation();
     void handleSubscriptionDelete(deleteBtn.dataset.subscriptionDelete);
     return;
   }
 
-  const row = event.target.closest('[data-subscription-row]');
+  const row = event.target.closest("[data-subscription-row]");
   if (row) {
     subscriptionState.selectedId = String(row.dataset.subscriptionRow);
     subscriptionState.sidebarView = sidebarViews.DETAIL;
@@ -649,26 +729,26 @@ function handleClick(event) {
 }
 
 function handleInput(event) {
-  if (event.target.matches('[data-subscriptions-search]')) {
+  if (event.target.matches("[data-subscriptions-search]")) {
     subscriptionState.filters.search = event.target.value;
     debounce(() => void refreshSubscriptionsModule());
   }
 }
 
 function handleChange(event) {
-  if (event.target.matches('[data-subscriptions-status]')) {
+  if (event.target.matches("[data-subscriptions-status]")) {
     subscriptionState.filters.status = event.target.value;
     void refreshSubscriptionsModule();
     return;
   }
 
-  if (event.target.matches('[data-subscriptions-cycle]')) {
+  if (event.target.matches("[data-subscriptions-cycle]")) {
     subscriptionState.filters.billingCycle = event.target.value;
     void refreshSubscriptionsModule();
     return;
   }
 
-  if (event.target.matches('[data-subscriptions-autoinvoice]')) {
+  if (event.target.matches("[data-subscriptions-autoinvoice]")) {
     subscriptionState.filters.autoInvoice = event.target.value;
     void refreshSubscriptionsModule();
   }
@@ -676,21 +756,23 @@ function handleChange(event) {
 
 async function handleSubscriptionFormSubmit(event) {
   event.preventDefault();
-  const form = event.target.closest('form');
+  const form = event.target.closest("form");
   if (!form) return;
   const data = new FormData(form);
 
   const payload = {
-    name: data.get('name')?.toString().trim(),
-    clientId: data.get('clientId') || undefined,
-    amount: data.get('amount') ? Number.parseFloat(data.get('amount')) : undefined,
-    currency: data.get('currency')?.toString().trim() || 'EUR',
-    billingCycle: data.get('billingCycle') || 'monthly',
-    startDate: data.get('startDate') || undefined,
-    nextBillingDate: data.get('nextBillingDate') || undefined,
-    status: data.get('status') || 'active',
-    autoInvoice: data.get('autoInvoice') === 'on',
-    description: data.get('description')?.toString().trim() || undefined,
+    name: data.get("name")?.toString().trim(),
+    clientId: data.get("clientId") || undefined,
+    amount: data.get("amount")
+      ? Number.parseFloat(data.get("amount"))
+      : undefined,
+    currency: data.get("currency")?.toString().trim() || "EUR",
+    billingCycle: data.get("billingCycle") || "monthly",
+    startDate: data.get("startDate") || undefined,
+    nextBillingDate: data.get("nextBillingDate") || undefined,
+    status: data.get("status") || "active",
+    autoInvoice: data.get("autoInvoice") === "on",
+    description: data.get("description")?.toString().trim() || undefined,
   };
 
   const editingId = subscriptionState.editingId;
@@ -700,20 +782,20 @@ async function handleSubscriptionFormSubmit(event) {
     if (editingId) {
       response = await window.api.updateSubscription(editingId, payload);
       subscriptionState.selectedId = String(editingId);
-      showToast('Suscripción actualizada correctamente', 'success');
+      showToast("Suscripción actualizada correctamente", "success");
     } else {
       response = await window.api.createSubscription(payload);
       if (response?.id) {
         subscriptionState.selectedId = String(response.id);
       }
-      showToast('Suscripción creada correctamente', 'success');
+      showToast("Suscripción creada correctamente", "success");
     }
     subscriptionState.editingId = null;
     subscriptionState.sidebarView = sidebarViews.DETAIL;
     await refreshSubscriptionsModule();
   } catch (error) {
-    console.error('Error saving subscription', error);
-    showToast('No se pudo guardar la suscripción', 'error');
+    console.error("Error saving subscription", error);
+    showToast("No se pudo guardar la suscripción", "error");
   }
 }
 
@@ -724,30 +806,28 @@ function handleSubmit(event) {
 }
 
 async function handleSubscriptionDelete(id) {
-  if (!window.confirm('¿Seguro que deseas eliminar esta suscripción?')) return;
+  if (!window.confirm("¿Seguro que deseas eliminar esta suscripción?")) return;
   try {
     await window.api.deleteSubscription(id);
-    showToast('Suscripción eliminada', 'success');
+    showToast("Suscripción eliminada", "success");
     if (subscriptionState.selectedId === id) {
       subscriptionState.selectedId = null;
     }
     await refreshSubscriptionsModule();
   } catch (error) {
-    console.error('Error deleting subscription', error);
-    showToast('No se pudo eliminar la suscripción', 'error');
+    console.error("Error deleting subscription", error);
+    showToast("No se pudo eliminar la suscripción", "error");
   }
 }
 
-
-
 export function initSubscriptions() {
-  const module = document.querySelector('.subscriptions-module');
+  const module = document.querySelector(".subscriptions-module");
   if (!module) return;
 
-  module.addEventListener('click', handleClick);
-  module.addEventListener('input', handleInput);
-  module.addEventListener('change', handleChange);
-  module.addEventListener('submit', handleSubmit);
+  module.addEventListener("click", handleClick);
+  module.addEventListener("input", handleInput);
+  module.addEventListener("change", handleChange);
+  module.addEventListener("submit", handleSubmit);
 
   window.requestAnimationFrame(() => {
     void refreshSubscriptionsModule();
