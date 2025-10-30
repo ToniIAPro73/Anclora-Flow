@@ -26,7 +26,6 @@ temp/
 .cache/
 
 # Images
-*.png
 *.jpg
 *.jpeg
 *.bmp
