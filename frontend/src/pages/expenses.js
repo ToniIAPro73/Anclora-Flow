@@ -538,9 +538,6 @@ function buildExpenseModalHtml(mode, expense) {
                 <span>Subcategoría</span>
                 <input type="text" id="expense-subcategory" name="subcategory" placeholder="Opcional" value="${escapeHtml(expense?.subcategory || '')}" />
               </label>
-            </div>
-
-            <div class="modal-form__grid modal-form__grid--three">
               <label class="form-field modal-form__field--span-3">
                 <span>Descripción *</span>
                 <input type="text" id="expense-description" name="description" placeholder="Describe el gasto" value="${escapeHtml(expense?.description || '')}" required maxlength="200" />
@@ -596,14 +593,11 @@ function buildExpenseModalHtml(mode, expense) {
               </label>
             </div>
 
-            <div class="modal-form__grid modal-form__grid--two">
-              <label class="form-field modal-form__field--span-2">
+            <div class="modal-form__grid modal-form__grid--three">
+              <label class="form-field">
                 <span>Enlace al justificante</span>
                 <input type="url" id="expense-receipt-url" name="receiptUrl" placeholder="https://..." value="${escapeHtml(expense?.receipt_url || expense?.receiptUrl || '')}" />
               </label>
-            </div>
-
-            <div class="modal-form__grid modal-form__grid--two">
               <label class="form-field modal-form__field--span-2">
                 <span>Notas</span>
                 <textarea id="expense-notes" name="notes" rows="3" placeholder="Información adicional">${escapeHtml(expense?.notes || '')}</textarea>

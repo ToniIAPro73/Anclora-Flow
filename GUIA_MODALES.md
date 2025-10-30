@@ -233,8 +233,8 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 
 ### 6.2 Altura del Modal
 
-- **No usar altura fija** (`height: 800px` ❌)
-- Usar `max-height` con viewport units (`max-height: 90vh` ✅)
+- **No usar altura fija** (por ejemplo `height: 800px`).
+- Usar `max-height` con viewport units (por ejemplo `max-height: 90vh`).
 - Permitir que el contenido defina la altura
 - El scroll interno solo aparece si el contenido excede `max-height`
 
@@ -256,31 +256,31 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 
 ### 7.2 Cuándo Aparece el Scroll
 
-- ✅ Al añadir líneas adicionales de ítems (2+)
-- ✅ En pantallas pequeñas donde no cabe todo el contenido
-- ❌ Al abrir el modal en su estado inicial en pantalla normal
-- ❌ Para ver los botones de acción (siempre visibles)
+- El scroll aparece al añadir líneas adicionales de ítems (segunda en adelante).
+- El scroll aparece en pantallas pequeñas donde el contenido completo no cabe.
+- El scroll no debe aparecer al abrir el modal en escritorio.
+- El scroll no debe ser necesario para alcanzar el footer de acciones.
 
 ## 8. Checklist para Nuevo Modal
 
 Antes de implementar un nuevo modal, verificar:
 
-- [ ] ✅ Título y descripción claros
-- [ ] ✅ Botón de cierre (×) en esquina superior derecha
-- [ ] ✅ Grid layout apropiado para los campos
-- [ ] ✅ Campos organizados lógicamente (agrupados por tipo)
-- [ ] ✅ Labels descriptivos para todos los campos
-- [ ] ✅ Campos requeridos marcados con (\*)
-- [ ] ✅ Sin scroll vertical al abrir (estado inicial)
-- [ ] ✅ Botón "Cancelar" (teal, izquierda)
-- [ ] ✅ Botón de acción principal (azul, derecha)
-- [ ] ✅ Botones en la misma posición que modal de referencia
-- [ ] ✅ Footer fijo (no se mueve con scroll)
-- [ ] ✅ Tamaño apropiado (`max-width` y `max-height`)
-- [ ] ✅ Para facturas/presupuestos: primera línea visible sin scroll
-- [ ] ✅ Para facturas/presupuestos: totales visibles sin scroll
-- [ ] ✅ Sin solapamientos entre elementos
-- [ ] ✅ Espaciado consistente
+- [ ] Título y descripción claros.
+- [ ] Botón de cierre (×) en esquina superior derecha.
+- [ ] Grid layout apropiado para los campos.
+- [ ] Campos organizados lógicamente (agrupados por tipo).
+- [ ] Labels descriptivos para todos los campos.
+- [ ] Campos requeridos marcados con (\*).
+- [ ] Sin scroll vertical al abrir (estado inicial).
+- [ ] Botón "Cancelar" (teal, izquierda).
+- [ ] Botón de acción principal (azul, derecha).
+- [ ] Botones en la misma posición que el modal de referencia.
+- [ ] Footer fijo (no se mueve con scroll).
+- [ ] Tamaño apropiado (`max-width` y `max-height`).
+- [ ] Para facturas/presupuestos: primera línea visible sin scroll.
+- [ ] Para facturas/presupuestos: totales visibles sin scroll.
+- [ ] Sin solapamientos entre elementos.
+- [ ] Espaciado consistente.
 
 ## 9. Ejemplos de Referencia
 
@@ -315,7 +315,7 @@ Antes de implementar un nuevo modal, verificar:
 
 ## 10. Errores Comunes a Evitar
 
-❌ **No hacer:**
+**No hacer:**
 
 - Usar altura fija que cause scroll innecesario
 - Poner botones dentro del área scrollable
@@ -325,7 +325,7 @@ Antes de implementar un nuevo modal, verificar:
 - Usar colores diferentes para botones de acción
 - Cambiar la posición de los botones entre modales
 
-✅ **Hacer:**
+**Hacer:**
 
 - Usar `max-height` con vh units
 - Mantener footer fijo con botones siempre visibles
