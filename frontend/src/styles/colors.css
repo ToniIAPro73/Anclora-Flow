@@ -1413,8 +1413,8 @@ a:hover {
 .expenses-table tbody td:last-child,
 .budgets-table tbody td:last-child,
 .subscriptions-table tbody td:last-child {
-  border-right: none;
-  border-bottom: none;
+  border-right: none !important;
+  border-bottom: none !important;
 }
 
 .invoices-table tr.is-selected,
@@ -1476,6 +1476,15 @@ a:hover {
 [data-theme="dark"] .subscriptions-table tbody td {
   border-bottom-color: rgba(71, 85, 105, 0.35);
   border-right-color: rgba(71, 85, 105, 0.35);
+}
+
+[data-theme="dark"] .invoices-table tbody td:last-child,
+[data-theme="dark"] .clients-table tbody td:last-child,
+[data-theme="dark"] .expenses-table tbody td:last-child,
+[data-theme="dark"] .budgets-table tbody td:last-child,
+[data-theme="dark"] .subscriptions-table tbody td:last-child {
+  border-right: none !important;
+  border-bottom: none !important;
 }
 
 .invoices-table__row,
