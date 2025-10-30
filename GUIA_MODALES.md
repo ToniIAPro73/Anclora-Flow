@@ -5,6 +5,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ## 1. Principios de Diseño
 
 ### 1.1 Sin Scroll Vertical al Abrir
+
 - Los modales **DEBEN** mostrar todo su contenido principal sin necesidad de scroll al abrirse
 - El contenido inicial visible debe incluir:
   - Todos los campos del formulario principal
@@ -15,12 +16,14 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
   - El usuario añade contenido dinámico
 
 ### 1.2 Tamaño del Modal
+
 - Usar tamaño apropiado según el contenido
 - Preferir modales más anchos y altos para evitar scroll
 - **Referencia**: Modal de clientes - tamaño compacto sin scroll
 - **Para facturas/presupuestos**: Modal más grande (80-90% viewport) para acomodar líneas de ítems
 
 ### 1.3 Organización Clara
+
 - Campos agrupados lógicamente
 - Uso de grid layout para múltiples columnas
 - Espaciado consistente entre campos
@@ -30,6 +33,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ## 2. Estructura del Modal
 
 ### 2.1 Cabecera del Modal
+
 ```html
 <div class="modal-header">
   <h2>Título del Modal</h2>
@@ -39,12 +43,14 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 **Características:**
+
 - Título claro y descriptivo (ej: "Nuevo cliente", "Nueva factura")
 - Descripción opcional explicando el propósito
 - Botón de cierre (×) en esquina superior derecha
 - Fondo oscuro consistente
 
 ### 2.2 Cuerpo del Modal
+
 ```html
 <div class="modal-body">
   <div class="modal-form-grid">
@@ -60,15 +66,17 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 **Características:**
+
 - Grid layout para organizar campos en columnas
 - Secciones claramente delimitadas
 - Campos del mismo tamaño visual
 - Labels descriptivos
-- Validación visual de campos requeridos (*)
+- Validación visual de campos requeridos (\*)
 
 ### 2.3 Grid Layout de Campos
 
 **Para modales simples (clientes, gastos):**
+
 ```css
 .modal-form-grid {
   display: grid;
@@ -87,11 +95,13 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 **Ejemplo de distribución (modal de clientes):**
+
 - Fila 1: Nombre (1 col) | Email (1 col) | Teléfono (1 col)
 - Fila 2: NIF/CIF (1 col) | Ciudad (1 col) | Notas (1 col)
 - Fila 3: Checkbox "Cliente activo" (full width)
 
 **Para modales complejos (facturas, presupuestos):**
+
 ```css
 .modal-form-grid {
   display: grid;
@@ -105,6 +115,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 ### 2.4 Pie del Modal (Botones)
+
 ```html
 <div class="modal-footer">
   <button type="button" class="btn-cancel">Cancelar</button>
@@ -113,6 +124,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 **Características:**
+
 - **SIEMPRE** dos botones: Cancelar (izquierda) y Acción principal (derecha)
 - Botón "Cancelar":
   - Color: Verde/Teal (`background: teal` o similar)
@@ -129,6 +141,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ## 3. Estilos de Botones
 
 ### 3.1 Botón Cancelar
+
 ```css
 .btn-cancel {
   padding: 0.75rem 2rem;
@@ -147,6 +160,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 ### 3.2 Botón Acción Principal
+
 ```css
 .btn-primary {
   padding: 0.75rem 2rem;
@@ -165,6 +179,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 ### 3.3 Layout del Footer
+
 ```css
 .modal-footer {
   display: flex;
@@ -181,6 +196,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ## 4. Modales con Líneas de Ítems (Facturas, Presupuestos)
 
 ### 4.1 Sección de Conceptos
+
 - Título de sección claro: "Conceptos facturados", "Partidas del presupuesto"
 - Botón "Añadir línea" visible y accesible (color teal, esquina superior derecha de la sección)
 - Primera línea **SIEMPRE** visible sin scroll
@@ -189,6 +205,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
   - Botón "Eliminar línea" al final de cada fila (excepto si es la única)
 
 ### 4.2 Grid de Línea de Ítem
+
 ```css
 .invoice-line-item {
   display: grid;
@@ -199,6 +216,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 ### 4.3 Resumen de Totales
+
 - **SIEMPRE** visible al abrir el modal (parte del contenido inicial)
 - Alineado a la derecha
 - Campos:
@@ -211,16 +229,19 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ## 5. Tipos de Modales
 
 ### 5.1 Modal de Creación
+
 - Título: "Nuevo [entidad]"
 - Campos vacíos o con valores por defecto
 - Botón principal: "Crear [entidad]"
 
 ### 5.2 Modal de Edición
+
 - Título: "Editar [entidad]"
 - Campos pre-rellenados con datos existentes
 - Botón principal: "Guardar cambios"
 
 ### 5.3 Modal de Consulta/Vista
+
 - Título: "Detalles de [entidad]"
 - Campos en modo solo lectura (disabled)
 - Botón principal: "Cerrar" o "Editar"
@@ -229,6 +250,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ## 6. Responsividad
 
 ### 6.1 Tamaños de Modal
+
 ```css
 /* Modal pequeño (clientes, gastos) */
 .modal-sm {
@@ -251,6 +273,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 ### 6.2 Altura del Modal
+
 - **No usar altura fija** (`height: 800px` ❌)
 - Usar `max-height` con viewport units (`max-height: 90vh` ✅)
 - Permitir que el contenido defina la altura
@@ -259,6 +282,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ## 7. Comportamiento de Scroll
 
 ### 7.1 Scroll en el Cuerpo
+
 - El scroll aplica solo al `modal-body`
 - El header y footer permanecen fijos
 - Scroll suave y visible cuando es necesario
@@ -272,6 +296,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ```
 
 ### 7.2 Cuándo Aparece el Scroll
+
 - ✅ Al añadir líneas adicionales de ítems (2+)
 - ✅ En pantallas pequeñas donde no cabe todo el contenido
 - ❌ Al abrir el modal en su estado inicial en pantalla normal
@@ -286,7 +311,7 @@ Antes de implementar un nuevo modal, verificar:
 - [ ] ✅ Grid layout apropiado para los campos
 - [ ] ✅ Campos organizados lógicamente (agrupados por tipo)
 - [ ] ✅ Labels descriptivos para todos los campos
-- [ ] ✅ Campos requeridos marcados con (*)
+- [ ] ✅ Campos requeridos marcados con (\*)
 - [ ] ✅ Sin scroll vertical al abrir (estado inicial)
 - [ ] ✅ Botón "Cancelar" (teal, izquierda)
 - [ ] ✅ Botón de acción principal (azul, derecha)
@@ -301,6 +326,7 @@ Antes de implementar un nuevo modal, verificar:
 ## 9. Ejemplos de Referencia
 
 ### 9.1 Modal Simple (Clientes)
+
 - **Ubicación**: `frontend/src/pages/clients.js`
 - **Características**:
   - Grid de 3 columnas
@@ -309,6 +335,7 @@ Antes de implementar un nuevo modal, verificar:
   - Botones: Cancelar (teal) | Crear cliente (azul)
 
 ### 9.2 Modal Complejo (Facturas)
+
 - **Ubicación**: `frontend/src/pages/invoices-with-api.js`
 - **Características**:
   - Grid de 2 columnas para campos principales
@@ -320,6 +347,7 @@ Antes de implementar un nuevo modal, verificar:
 ## 10. Errores Comunes a Evitar
 
 ❌ **No hacer:**
+
 - Usar altura fija que cause scroll innecesario
 - Poner botones dentro del área scrollable
 - Amontonar campos sin organización visual
@@ -329,6 +357,7 @@ Antes de implementar un nuevo modal, verificar:
 - Cambiar la posición de los botones entre modales
 
 ✅ **Hacer:**
+
 - Usar `max-height` con vh units
 - Mantener footer fijo con botones siempre visibles
 - Organizar campos en grid lógico

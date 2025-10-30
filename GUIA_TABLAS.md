@@ -7,6 +7,7 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
 ### ✅ Requisitos Obligatorios
 
 #### 1.1 Encabezado de la Columna
+
 - **DEBE** incluir una columna de encabezado visible con el texto "ACCIONES"
 - **NO** usar `visually-hidden` en esta columna
 
@@ -20,6 +21,7 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
 ```
 
 #### 1.2 Contenedor de Botones
+
 - **DEBE** usar un `<div>` contenedor dentro de `<td>` con clase apropiada
 - La clase **NO DEBE** aplicarse directamente al `<td>`
 - Opciones válidas para la clase del contenedor:
@@ -57,17 +59,20 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
 ```
 
 #### 1.3 Alineación de Botones
+
 - Los botones **DEBEN** aparecer horizontalmente (uno al lado del otro)
 - Se logra mediante `display: inline-flex` en el contenedor
 - **NO** apilar botones verticalmente
 
 #### 1.4 Flexibilidad del Contenedor
+
 - El contenedor **DEBE** ajustarse al tamaño de la celda de la tabla
 - Al hacer zoom o cambiar el tamaño de la ventana, el contenedor se adapta
 - Esto se logra usando `<td>` normal + `<div>` interno con `display: inline-flex`
 - **NUNCA** aplicar `display: inline-flex` directamente al `<td>` (causa tamaño fijo)
 
 #### 1.5 Bordes
+
 - El contenedor de botones **NO DEBE** tener bordes visibles
 - Los bordes de la celda deben ajustarse al contenido
 - El contenedor interno no debe tener bordes adicionales
@@ -86,10 +91,12 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
 ## 2. Estilos de Botones
 
 ### 2.1 Clases de Botones
+
 - `.table-action` - Para botones en facturas, gastos
 - `.btn-icon` - Para botones en clientes, proyectos
 
 ### 2.2 Fondo de Botones
+
 - **DEBE** usar fondo azul claro unificado
 - Valor: `rgba(51, 102, 255, 0.35)`
 
@@ -104,11 +111,13 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
 ## 3. Selección de Filas
 
 ### 3.1 Color de Selección
+
 - **DEBE** ser consistente en todas las tablas
 - Tema claro: `rgba(59, 130, 246, 0.15)`
 - Tema oscuro: `rgba(37, 99, 235, 0.35)`
 
 ### 3.2 Comportamiento de Selección
+
 - Primera fila **DEBE** estar seleccionada por defecto al cargar
 - Al hacer clic en una fila, **DEBE** cambiar la selección
 - Al hacer clic en la misma fila seleccionada, **NO DEBE** deseleccionarla
@@ -118,7 +127,7 @@ Esta guía documenta los estándares y requisitos para crear y mantener tablas e
 // Ejemplo de implementación correcta
 function ensureSelection() {
   if (data.length > 0) {
-    const isValid = data.some(item => String(item.id) === String(selectedId));
+    const isValid = data.some((item) => String(item.id) === String(selectedId));
     if (!isValid) {
       selectedId = String(data[0].id);
     }
@@ -128,12 +137,12 @@ function ensureSelection() {
 }
 
 // Event listener
-tbody.addEventListener('click', (e) => {
-  if (e.target.closest('button') || e.target.closest('a')) {
+tbody.addEventListener("click", (e) => {
+  if (e.target.closest("button") || e.target.closest("a")) {
     return; // Ignorar clics en botones
   }
 
-  const row = e.target.closest('tr[data-id]');
+  const row = e.target.closest("tr[data-id]");
   if (row) {
     const id = String(row.dataset.id);
     // Solo cambiar si es diferente (no deseleccionar)
@@ -180,10 +189,12 @@ Antes de crear una nueva tabla, verifica:
 ## 6. Ejemplos de Referencia
 
 ### Tabla de Facturas (invoices-with-api.js)
+
 - Mejor práctica para estructura de botones
 - Usar como referencia para nuevas tablas
 
 ### Tabla de Clientes (clients.js)
+
 - Ejemplo de uso de `.table-actions`
 - Referencia para selección de filas
 
