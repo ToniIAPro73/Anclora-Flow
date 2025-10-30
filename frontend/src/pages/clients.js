@@ -557,7 +557,7 @@ function renderClientsTable() {
     .map((client) => {
       const isSelected = client.id === clientsState.selectedClientId;
       return `
-        <tr data-client-row="${client.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
+        <tr data-client-row="${client.id}" class="clients-table__row${isSelected ? ' is-selected' : ''}">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(client.name)}</strong>
@@ -648,7 +648,7 @@ function renderProjectsTable() {
           : 'info';
 
       return `
-        <tr data-project-row="${project.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
+        <tr data-project-row="${project.id}" class="clients-table__row${isSelected ? ' is-selected' : ''}">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(project.name)}</strong>
