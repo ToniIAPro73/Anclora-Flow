@@ -1,4 +1,4 @@
-const VIEW_LOGIN = 'login';
+﻿const VIEW_LOGIN = 'login';
 const VIEW_REGISTER = 'register';
 const VIEW_RECOVER = 'recover';
 const VIEW_RESET = 'reset';
