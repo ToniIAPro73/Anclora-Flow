@@ -1404,7 +1404,16 @@ a:hover {
 .subscriptions-table tbody td {
   padding: 1.05rem 1.5rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
   font-weight: 500;
+}
+
+.invoices-table tbody td:last-child,
+.clients-table tbody td:last-child,
+.expenses-table tbody td:last-child,
+.budgets-table tbody td:last-child,
+.subscriptions-table tbody td:last-child {
+  border-right: none;
 }
 
 .invoices-table tr.is-selected,
@@ -1430,7 +1439,7 @@ a:hover {
 [data-theme="dark"] .expenses-table__row.is-selected,
 [data-theme="dark"] .budgets-table__row.is-selected,
 [data-theme="dark"] .subscriptions-table__row.is-selected {
-  background: rgba(30, 64, 175, 0.25) !important;
+  background: rgba(30, 64, 175, 0.5) !important;
 }
 
 .invoices-table tr.is-selected td,
@@ -1465,6 +1474,7 @@ a:hover {
 [data-theme="dark"] .budgets-table tbody td,
 [data-theme="dark"] .subscriptions-table tbody td {
   border-bottom-color: rgba(71, 85, 105, 0.35);
+  border-right-color: rgba(71, 85, 105, 0.35);
 }
 
 .invoices-table__row,
