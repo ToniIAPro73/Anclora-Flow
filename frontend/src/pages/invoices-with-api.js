@@ -4,6 +4,7 @@
 // Estado global del módulo
 let invoicesData = [];
 let isLoading = false;
+let selectedInvoiceId = null;  // Estado para rastrear factura seleccionada
 let currentFilters = {
   search: '',
   status: 'all',
@@ -706,6 +707,19 @@ function showNotification(message, type = 'info') {
 
 // === FUNCIONES DE API ===
 
+function ensureInvoiceSelection() {
+  if (invoicesData.length > 0) {
+    const isValidSelection = invoicesData.some(
+      (invoice) => String(invoice.id) === String(selectedInvoiceId)
+    );
+    if (!isValidSelection) {
+      selectedInvoiceId = String(invoicesData[0].id);
+    }
+  } else {
+    selectedInvoiceId = null;
+  }
+}
+
 async function loadInvoices() {
   isLoading = true;
   renderLoadingState();
@@ -746,6 +760,9 @@ async function loadInvoices() {
       verifactuHash: invoice.verifactu_hash,
       verifactuError: invoice.verifactu_error_message
     }));
+
+    // Asegurar que la primera factura esté seleccionada
+    ensureInvoiceSelection();
 
     renderInvoicesTable();
     updateSummaryCards();
@@ -1881,8 +1898,9 @@ function renderInvoiceRows() {
       `;
     }
 
+    const isSelected = String(invoice.id) === String(selectedInvoiceId);
     return `
-      <tr data-invoice-id="${invoice.id}">
+      <tr data-invoice-id="${invoice.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
         <td data-column="Factura">
           <span class="invoices-table__number">${invoice.number}</span>
         </td>
@@ -2029,6 +2047,28 @@ function setupFilters() {
     clientFilter.addEventListener('change', (e) => {
       currentFilters.client = e.target.value;
       renderInvoicesTable();
+    });
+  }
+
+  // Manejar selección de filas
+  const tbody = document.querySelector('.invoices-table tbody');
+  if (tbody) {
+    tbody.addEventListener('click', (e) => {
+      // Ignorar clics en botones y enlaces
+      if (e.target.closest('button') || e.target.closest('a')) {
+        return;
+      }
+
+      const row = e.target.closest('tr[data-invoice-id]');
+      if (row) {
+        const invoiceId = String(row.dataset.invoiceId);
+        // Solo cambiar si es diferente (no deseleccionar)
+        if (selectedInvoiceId !== invoiceId) {
+          selectedInvoiceId = invoiceId;
+          console.log('Factura seleccionada:', selectedInvoiceId);
+          renderInvoicesTable();
+        }
+      }
     });
   }
 }
