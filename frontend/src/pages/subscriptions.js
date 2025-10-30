@@ -278,7 +278,7 @@ function renderSubscriptionsTable() {
           ? 'warning'
           : 'danger';
       return `
-        <tr data-subscription-row="${sub.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
+        <tr data-subscription-row="${sub.id}" class="subscriptions-table__row${isSelected ? ' is-selected' : ''}">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(sub.name)}</strong>

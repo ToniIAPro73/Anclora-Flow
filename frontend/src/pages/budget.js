@@ -193,7 +193,7 @@ function renderBudgetTable() {
       const progress = Math.min(Math.max(ratio, 0), 150);
       const barClass = ratio < 80 ? 'progress--success' : ratio <= 100 ? 'progress--warning' : 'progress--danger';
       return `
-        <tr data-budget-row="${item.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
+        <tr data-budget-row="${item.id}" class="budgets-table__row${isSelected ? ' is-selected' : ''}">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(item.category)}</strong>
