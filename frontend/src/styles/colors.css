@@ -1388,25 +1388,53 @@ a:hover {
 
 .invoices-table tr.is-selected,
 .clients-table tr.is-selected,
-.invoices-table__row.is-selected {
-  background: rgba(51, 102, 255, 0.08);
+.expenses-table tr.is-selected,
+.budgets-table tr.is-selected,
+.subscriptions-table tr.is-selected,
+.invoices-table__row.is-selected,
+.clients-table__row.is-selected,
+.expenses-table__row.is-selected,
+.budgets-table__row.is-selected,
+.subscriptions-table__row.is-selected {
+  background: rgba(51, 102, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .invoices-table tr.is-selected,
 [data-theme="dark"] .clients-table tr.is-selected,
-[data-theme="dark"] .invoices-table__row.is-selected {
-  background: rgba(30, 64, 175, 0.25);
+[data-theme="dark"] .expenses-table tr.is-selected,
+[data-theme="dark"] .budgets-table tr.is-selected,
+[data-theme="dark"] .subscriptions-table tr.is-selected,
+[data-theme="dark"] .invoices-table__row.is-selected,
+[data-theme="dark"] .clients-table__row.is-selected,
+[data-theme="dark"] .expenses-table__row.is-selected,
+[data-theme="dark"] .budgets-table__row.is-selected,
+[data-theme="dark"] .subscriptions-table__row.is-selected {
+  background: rgba(30, 64, 175, 0.25) !important;
 }
 
 .invoices-table tr.is-selected td,
 .clients-table tr.is-selected td,
-.invoices-table__row.is-selected td {
+.expenses-table tr.is-selected td,
+.budgets-table tr.is-selected td,
+.subscriptions-table tr.is-selected td,
+.invoices-table__row.is-selected td,
+.clients-table__row.is-selected td,
+.expenses-table__row.is-selected td,
+.budgets-table__row.is-selected td,
+.subscriptions-table__row.is-selected td {
   box-shadow: inset 0 0 0 1px rgba(51, 102, 255, 0.16);
 }
 
 [data-theme="dark"] .invoices-table tr.is-selected td,
 [data-theme="dark"] .clients-table tr.is-selected td,
-[data-theme="dark"] .invoices-table__row.is-selected td {
+[data-theme="dark"] .expenses-table tr.is-selected td,
+[data-theme="dark"] .budgets-table tr.is-selected td,
+[data-theme="dark"] .subscriptions-table tr.is-selected td,
+[data-theme="dark"] .invoices-table__row.is-selected td,
+[data-theme="dark"] .clients-table__row.is-selected td,
+[data-theme="dark"] .expenses-table__row.is-selected td,
+[data-theme="dark"] .budgets-table__row.is-selected td,
+[data-theme="dark"] .subscriptions-table__row.is-selected td {
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
 }
 
@@ -1416,17 +1444,26 @@ a:hover {
 }
 
 .invoices-table__row,
-.expenses-table__row {
+.clients-table__row,
+.expenses-table__row,
+.budgets-table__row,
+.subscriptions-table__row {
   transition: background 0.25s ease;
 }
 
 .invoices-table__row:hover,
-.expenses-table__row:hover {
+.clients-table__row:hover,
+.expenses-table__row:hover,
+.budgets-table__row:hover,
+.subscriptions-table__row:hover {
   background: rgba(51, 102, 255, 0.05);
 }
 
 [data-theme="dark"] .invoices-table__row:hover,
-[data-theme="dark"] .expenses-table__row:hover {
+[data-theme="dark"] .clients-table__row:hover,
+[data-theme="dark"] .expenses-table__row:hover,
+[data-theme="dark"] .budgets-table__row:hover,
+[data-theme="dark"] .subscriptions-table__row:hover {
   background: rgba(51, 102, 255, 0.16);
 }
 
