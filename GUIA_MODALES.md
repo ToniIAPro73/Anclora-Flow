@@ -52,8 +52,8 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 ### 2.2 Cuerpo del Modal
 
 ```html
-<div class="modal-body">
-  <div class="modal-form-grid">
+<div class="modal__body modal-form__body">
+  <div class="modal-form__grid">
     <!-- Campos del formulario -->
   </div>
 
@@ -78,18 +78,18 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 **Para modales simples (clientes, gastos):**
 
 ```css
-.modal-form-grid {
+.modal-form__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
 }
 
 /* Campos que ocupan más espacio */
-.field-wide {
+.modal-form__field--span-2 {
   grid-column: span 2;
 }
 
-.field-full {
+.modal-form__field--span-3 {
   grid-column: span 3;
 }
 ```
@@ -103,35 +103,29 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 **Para modales complejos (facturas, presupuestos):**
 
 ```css
-.modal-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-}
-
-.invoice-items-section {
-  grid-column: span 2;
+.modal-form__grid--three {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 ```
 
 ### 2.4 Pie del Modal (Botones)
 
 ```html
-<div class="modal-footer">
-  <button type="button" class="btn-cancel">Cancelar</button>
+<footer class="modal__footer modal-form__footer">
+  <button type="button" class="btn-secondary">Cancelar</button>
   <button type="submit" class="btn-primary">Crear/Guardar</button>
-</div>
+</footer>
 ```
 
 **Características:**
 
 - **SIEMPRE** dos botones: Cancelar (izquierda) y Acción principal (derecha)
 - Botón "Cancelar":
-  - Color: Verde/Teal (`background: teal` o similar)
+  - Color: Verde/Teal (utilizar `btn-secondary`)
   - Posición: Izquierda
   - Cierra el modal sin guardar
 - Botón de acción principal:
-  - Color: Azul (`background: blue`)
+  - Color: Azul (utilizar `btn-primary`)
   - Posición: Derecha
   - Texto descriptivo: "Crear cliente", "Crear factura", "Guardar cambios"
 - Ambos botones del mismo tamaño visual
@@ -140,58 +134,23 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 
 ## 3. Estilos de Botones
 
-### 3.1 Botón Cancelar
+### 3.1 Botón Cancelar (`btn-secondary`)
 
-```css
-.btn-cancel {
-  padding: 0.75rem 2rem;
-  background: #14b8a6; /* Teal */
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
+- Utiliza el estilo global `btn-secondary` (degradado teal) definido en `frontend/src/styles/colors.css`.
+- Mantiene esquinas redondeadas (`border-radius: 999px`) y paddings generosos.
+- Debe conservar un ancho mínimo de 180px para alinearse con el botón primario.
 
-.btn-cancel:hover {
-  background: #0d9488;
-}
-```
+### 3.2 Botón Acción Principal (`btn-primary`)
 
-### 3.2 Botón Acción Principal
-
-```css
-.btn-primary {
-  padding: 0.75rem 2rem;
-  background: #3b82f6; /* Blue */
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.btn-primary:hover {
-  background: #2563eb;
-}
-```
+- Reutiliza `btn-primary` (degradado azul) ya existente en la base de estilos.
+- Misma altura y ancho que el botón secundario para evitar saltos visuales.
+- Texto en mayúsculas opcional, pero siempre con verbo claro: "Crear", "Guardar", "Editar".
 
 ### 3.3 Layout del Footer
 
-```css
-.modal-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.3);
-  position: sticky;
-  bottom: 0;
-}
-```
+- Usa el contenedor `modal-form__footer` para fijar botones y mantenerlos alineados a la derecha.
+- El footer incorpora un borde superior suave y relleno vertical para separarlo del formulario.
+- En pantallas pequeñas, el footer apila los botones (`flex-direction: column`) automáticamente.
 
 ## 4. Modales con Líneas de Ítems (Facturas, Presupuestos)
 
@@ -343,6 +302,16 @@ Antes de implementar un nuevo modal, verificar:
   - Primera línea visible sin scroll
   - Resumen de totales visible sin scroll
   - Botones: Cancelar (teal) | Crear factura (azul)
+
+### 9.3 Modal de Gastos
+
+- **Ubicación**: `frontend/src/pages/expenses.js`
+- **Características**:
+  - Grid de 3 columnas con campos extensibles mediante `modal-form__field--span-*`
+  - Secciones diferenciadas para datos generales, importes, tratamiento fiscal y anexos
+  - Sin scroll inicial en escritorio; solo aparece al añadir más contenido dinámico
+  - Footer fijo reutilizando `btn-secondary` y `btn-primary` con el mismo ancho
+  - Modal de detalle en modo lectura soportado por `detail-list` a dos columnas
 
 ## 10. Errores Comunes a Evitar
 

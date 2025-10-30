@@ -493,11 +493,24 @@ function buildExpenseModalHtml(mode, expense) {
   const isEdit = mode === 'edit' && expense;
   const title = isEdit ? 'Editar gasto' : 'Registrar nuevo gasto';
   const actionLabel = isEdit ? 'Guardar cambios' : 'Crear gasto';
+  const selectedCategory = expense?.category ?? '';
+  const paymentMethodValue = expense?.payment_method ?? expense?.paymentMethod ?? '';
+  const amountValue = expense ? sanitizeNumber(expense.amount, 0) : '';
+  const vatPercentageValue = expense ? sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 21) : 21;
+  const vatAmountValue = expense ? sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0) : 0;
+  const deductiblePercentageValue = expense
+    ? sanitizeNumber(expense.deductible_percentage ?? expense.deductiblePercentage, 100)
+    : 100;
+  const isDeductibleChecked = expense
+    ? (expense.is_deductible ?? expense.isDeductible ?? true)
+      ? 'checked'
+      : ''
+    : 'checked';
 
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(95vw, 960px); max-width: 960px;">
+      <div class="modal__panel">
         <header class="modal__head">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
@@ -505,100 +518,103 @@ function buildExpenseModalHtml(mode, expense) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
-        <div class="modal__body">
-          <form id="expense-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.25rem;">
-            <div class="grid grid--three">
-              <div class="form-group">
-                <label for="expense-date">Fecha del gasto</label>
-                <input type="date" id="expense-date" name="expenseDate" class="form-input" value="${formatDateForInput(expense?.expense_date)}" required />
-              </div>
-              <div class="form-group">
-                <label for="expense-category">Categoría</label>
-                <select id="expense-category" name="category" class="form-input" required>
+        <form id="expense-form" data-mode="${mode}" class="modal-form" novalidate>
+          <div class="modal__body modal-form__body">
+            <div class="modal-form__grid modal-form__grid--three">
+              <label class="form-field">
+                <span>Fecha del gasto *</span>
+                <input type="date" id="expense-date" name="expenseDate" value="${formatDateForInput(expense?.expense_date)}" required />
+              </label>
+              <label class="form-field">
+                <span>Categoría *</span>
+                <select id="expense-category" name="category" required>
                   <option value="" disabled ${!expense ? 'selected' : ''}>Selecciona una categoría</option>
                   ${Object.entries(EXPENSE_CATEGORIES).map(([key, label]) => `
-                    <option value="${key}" ${expense?.category === key ? 'selected' : ''}>${label}</option>
+                    <option value="${key}" ${selectedCategory === key ? 'selected' : ''}>${label}</option>
                   `).join('')}
                 </select>
-              </div>
+              </label>
+              <label class="form-field">
+                <span>Subcategoría</span>
+                <input type="text" id="expense-subcategory" name="subcategory" placeholder="Opcional" value="${escapeHtml(expense?.subcategory || '')}" />
+              </label>
             </div>
 
-            <div class="grid grid--three">
-              <div class="form-group">
-                <label for="expense-description">Descripción</label>
-                <input type="text" id="expense-description" name="description" class="form-input" placeholder="Describe el gasto" value="${escapeHtml(expense?.description || '')}" required maxlength="200" />
-              </div>
-              <div class="form-group">
-                <label for="expense-subcategory">Subcategoría</label>
-                <input type="text" id="expense-subcategory" name="subcategory" class="form-input" placeholder="Opcional" value="${escapeHtml(expense?.subcategory || '')}" />
-              </div>
+            <div class="modal-form__grid modal-form__grid--three">
+              <label class="form-field modal-form__field--span-3">
+                <span>Descripción *</span>
+                <input type="text" id="expense-description" name="description" placeholder="Describe el gasto" value="${escapeHtml(expense?.description || '')}" required maxlength="200" />
+              </label>
             </div>
 
-            <div class="grid grid--three">
-              <div class="form-group">
-                <label for="expense-amount">Importe base (€)</label>
-                <input type="number" step="0.01" min="0" id="expense-amount" name="amount" class="form-input" value="${expense ? sanitizeNumber(expense.amount, 0) : ''}" required />
-              </div>
-              <div class="form-group">
-                <label for="expense-vat-percentage">IVA (%)</label>
-                <input type="number" step="0.1" min="0" id="expense-vat-percentage" name="vatPercentage" class="form-input" value="${expense ? sanitizeNumber(expense.vat_percentage || expense.vatPercentage, 21) : 21}" />
-              </div>
-              <div class="form-group">
-                <label for="expense-vat-amount">IVA calculado (€)</label>
-                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" class="form-input" value="${expense ? sanitizeNumber(expense.vat_amount || expense.vatAmount, 0) : 0}" />
-                <small class="form-hint">Se actualiza al modificar importe o IVA</small>
-              </div>
+            <div class="modal-form__grid modal-form__grid--three">
+              <label class="form-field">
+                <span>Importe base (€) *</span>
+                <input type="number" step="0.01" min="0" id="expense-amount" name="amount" value="${amountValue}" required />
+              </label>
+              <label class="form-field">
+                <span>IVA (%)</span>
+                <input type="number" step="0.1" min="0" id="expense-vat-percentage" name="vatPercentage" value="${vatPercentageValue}" />
+              </label>
+              <label class="form-field">
+                <span>IVA calculado (€)</span>
+                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" value="${vatAmountValue}" />
+                <span class="form-hint">Calculado automáticamente al modificar importe o IVA</span>
+              </label>
             </div>
 
-            <div class="grid grid--two">
-              <div class="form-group">
-                <label for="expense-payment-method">Método de pago</label>
-                <select id="expense-payment-method" name="paymentMethod" class="form-input">
-                  <option value="" disabled ${!expense?.payment_method ? 'selected' : ''}>Selecciona un método</option>
+            <div class="modal-form__grid modal-form__grid--two">
+              <label class="form-field">
+                <span>Método de pago</span>
+                <select id="expense-payment-method" name="paymentMethod">
+                  <option value="" disabled ${!paymentMethodValue ? 'selected' : ''}>Selecciona un método</option>
                   ${Object.entries(PAYMENT_METHODS).map(([key, label]) => `
-                    <option value="${key}" ${expense?.payment_method === key ? 'selected' : ''}>${label}</option>
+                    <option value="${key}" ${paymentMethodValue === key ? 'selected' : ''}>${label}</option>
                   `).join('')}
                 </select>
-              </div>
-              <div class="form-group">
-                <label for="expense-vendor">Proveedor</label>
-                <input type="text" id="expense-vendor" name="vendor" class="form-input" placeholder="Nombre del proveedor" value="${escapeHtml(expense?.vendor || '')}" />
-              </div>
+              </label>
+              <label class="form-field">
+                <span>Proveedor</span>
+                <input type="text" id="expense-vendor" name="vendor" placeholder="Nombre del proveedor" value="${escapeHtml(expense?.vendor || '')}" />
+              </label>
             </div>
 
-            <div class="grid grid--two">
-              <div class="form-group">
-                <label for="expense-deductible">Tratamiento fiscal</label>
+            <div class="modal-form__grid modal-form__grid--two modal-form__grid--align-center">
+              <div class="form-field form-field--inline">
+                <span>Tratamiento fiscal</span>
                 <div class="toggle-group">
                   <label class="toggle">
-                    <input type="checkbox" id="expense-deductible" name="isDeductible" ${expense?.is_deductible || expense?.isDeductible !== false ? 'checked' : ''} />
+                    <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} />
                     <span class="toggle__slider"></span>
                     <span class="toggle__label">Deducible</span>
                   </label>
                 </div>
               </div>
-              <div class="form-group" id="deductible-percentage-group">
-                <label for="expense-deductible-percentage">Porcentaje deducible (%)</label>
-                <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" class="form-input" value="${expense ? sanitizeNumber(expense.deductible_percentage || expense.deductiblePercentage, 100) : 100}" />
-              </div>
+              <label class="form-field" id="deductible-percentage-group">
+                <span>Porcentaje deducible (%)</span>
+                <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" value="${deductiblePercentageValue}" />
+              </label>
             </div>
 
-            <div class="form-group">
-              <label for="expense-receipt-url">Enlace al justificante</label>
-              <input type="url" id="expense-receipt-url" name="receiptUrl" class="form-input" placeholder="https://..." value="${escapeHtml(expense?.receipt_url || expense?.receiptUrl || '')}" />
+            <div class="modal-form__grid modal-form__grid--two">
+              <label class="form-field modal-form__field--span-2">
+                <span>Enlace al justificante</span>
+                <input type="url" id="expense-receipt-url" name="receiptUrl" placeholder="https://..." value="${escapeHtml(expense?.receipt_url || expense?.receiptUrl || '')}" />
+              </label>
             </div>
 
-            <div class="form-group">
-              <label for="expense-notes">Notas</label>
-              <textarea id="expense-notes" name="notes" rows="3" class="form-input" placeholder="Información adicional">${escapeHtml(expense?.notes || '')}</textarea>
+            <div class="modal-form__grid modal-form__grid--two">
+              <label class="form-field modal-form__field--span-2">
+                <span>Notas</span>
+                <textarea id="expense-notes" name="notes" rows="3" placeholder="Información adicional">${escapeHtml(expense?.notes || '')}</textarea>
+              </label>
             </div>
-
-            <div class="modal__footer" style="display: flex; gap: 0.75rem;">
-              <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cancelar</button>
-              <button type="submit" class="btn-primary" style="flex: 1;">${actionLabel}</button>
-            </div>
-          </form>
-        </div>
+          </div>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+            <button type="submit" class="btn-primary">${actionLabel}</button>
+          </footer>
+        </form>
       </div>
     </div>
   `;
@@ -703,32 +719,89 @@ async function viewExpense(expenseId) {
       return;
     }
 
+    const formattedDate = formatDate(expense.expense_date);
+    const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || 'Sin categoría';
+    const subcategoryLabel = expense.subcategory || '-';
+    const paymentMethodLabel = PAYMENT_METHODS[expense.payment_method] || expense.payment_method || '-';
+    const projectLabel = expense.project_name || '-';
+    const vatPercentageDisplay = sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 0);
+    const deductiblePercentageDisplay = sanitizeNumber(
+      expense.deductible_percentage ?? expense.deductiblePercentage,
+      0
+    );
+    const isDeductibleText = (expense.is_deductible ?? expense.isDeductible ?? true)
+      ? `Sí, ${deductiblePercentageDisplay}%`
+      : 'No deducible';
+    const receiptLink = expense.receipt_url
+      ? `<a href="${escapeHtml(expense.receipt_url)}" target="_blank" rel="noopener">Abrir justificante</a>`
+      : 'No adjuntado';
+
     const modalHtml = `
       <div class="modal is-open" id="expense-view-modal" role="dialog" aria-modal="true">
         <div class="modal__backdrop"></div>
-        <div class="modal__panel" style="width: min(90vw, 640px); max-width: 640px;">
+        <div class="modal__panel">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Detalle del gasto</h2>
-              <p class="modal__subtitle">${formatDate(expense.expense_date)} · ${EXPENSE_CATEGORIES[expense.category] || expense.category}</p>
+              <p class="modal__subtitle">${formattedDate} - ${escapeHtml(categoryLabel)}</p>
             </div>
-            <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
+            <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
           </header>
           <div class="modal__body">
             <dl class="detail-list">
-              <div><dt>Descripción</dt><dd>${escapeHtml(expense.description || '-')}</dd></div>
-              <div><dt>Proveedor</dt><dd>${escapeHtml(expense.vendor || '-')}</dd></div>
-              <div><dt>Importe</dt><dd>${formatCurrency(expense.amount)} + IVA ${formatCurrency(expense.vat_amount)} (${sanitizeNumber(expense.vat_percentage, 0)}%)</dd></div>
-              <div><dt>Deducible</dt><dd>${expense.is_deductible ? `Sí, ${sanitizeNumber(expense.deductible_percentage, 0)}%` : 'No deducible'}</dd></div>
-              <div><dt>Método de pago</dt><dd>${PAYMENT_METHODS[expense.payment_method] || expense.payment_method || '-'}</dd></div>
-              <div><dt>Proyecto</dt><dd>${escapeHtml(expense.project_name || '-')}</dd></div>
-              <div><dt>Notas</dt><dd>${escapeHtml(expense.notes || '-')}</dd></div>
-              <div><dt>Justificante</dt><dd>${expense.receipt_url ? `<a href="${escapeHtml(expense.receipt_url)}" target="_blank" rel="noopener">Abrir justificante</a>` : 'No adjuntado'}</dd></div>
+              <div class="detail-list__item detail-list__item--full">
+                <dt>Descripción</dt>
+                <dd>${escapeHtml(expense.description || '-')}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Fecha del gasto</dt>
+                <dd>${formattedDate}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Categoría</dt>
+                <dd>${escapeHtml(categoryLabel)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Subcategoría</dt>
+                <dd>${escapeHtml(subcategoryLabel)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Método de pago</dt>
+                <dd>${escapeHtml(paymentMethodLabel)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Proveedor</dt>
+                <dd>${escapeHtml(expense.vendor || '-')}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Importe base</dt>
+                <dd>${formatCurrency(expense.amount)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>IVA</dt>
+                <dd>${formatCurrency(expense.vat_amount)} (${vatPercentageDisplay}%)</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Tratamiento fiscal</dt>
+                <dd>${escapeHtml(isDeductibleText)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Proyecto</dt>
+                <dd>${escapeHtml(projectLabel)}</dd>
+              </div>
+              <div class="detail-list__item detail-list__item--full">
+                <dt>Justificante</dt>
+                <dd>${receiptLink}</dd>
+              </div>
+              <div class="detail-list__item detail-list__item--full">
+                <dt>Notas</dt>
+                <dd>${escapeHtml(expense.notes || '-')}</dd>
+              </div>
             </dl>
           </div>
-          <footer class="modal__footer">
+          <footer class="modal__footer modal-form__footer">
             <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-            <button type="button" class="btn-primary" onclick="openExpenseModal('edit', '${expense.id}')">Editar</button>
+            <button type="button" class="btn-primary" data-expense-edit="${expense.id}">Editar gasto</button>
           </footer>
         </div>
       </div>
@@ -740,6 +813,10 @@ async function viewExpense(expenseId) {
       btn.addEventListener('click', () => modal.remove());
     });
     modal?.querySelector('.modal__backdrop')?.addEventListener('click', () => modal.remove());
+    modal?.querySelector('[data-expense-edit]')?.addEventListener('click', () => {
+      modal.remove();
+      openExpenseModal('edit', String(expense.id));
+    });
   } catch (error) {
     console.error('Error mostrando gasto:', error);
     showNotification('No se pudo mostrar el detalle del gasto', 'error');
