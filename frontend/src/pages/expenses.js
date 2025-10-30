@@ -37,6 +37,34 @@ const PAYMENT_METHODS = {
   other: 'Otro'
 };
 
+function normalizeExpense(expense) {
+  if (!expense) return null;
+
+  return {
+    id: expense.id,
+    projectId: expense.project_id ?? expense.projectId ?? null,
+    projectName: expense.project_name ?? expense.projectName ?? null,
+    category: expense.category ?? null,
+    subcategory: expense.subcategory ?? null,
+    description: expense.description ?? '',
+    amount: sanitizeNumber(expense.amount, 0),
+    vatAmount: sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0),
+    vatPercentage: sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 0),
+    isDeductible: Boolean(
+      expense.is_deductible ?? expense.isDeductible ?? true
+    ),
+    deductiblePercentage: sanitizeNumber(
+      expense.deductible_percentage ?? expense.deductiblePercentage,
+      0
+    ),
+    expenseDate: expense.expense_date ?? expense.expenseDate ?? null,
+    paymentMethod: expense.payment_method ?? expense.paymentMethod ?? null,
+    vendor: expense.vendor ?? null,
+    receiptUrl: expense.receipt_url ?? expense.receiptUrl ?? null,
+    notes: expense.notes ?? null
+  };
+}
+
 // === FORMATTERS ===
 const currencyFormatter = new Intl.NumberFormat('es-ES', {
   style: 'currency',
@@ -194,24 +222,9 @@ async function loadExpenses() {
     const response = await window.api.getExpenses(query);
     const expenses = response?.expenses || response || [];
 
-    expensesData = expenses.map(expense => ({
-      id: expense.id,
-      projectId: expense.project_id || null,
-      projectName: expense.project_name || null,
-      category: expense.category,
-      subcategory: expense.subcategory,
-      description: expense.description,
-      amount: sanitizeNumber(expense.amount, 0),
-      vatAmount: sanitizeNumber(expense.vat_amount, 0),
-      vatPercentage: sanitizeNumber(expense.vat_percentage, 0),
-      isDeductible: Boolean(expense.is_deductible),
-      deductiblePercentage: sanitizeNumber(expense.deductible_percentage, 0),
-      expenseDate: expense.expense_date,
-      paymentMethod: expense.payment_method,
-      vendor: expense.vendor,
-      receiptUrl: expense.receipt_url,
-      notes: expense.notes
-    }));
+    expensesData = expenses
+      .map(normalizeExpense)
+      .filter(expense => expense !== null);
 
     currentPage = 1;
     renderExpensesTable();
@@ -706,15 +719,34 @@ async function handleExpenseSubmit(form) {
 
   try {
     if (mode === 'edit' && activeExpenseId) {
-      await window.api.updateExpense(activeExpenseId, payload);
+      const updatedExpense = await window.api.updateExpense(activeExpenseId, payload);
+      const normalized = normalizeExpense(updatedExpense);
+      if (normalized) {
+        expensesData = expensesData
+          .filter(expense => expense.id !== normalized.id);
+        expensesData.unshift(normalized);
+        currentPage = 1;
+        renderExpensesTable();
+        updateSummaryCards();
+      }
       showNotification('Gasto actualizado correctamente', 'success');
     } else {
-      await window.api.createExpense(payload);
+      const createdExpense = await window.api.createExpense(payload);
+      const normalized = normalizeExpense(createdExpense);
+      if (normalized) {
+        expensesData = expensesData
+          .filter(expense => expense.id !== normalized.id);
+        expensesData.unshift(normalized);
+        currentPage = 1;
+        renderExpensesTable();
+        updateSummaryCards();
+      }
       showNotification('Gasto registrado correctamente', 'success');
     }
 
     closeExpenseModal();
-    await loadExpenses();
+    // Sincroniza con backend pero sin bloquear el feedback inmediato
+    loadExpenses();
   } catch (error) {
     console.error('Error guardando gasto:', error);
     showNotification(error?.message || 'No se pudo guardar el gasto', 'error');
