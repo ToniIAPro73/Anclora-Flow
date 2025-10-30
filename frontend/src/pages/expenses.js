@@ -1005,7 +1005,7 @@ export default function renderExpenses() {
                 <th scope="col">Deducible</th>
                 <th scope="col">Pago</th>
                 <th scope="col">Proyecto</th>
-                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                <th scope="col">Acciones</th>
               </tr>
             </thead>
             <tbody data-expenses-tbody>

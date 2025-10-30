@@ -602,7 +602,7 @@ export default function renderBudget() {
                   <th>Real</th>
                   <th>Disponible</th>
                   <th>Avance</th>
-                  <th></th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody data-budget-table></tbody>

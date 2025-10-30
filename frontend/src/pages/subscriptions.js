@@ -943,7 +943,7 @@ export default function renderSubscriptions() {
                   <th>Importe</th>
                   <th>Auto-Fact.</th>
                   <th>Estado</th>
-                  <th></th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody data-subscriptions-table></tbody>

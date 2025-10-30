@@ -1260,7 +1260,7 @@ export default function renderClients() {
                   <th scope="col">Facturación</th>
                   <th scope="col">Proyectos</th>
                   <th scope="col">Estado</th>
-                  <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                  <th scope="col">Acciones</th>
                 </tr>
               </thead>
               <tbody data-clients-table></tbody>
@@ -1327,7 +1327,7 @@ export default function renderClients() {
                   <th scope="col">Facturación</th>
                   <th scope="col">Facturas</th>
                   <th scope="col">Fechas</th>
-                  <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                  <th scope="col">Acciones</th>
                 </tr>
               </thead>
               <tbody data-projects-table></tbody>
