@@ -586,8 +586,8 @@ function renderClientsTable() {
           </td>
           <td>
             <div class="table-actions">
-              <button type="button" class="btn-icon" data-client-edit="${client.id}" aria-label="Editar cliente">✏️</button>
-              <button type="button" class="btn-icon btn-icon--danger" data-client-delete="${client.id}" aria-label="Eliminar cliente">🗑️</button>
+              <button type="button" class="table-action" data-client-edit="${client.id}" aria-label="Editar cliente">✏️</button>
+              <button type="button" class="table-action" data-client-delete="${client.id}" aria-label="Eliminar cliente">🗑️</button>
             </div>
           </td>
         </tr>
@@ -682,8 +682,8 @@ function renderProjectsTable() {
           </td>
           <td>
             <div class="table-actions">
-              <button type="button" class="btn-icon" data-project-edit="${project.id}" aria-label="Editar proyecto">✏️</button>
-              <button type="button" class="btn-icon btn-icon--danger" data-project-delete="${project.id}" aria-label="Eliminar proyecto">🗑️</button>
+              <button type="button" class="table-action" data-project-edit="${project.id}" aria-label="Editar proyecto">✏️</button>
+              <button type="button" class="table-action" data-project-delete="${project.id}" aria-label="Eliminar proyecto">🗑️</button>
             </div>
           </td>
         </tr>
