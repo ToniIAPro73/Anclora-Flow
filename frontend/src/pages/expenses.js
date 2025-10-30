@@ -274,7 +274,7 @@ function renderExpensesTable() {
     const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || 'Sin categoría';
     const paymentLabel = PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || 'N/A';
     return `
-      <tr class="expenses-table__row" data-expense-id="${expense.id}">
+      <tr class="invoices-table__row expenses-table__row" data-expense-id="${expense.id}">
         <td>
           <time datetime="${escapeHtml(expense.expenseDate || '')}">
             ${formatDate(expense.expenseDate)}

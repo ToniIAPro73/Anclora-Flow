@@ -537,7 +537,7 @@ function renderClientsTable() {
   if (!clientsState.clients.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6">
+        <td colspan="8">
           <div class="empty-state">
             <span class="empty-state__icon">🧾</span>
             <h3>Sin clientes registrados</h3>
@@ -561,13 +561,16 @@ function renderClientsTable() {
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(client.name)}</strong>
-              <span>${escapeHtml(client.email || 'Sin email')}</span>
+              ${
+                client.city
+                  ? `<span class="meta">${escapeHtml(client.city)}</span>`
+                  : ''
+              }
             </div>
           </td>
-          <td>
-            <span>${escapeHtml(client.phone || '—')}</span>
-            <span class="meta">${escapeHtml(client.nifCif || 'Sin NIF/CIF')}</span>
-          </td>
+          <td>${escapeHtml(client.email || 'Sin email')}</td>
+          <td>${escapeHtml(client.phone || '—')}</td>
+          <td>${escapeHtml(client.nifCif || 'Sin NIF/CIF')}</td>
           <td>
             <strong>${formatCurrency(client.totalInvoiced)}</strong>
             <span class="meta pending">${formatCurrency(client.totalPending)} pendientes</span>
@@ -1251,7 +1254,9 @@ export default function renderClients() {
               <thead>
                 <tr>
                   <th scope="col">Cliente</th>
-                  <th scope="col">Contacto</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Teléfono</th>
+                  <th scope="col">NIF/CIF</th>
                   <th scope="col">Facturación</th>
                   <th scope="col">Proyectos</th>
                   <th scope="col">Estado</th>

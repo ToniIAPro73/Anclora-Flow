@@ -432,7 +432,7 @@ function renderInvoiceRows() {
     }
 
     return `
-      <tr data-invoice-id="${invoice.id}">
+      <tr data-invoice-id="${invoice.id}" class="invoices-table__row">
         <td data-column="Factura">
           <span class="invoices-table__number">${invoice.number}</span>
         </td>
