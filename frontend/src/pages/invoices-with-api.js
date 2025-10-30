@@ -1882,7 +1882,7 @@ function renderInvoiceRows() {
       `;
     }
 
-    const isSelected = invoice.id === selectedInvoiceId;
+    const isSelected = String(invoice.id) === String(selectedInvoiceId);
     return `
       <tr data-invoice-id="${invoice.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
         <td data-column="Factura">
@@ -2038,10 +2038,16 @@ function setupFilters() {
   const tbody = document.querySelector('.invoices-table tbody');
   if (tbody) {
     tbody.addEventListener('click', (e) => {
+      // Ignorar clics en botones y enlaces
+      if (e.target.closest('button') || e.target.closest('a')) {
+        return;
+      }
+
       const row = e.target.closest('tr[data-invoice-id]');
       if (row) {
-        const invoiceId = row.dataset.invoiceId;
+        const invoiceId = String(row.dataset.invoiceId);
         selectedInvoiceId = selectedInvoiceId === invoiceId ? null : invoiceId;
+        console.log('Factura seleccionada:', selectedInvoiceId);
         renderInvoicesTable();
       }
     });
