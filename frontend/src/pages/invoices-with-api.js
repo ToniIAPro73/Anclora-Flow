@@ -265,6 +265,7 @@ function setupItemsEditor({
     allowIrpfEdit: editable ? allowIrpfEdit : false,
     defaultUnitType,
     irpfPercentage: sanitizeNumber(irpfPercentage, 0),
+    activeIndex: 0,
     eventsAttached: false,
     latestTotals: calculateInvoiceTotals(items, irpfPercentage),
   };
@@ -308,37 +309,89 @@ function renderItemsEditor(editorKey) {
   if (!state) return;
 
   const container = document.getElementById(state.containerId);
-  if (container) {
-    if (!state.items || state.items.length === 0) {
-      container.innerHTML = state.editable
-        ? '<p style="font-size: 0.9rem; color: var(--text-secondary);">Anade lineas para esta factura.</p>'
-        : '<p style="font-size: 0.9rem; color: var(--text-secondary);">Sin lineas disponibles.</p>';
+  if (!container) return;
+
+  if (!state.items || state.items.length === 0) {
+    if (state.editable) {
+      state.items = [normalizeInvoiceItem({ unitType: state.defaultUnitType })];
     } else {
-      container.innerHTML = state.items
-        .map((item, index) => getItemRowMarkup(item, index, state.editable))
-        .join("");
+      container.innerHTML =
+        '<p class="modal-tabs__empty">Sin conceptos disponibles.</p>';
+      container.dataset.editorKey = editorKey;
+      updateTotalsDisplay(editorKey);
+      return;
     }
   }
+
+  const lastIndex = Math.max(state.items.length - 1, 0);
+  if (typeof state.activeIndex !== "number") {
+    state.activeIndex = 0;
+  }
+  state.activeIndex = Math.min(Math.max(state.activeIndex, 0), lastIndex);
+
+  const tabsMarkup = state.items
+    .map((item, index) => {
+      const label = getLineTabLabel(item, index);
+      return `
+        <button
+          type="button"
+          class="modal-tabs__tab${index === state.activeIndex ? " is-active" : ""}"
+          data-action="switch-tab"
+          data-tab-index="${index}"
+          role="tab"
+          aria-selected="${index === state.activeIndex}"
+        >
+          ${escapeHtml(label)}
+        </button>
+      `;
+    })
+    .join("");
+
+  const activeItem = state.items[state.activeIndex] || null;
+
+  container.innerHTML = `
+    <div class="modal-tabs">
+      <div class="modal-tabs__nav" role="tablist">
+        ${tabsMarkup}
+      </div>
+      <div class="modal-tabs__panel" data-editor-panel data-index="${state.activeIndex}" role="tabpanel">
+        ${getItemPanelMarkup(activeItem, state.activeIndex, state.editable)}
+      </div>
+    </div>
+  `;
+  container.dataset.editorKey = editorKey;
 
   updateTotalsDisplay(editorKey);
 }
 
-function getItemRowMarkup(item, index, editable) {
+function getLineTabLabel(item, index) {
+  const base = (item?.description || "").trim().replace(/\s+/g, " ");
+  if (!base) return `Línea ${index + 1}`;
+  if (base.length <= 28) return base;
+  return `${base.slice(0, 28)}…`;
+}
+
+function getItemPanelMarkup(item, index, editable) {
+  if (!item) {
+    return '<p class="modal-tabs__empty">Sin datos de la línea seleccionada.</p>';
+  }
+
   return `
-    <div class="invoice-item-row" data-index="${index}" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1rem; align-items: end;">
-      <div style="grid-column: span 2;">
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Concepto</label>
+    <div class="modal-tab__grid modal-form__grid modal-form__grid--two">
+      <label class="form-field modal-form__field--span-2">
+        <span>Concepto *</span>
         <input
           type="text"
           class="form-input"
           data-field="description"
           value="${escapeHtml(item.description)}"
           ${editable ? "" : "disabled"}
+          maxlength="160"
           placeholder="Servicio o producto"
         />
-      </div>
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Unidad</label>
+      </label>
+      <label class="form-field">
+        <span>Unidad</span>
         <input
           type="text"
           class="form-input"
@@ -347,9 +400,9 @@ function getItemRowMarkup(item, index, editable) {
           ${editable ? "" : "disabled"}
           placeholder="unidad"
         />
-      </div>
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Cantidad</label>
+      </label>
+      <label class="form-field">
+        <span>Cantidad *</span>
         <input
           type="number"
           class="form-input"
@@ -359,9 +412,9 @@ function getItemRowMarkup(item, index, editable) {
           min="0"
           ${editable ? "" : "disabled"}
         />
-      </div>
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Precio unitario</label>
+      </label>
+      <label class="form-field">
+        <span>Precio unitario *</span>
         <input
           type="number"
           class="form-input"
@@ -371,9 +424,9 @@ function getItemRowMarkup(item, index, editable) {
           min="0"
           ${editable ? "" : "disabled"}
         />
-      </div>
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">IVA (%)</label>
+      </label>
+      <label class="form-field">
+        <span>IVA (%)</span>
         <input
           type="number"
           class="form-input"
@@ -384,26 +437,117 @@ function getItemRowMarkup(item, index, editable) {
           max="100"
           ${editable ? "" : "disabled"}
         />
+      </label>
+      <div class="form-field">
+        <span>Importe de la línea</span>
+        <div class="modal-tab__line-total" data-field="line-total">${formatCurrency(
+          item.amount
+        )}</div>
       </div>
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-secondary);">Importe</label>
-        <div
-          data-field="line-total"
-          style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary); font-weight: 600; color: var(--text-primary);"
-        >
-          ${formatCurrency(item.amount)}
-        </div>
-      </div>
-      ${
-        editable
-          ? `
-        <div style="grid-column: span 6; display: flex; justify-content: flex-end;">
-          <button type="button" class="btn-ghost" data-action="remove-item" aria-label="Eliminar linea">Eliminar linea</button>
-        </div>
-      `
-          : ""
-      }
     </div>
+    ${
+      editable
+        ? `
+      <div class="modal-tab__footer">
+        <button type="button" class="btn-ghost" data-action="remove-item">
+          Eliminar línea
+        </button>
+      </div>
+    `
+        : ""
+    }
+  `;
+}
+
+function renderInvoiceViewTabs(container, items, activeIndex = 0) {
+  if (!container) return;
+  container.classList.add("modal-tabs");
+
+  if (!Array.isArray(items) || items.length === 0) {
+    container.innerHTML =
+      '<p class="modal-tabs__empty">Sin conceptos registrados.</p>';
+    return;
+  }
+
+  const safeIndex = Math.min(Math.max(activeIndex, 0), items.length - 1);
+
+  const navMarkup = items
+    .map((item, index) => {
+      const label = getLineTabLabel(item, index);
+      return `
+        <button
+          type="button"
+          class="modal-tabs__tab${index === safeIndex ? " is-active" : ""}"
+          data-view-tab-index="${index}"
+        >
+          ${escapeHtml(label)}
+        </button>
+      `;
+    })
+    .join("");
+
+  container.innerHTML = `
+    <div class="modal-tabs__nav" role="tablist">
+      ${navMarkup}
+    </div>
+    <div class="modal-tabs__panel" role="tabpanel">
+      ${getViewItemPanelMarkup(items[safeIndex])}
+    </div>
+  `;
+
+  container
+    .querySelectorAll("[data-view-tab-index]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const next = Number.parseInt(button.dataset.viewTabIndex, 10);
+        if (Number.isNaN(next) || next === safeIndex) return;
+        renderInvoiceViewTabs(container, items, next);
+      });
+    });
+}
+
+function getViewItemPanelMarkup(item) {
+  if (!item) {
+    return '<p class="modal-tabs__empty">Sin datos disponibles.</p>';
+  }
+
+  const quantity = sanitizeNumber(item.quantity, 0);
+  const unitPrice = sanitizeNumber(item.unitPrice, 0);
+  const vatPercentage = sanitizeNumber(item.vatPercentage, 0);
+  const lineBase = Number((quantity * unitPrice).toFixed(2));
+  const vatAmount = Number((lineBase * (vatPercentage / 100)).toFixed(2));
+
+  return `
+    <dl class="detail-list">
+      <div class="detail-list__item detail-list__item--full">
+        <dt>Concepto</dt>
+        <dd>${escapeHtml(item.description || "Sin descripción")}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Unidad</dt>
+        <dd>${escapeHtml(item.unitType || "-")}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Cantidad</dt>
+        <dd>${quantity}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Precio unitario</dt>
+        <dd>${formatCurrency(unitPrice)}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>Base imponible</dt>
+        <dd>${formatCurrency(lineBase)}</dd>
+      </div>
+      <div class="detail-list__item">
+        <dt>IVA (${vatPercentage}%)</dt>
+        <dd>${formatCurrency(vatAmount)}</dd>
+      </div>
+      <div class="detail-list__item detail-list__item--full">
+        <dt>Importe línea</dt>
+        <dd>${formatCurrency(item.amount)}</dd>
+      </div>
+    </dl>
   `;
 }
 
@@ -419,48 +563,52 @@ function updateTotalsDisplay(editorKey) {
 
   const irpfFieldId = `${editorKey}-irpf-percentage`;
 
+  const formattedIrpfAmount =
+    totals.irpfAmount > 0
+      ? `-${formatCurrency(totals.irpfAmount)}`
+      : formatCurrency(0);
+
   totalsEl.innerHTML = `
-    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-      <span>Subtotal</span>
-      <strong>${formatCurrency(totals.subtotal)}</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-      <span>IVA estimado (${totals.vatPercentage.toFixed(2)}%)</span>
-      <strong>${formatCurrency(totals.vatAmount)}</strong>
-    </div>
-    ${
-      state.allowIrpfEdit
-        ? `
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-          <label for="${irpfFieldId}" style="font-weight: 600; color: var(--text-secondary);">IRPF (%)</label>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
+    <div class="modal-totals" data-editor-key="${editorKey}">
+      <div class="modal-totals__row">
+        <span class="modal-totals__label">Subtotal</span>
+        <span class="modal-totals__value">${formatCurrency(totals.subtotal)}</span>
+      </div>
+      <div class="modal-totals__row">
+        <span class="modal-totals__label">IVA (${totals.vatPercentage.toFixed(2)}%)</span>
+        <span class="modal-totals__value">${formatCurrency(totals.vatAmount)}</span>
+      </div>
+      ${
+        state.allowIrpfEdit
+          ? `
+        <div class="modal-totals__control">
+          <label for="${irpfFieldId}" class="modal-totals__label">IRPF (%)</label>
+          <div class="modal-totals__input">
             <input
               id="${irpfFieldId}"
               type="number"
               class="form-input"
-              style="width: 110px;"
               min="0"
               max="100"
               step="0.1"
               value="${state.irpfPercentage}"
               data-totals-field="irpfPercentage"
             />
-            <span style="font-weight: 600; color: var(--text-secondary);">${formatCurrency(
-              totals.irpfAmount
-            )}</span>
+            <span class="modal-totals__value modal-totals__value--negative">${formattedIrpfAmount}</span>
           </div>
         </div>
       `
-        : `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-          <span>IRPF (${state.irpfPercentage}%)</span>
-          <strong>${formatCurrency(totals.irpfAmount)}</strong>
+          : `
+        <div class="modal-totals__row">
+          <span class="modal-totals__label">IRPF (${state.irpfPercentage}%)</span>
+          <span class="modal-totals__value modal-totals__value--negative">${formattedIrpfAmount}</span>
         </div>
       `
-    }
-    <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
-      <span>Total</span>
-      <strong>${formatCurrency(totals.total)}</strong>
+      }
+      <div class="modal-totals__row modal-totals__row--emphasis">
+        <span class="modal-totals__label">Total</span>
+        <span class="modal-totals__value">${formatCurrency(totals.total)}</span>
+      </div>
     </div>
   `;
 }
@@ -487,17 +635,17 @@ function handleItemEditorInput(event) {
   const field = target.dataset.field;
   if (!field) return;
 
-  const parent = target.closest("[data-editor-key]");
-  if (!parent) return;
+  const container = target.closest("[data-editor-key]");
+  if (!container) return;
 
-  const editorKey = parent.dataset.editorKey;
+  const editorKey = container.dataset.editorKey;
   const state = invoiceItemEditors[editorKey];
   if (!state || !state.editable) return;
 
-  const row = target.closest(".invoice-item-row");
-  if (!row) return;
+  const panel = target.closest("[data-editor-panel]");
+  if (!panel) return;
 
-  const index = Number.parseInt(row.dataset.index, 10);
+  const index = Number.parseInt(panel.dataset.index, 10);
   if (Number.isNaN(index) || !state.items[index]) return;
 
   if (field === "description") {
@@ -514,34 +662,74 @@ function handleItemEditorInput(event) {
   const totals = calculateLineTotals(state.items[index]);
   state.items[index].amount = totals.total;
 
-  const lineTotalEl = row.querySelector('[data-field="line-total"]');
+  const lineTotalEl = panel.querySelector('[data-field="line-total"]');
   if (lineTotalEl) {
     lineTotalEl.textContent = formatCurrency(state.items[index].amount);
   }
 
   updateTotalsDisplay(editorKey);
+
+  if (field === "description") {
+    const nav = container.querySelector(".modal-tabs__nav");
+    if (nav) {
+      const tabButton = nav.querySelector(`[data-tab-index="${index}"]`);
+      if (tabButton) {
+        tabButton.textContent = getLineTabLabel(state.items[index], index);
+      }
+    }
+  }
 }
 
 function handleItemEditorClick(event) {
-  const action = event.target.dataset.action;
-  if (action !== "remove-item") return;
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
 
-  const parent = event.target.closest("[data-editor-key]");
-  if (!parent) return;
+  const container = button.closest("[data-editor-key]");
+  if (!container) return;
 
-  const editorKey = parent.dataset.editorKey;
+  const editorKey = container.dataset.editorKey;
   const state = invoiceItemEditors[editorKey];
-  if (!state || !state.editable) return;
+  if (!state) return;
 
-  const row = event.target.closest(".invoice-item-row");
-  if (!row) return;
+  const action = button.dataset.action;
 
-  const index = Number.parseInt(row.dataset.index, 10);
-  if (Number.isNaN(index)) return;
+  if (action === "switch-tab") {
+    const tabIndex = Number.parseInt(button.dataset.tabIndex, 10);
+    if (
+      Number.isNaN(tabIndex) ||
+      tabIndex < 0 ||
+      tabIndex >= state.items.length ||
+      tabIndex === state.activeIndex
+    ) {
+      return;
+    }
+    state.activeIndex = tabIndex;
+    renderItemsEditor(editorKey);
+    updateEditorControlsState(state);
+    return;
+  }
 
-  state.items.splice(index, 1);
-  renderItemsEditor(editorKey);
-  updateEditorControlsState(state);
+  if (action === "remove-item") {
+    if (!state.editable) return;
+    const panel = button.closest("[data-editor-panel]");
+    if (!panel) return;
+    const index = Number.parseInt(panel.dataset.index, 10);
+    if (Number.isNaN(index)) return;
+
+    state.items.splice(index, 1);
+    if (state.items.length === 0 && state.editable) {
+      state.items.push(normalizeInvoiceItem({ unitType: state.defaultUnitType }));
+      state.activeIndex = 0;
+    } else {
+      state.activeIndex = Math.max(
+        0,
+        Math.min(state.activeIndex, state.items.length - 1)
+      );
+    }
+
+    renderItemsEditor(editorKey);
+    updateEditorControlsState(state);
+  }
 }
 
 function handleTotalsInput(event) {
@@ -573,6 +761,7 @@ function handleAddItem(event) {
   if (!state || !state.editable) return;
 
   state.items.push(normalizeInvoiceItem({ unitType: state.defaultUnitType }));
+  state.activeIndex = state.items.length - 1;
   renderItemsEditor(editorKey);
   updateEditorControlsState(state);
 }
@@ -1061,16 +1250,11 @@ async function viewInvoice(invoiceId) {
   try {
     showNotification("Cargando detalles de la factura...", "info");
 
-    // Obtener detalles completos de la factura con items
     const invoice = await window.api.getInvoice(invoiceId);
 
-    // Calcular subtotal de items
-    const itemsSubtotal = invoice.items
-      ? invoice.items.reduce(
-          (sum, item) => sum + parseFloat(item.amount || 0),
-          0
-        )
-      : 0;
+    const normalizedItems = Array.isArray(invoice.items)
+      ? invoice.items.map(normalizeInvoiceItem)
+      : [];
 
     const statusInfo = statusMap[invoice.status] || {
       label: invoice.status,
@@ -1082,8 +1266,11 @@ async function viewInvoice(invoiceId) {
     const clientName =
       invoice.client?.name || invoice.client_name || "Sin cliente";
     const clientEmail = invoice.client?.email || invoice.client_email || "";
-    const subtotal = sanitizeNumber(invoice.subtotal, itemsSubtotal);
-    const vatPercentage = sanitizeNumber(invoice.vat_percentage, 21);
+    const subtotal = sanitizeNumber(
+      invoice.subtotal ?? invoice.total_without_tax,
+      0
+    );
+    const vatPercentage = sanitizeNumber(invoice.vat_percentage, 0);
     const vatAmount = sanitizeNumber(invoice.vat_amount, 0);
     const irpfPercentage = sanitizeNumber(invoice.irpf_percentage, 0);
     const irpfAmount = sanitizeNumber(invoice.irpf_amount, 0);
@@ -1091,75 +1278,56 @@ async function viewInvoice(invoiceId) {
       invoice.total,
       subtotal + vatAmount - irpfAmount
     );
-    const notesContent = invoice.notes
-      ? escapeHtml(invoice.notes).replace(/\n/g, "<br />")
-      : "";
-
-    const itemsSection =
-      invoice.items && invoice.items.length > 0
-        ? `
-      <section class="modal-section modal-section--card">
-        <div class="modal-section__header">
-          <h3 class="modal-section__title">Conceptos facturados</h3>
-          <p class="modal-section__description">Revisa las líneas incluidas en esta factura.</p>
-        </div>
-        <div>
-          <table class="modal-table">
-            <thead>
-              <tr>
-                <th scope="col">Descripción</th>
-                <th scope="col" class="modal-table__cell--center">Cantidad</th>
-                <th scope="col" class="modal-table__cell--numeric">P. unitario</th>
-                <th scope="col" class="modal-table__cell--numeric">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${invoice.items
-                .map(
-                  (item) => `
-                <tr>
-                  <td>${escapeHtml(item.description || "")}</td>
-                  <td class="modal-table__cell--center">
-                    ${sanitizeNumber(item.quantity, 0)} ${escapeHtml(
-                    item.unit_type || ""
-                  )}
-                  </td>
-                  <td class="modal-table__cell--numeric">${formatCurrency(
-                    item.unit_price
-                  )}</td>
-                  <td class="modal-table__cell--numeric">${formatCurrency(
-                    item.amount
-                  )}</td>
-                </tr>
-              `
-                )
-                .join("")}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    `
-        : "";
+    const notesContent = (invoice.notes || "").trim();
+    const irpfDisplay =
+      irpfAmount > 0 ? `-${formatCurrency(irpfAmount)}` : formatCurrency(0);
 
     const notesSection = notesContent
       ? `
         <section class="modal-section modal-section--card">
           <h3 class="modal-section__title">Notas</h3>
-          <p class="modal-section__description">${notesContent}</p>
+          <p class="modal-notes">${escapeHtml(notesContent)}</p>
         </section>
       `
       : "";
 
+    const totalsSection = `
+      <div class="modal-totals">
+        <div class="modal-totals__row">
+          <span class="modal-totals__label">Subtotal</span>
+          <span class="modal-totals__value">${formatCurrency(subtotal)}</span>
+        </div>
+        <div class="modal-totals__row">
+          <span class="modal-totals__label">IVA (${vatPercentage}%)</span>
+          <span class="modal-totals__value">${formatCurrency(vatAmount)}</span>
+        </div>
+        ${
+          irpfAmount > 0
+            ? `
+        <div class="modal-totals__row">
+          <span class="modal-totals__label">IRPF (${irpfPercentage}%)</span>
+          <span class="modal-totals__value modal-totals__value--negative">${irpfDisplay}</span>
+        </div>
+      `
+            : ""
+        }
+        <div class="modal-totals__row modal-totals__row--emphasis">
+          <span class="modal-totals__label">Total</span>
+          <span class="modal-totals__value">${formatCurrency(total)}</span>
+        </div>
+      </div>
+    `;
+
     const modalHTML = `
       <div class="modal is-open" id="view-invoice-modal" role="dialog" aria-modal="true">
         <div class="modal__backdrop" data-modal-close></div>
-        <div class="modal__panel modal__panel--wide modal__panel--tall modal__panel--flex">
+        <div class="modal__panel modal__panel--xl modal__panel--tall modal__panel--flex">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Factura ${escapeHtml(
                 invoice.invoice_number || ""
               )}</h2>
-              <p class="modal__subtitle">Detalles completos de la factura emitida</p>
+              <p class="modal__subtitle">Detalles completos de la factura</p>
             </div>
             <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
           </header>
@@ -1216,50 +1384,39 @@ async function viewInvoice(invoiceId) {
                   <dt>Fecha de vencimiento</dt>
                   <dd>${formatDate(invoice.due_date)}</dd>
                 </div>
-              </dl>
-            </section>
-            ${itemsSection}
-            <section class="modal-section">
-              <div class="modal-totals">
-                <div class="modal-totals__row">
-                  <span class="modal-totals__label">Subtotal</span>
-                  <span class="modal-totals__value">${formatCurrency(
-                    subtotal
-                  )}</span>
-                </div>
-                <div class="modal-totals__row">
-                  <span class="modal-totals__label">IVA (${vatPercentage}%)</span>
-                  <span class="modal-totals__value">${formatCurrency(
-                    vatAmount
-                  )}</span>
-                </div>
                 ${
-                  irpfAmount > 0
+                  invoice.payment_date
                     ? `
-                  <div class="modal-totals__row">
-                    <span class="modal-totals__label">IRPF (${irpfPercentage}%)</span>
-                    <span class="modal-totals__value modal-totals__value--negative">-${formatCurrency(
-                      irpfAmount
-                    )}</span>
-                  </div>
-                `
+                <div class="detail-list__item">
+                  <dt>Fecha de cobro</dt>
+                  <dd>${formatDate(invoice.payment_date)}</dd>
+                </div>
+              `
                     : ""
                 }
-                <div class="modal-totals__row modal-totals__row--emphasis">
-                  <span class="modal-totals__label">Total</span>
-                  <span class="modal-totals__value">${formatCurrency(
-                    total
-                  )}</span>
-                </div>
+              </dl>
+            </section>
+            <section class="modal-section modal-section--card">
+              <div class="modal-section__header">
+                <h3 class="modal-section__title">Conceptos facturados</h3>
+                <p class="modal-section__description">${
+                  normalizedItems.length
+                    ? "Navega por cada línea para revisar cantidades e importes."
+                    : "Esta factura no tiene conceptos registrados."
+                }</p>
               </div>
+              <div class="modal-tabs" data-view-tabs></div>
+            </section>
+            <section class="modal-section">
+              ${totalsSection}
             </section>
             ${notesSection}
           </div>
           <footer class="modal__footer modal-form__footer">
             <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-            <button type="button" class="btn-primary" data-invoice-download="${
-              invoice.id
-            }">Descargar PDF</button>
+            <button type="button" class="btn-primary" data-invoice-download="${invoice.id}">
+              Descargar PDF
+            </button>
           </footer>
         </div>
       </div>
@@ -1269,9 +1426,9 @@ async function viewInvoice(invoiceId) {
 
     const modal = document.getElementById("view-invoice-modal");
     if (modal) {
-      modal.querySelectorAll("[data-modal-close]").forEach((btn) => {
-        btn.addEventListener("click", () => modal.remove());
-      });
+      modal
+        .querySelectorAll("[data-modal-close]")
+        .forEach((btn) => btn.addEventListener("click", () => modal.remove()));
       modal
         .querySelector(".modal__backdrop")
         ?.addEventListener("click", () => modal.remove());
@@ -1280,6 +1437,9 @@ async function viewInvoice(invoiceId) {
         ?.addEventListener("click", () =>
           downloadInvoicePDF(String(invoice.id))
         );
+
+      const tabsHost = modal.querySelector("[data-view-tabs]");
+      renderInvoiceViewTabs(tabsHost, normalizedItems, 0);
     }
 
     const notifications = document.querySelectorAll(".notification--info");
@@ -1304,7 +1464,7 @@ async function editInvoice(invoiceId) {
     const modalHTML = `
       <div class="modal is-open" id="edit-invoice-modal" role="dialog" aria-modal="true">
         <div class="modal__backdrop" data-modal-close></div>
-        <div class="modal__panel modal__panel--wide modal__panel--tall modal__panel--flex">
+        <div class="modal__panel modal__panel--xl modal__panel--tall modal__panel--flex">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Editar factura ${escapeHtml(
@@ -1504,7 +1664,7 @@ async function openNewInvoiceModal() {
     const modalHTML = `
       <div class="modal is-open" id="new-invoice-modal" role="dialog" aria-modal="true">
         <div class="modal__backdrop" data-modal-close></div>
-        <div class="modal__panel modal__panel--wide modal__panel--tall modal__panel--flex">
+        <div class="modal__panel modal__panel--xl modal__panel--tall modal__panel--flex">
           <header class="modal__head">
             <div>
               <h2 class="modal__title" id="new-invoice-modal-title">Nueva factura</h2>
