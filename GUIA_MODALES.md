@@ -21,6 +21,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 - Preferir modales más anchos y altos para evitar scroll
 - **Referencia**: Modal de clientes - tamaño compacto sin scroll
 - **Para facturas/presupuestos**: Modal más grande (80-90% viewport) para acomodar líneas de ítems
+- Utiliza modificadores de panel: `.modal__panel--wide` (facturas/presupuestos), `.modal__panel--xl` (flujos especiales) y `.modal__panel--tall` para garantizar altura máxima sin forzar scroll inicial. Combínalos con `.modal__panel--flex` cuando el contenido incluya `form + footer` y se necesite que el cuerpo crezca sin desbordar.
 
 ### 1.3 Organización Clara
 
@@ -131,6 +132,26 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 - Ambos botones del mismo tamaño visual
 - Espaciado horizontal entre botones
 - Fijos en la parte inferior del modal (no se mueven con scroll)
+
+### 2.5 Secciones de Contenido
+
+- Wrapper recomendado: `modal-section` para agrupar campos o bloques relacionados.
+- Añade `modal-section--card` cuando la sección requiera fondo propio (conceptos facturados, notas, adjuntos).
+- Usa `modal-section__header` para alinear títulos y acciones contextuales (`modal-section__actions`).
+- Mantén el cuerpo del formulario dentro de `modal__body modal-form__body` para que el `flex` gestione el alto.
+
+### 2.6 Tablas y Totales Dentro del Modal
+
+- Tablas internas reutilizan la clase `modal-table`, con modificadores `modal-table__cell--center`/`--numeric` para alineaciones.
+- El resumen de importes utiliza `modal-totals`, con filas (`modal-totals__row`) y valores (`modal-totals__value`, `modal-totals__value--negative`).
+- Garantizar que el bloque de totales esté visible sin scroll inicial; ubicarlo tras la tabla de conceptos.
+
+### 2.7 Banners y Avisos Contextuales
+
+- Mensajes informativos (ej. factura registrada en Verifactu) emplean `modal-banner`.
+- Variantes disponibles: `modal-banner--info` (azul), y se puede extender con nuevos tonos según se necesite.
+- Estructura interna: `modal-banner__icon` para el glifo leading y `modal-banner__content` para texto + subtítulo.
+- Usa el atributo `hidden` en el banner para mostrar/ocultar mediante lógica JS (`element.hidden = true/false`). 
 
 ## 3. Estilos de Botones
 
