@@ -4,11 +4,11 @@
 let expensesData = [];
 let isLoading = false;
 let currentFilters = {
-  search: '',
-  category: '',
-  isDeductible: '',
-  dateFrom: '',
-  dateTo: ''
+  search: "",
+  category: "",
+  isDeductible: "",
+  dateFrom: "",
+  dateTo: "",
 };
 let filterRefreshTimeout = null;
 let activeExpenseId = null;
@@ -18,23 +18,23 @@ let currentPage = 1;
 
 // === CONSTANTES ===
 const EXPENSE_CATEGORIES = {
-  office: 'Oficina',
-  software: 'Software',
-  hardware: 'Hardware',
-  marketing: 'Marketing',
-  travel: 'Viajes',
-  meals: 'Comidas',
-  professional_services: 'Servicios profesionales',
-  supplies: 'Suministros',
-  insurance: 'Seguros',
-  other: 'Otros'
+  office: "Oficina",
+  software: "Software",
+  hardware: "Hardware",
+  marketing: "Marketing",
+  travel: "Viajes",
+  meals: "Comidas",
+  professional_services: "Servicios profesionales",
+  supplies: "Suministros",
+  insurance: "Seguros",
+  other: "Otros",
 };
 
 const PAYMENT_METHODS = {
-  bank_transfer: 'Transferencia bancaria',
-  card: 'Tarjeta',
-  cash: 'Efectivo',
-  other: 'Otro'
+  bank_transfer: "Transferencia bancaria",
+  card: "Tarjeta",
+  cash: "Efectivo",
+  other: "Otro",
 };
 
 function normalizeExpense(expense) {
@@ -66,10 +66,10 @@ function normalizeExpense(expense) {
 }
 
 // === FORMATTERS ===
-const currencyFormatter = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 2
+const currencyFormatter = new Intl.NumberFormat("es-ES", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 2,
 });
 
 function formatCurrency(value) {
@@ -79,21 +79,21 @@ function formatCurrency(value) {
 }
 
 function formatDate(value) {
-  if (!value) return '-';
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 }
 
 function formatDateForInput(value) {
-  if (!value) return '';
+  if (!value) return "";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().split('T')[0];
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().split("T")[0];
 }
 
 function sanitizeNumber(value, fallback = 0) {
@@ -101,13 +101,13 @@ function sanitizeNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function escapeHtml(value = '') {
+function escapeHtml(value = "") {
   return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function calculateVatAmount(amount, vatPercentage) {
@@ -117,21 +117,23 @@ function calculateVatAmount(amount, vatPercentage) {
 }
 
 // === NOTIFICACIONES ===
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
+function showNotification(message, type = "info") {
+  const notification = document.createElement("div");
   notification.className = `notification notification--${type}`;
   notification.innerHTML = `
     <span>${message}</span>
     <button type="button" class="notification__close" aria-label="Cerrar notificación">×</button>
   `;
 
-  notification.querySelector('.notification__close').addEventListener('click', () => {
-    notification.remove();
-  });
+  notification
+    .querySelector(".notification__close")
+    .addEventListener("click", () => {
+      notification.remove();
+    });
 
-  if (!document.getElementById('notification-styles')) {
-    const style = document.createElement('style');
-    style.id = 'notification-styles';
+  if (!document.getElementById("notification-styles")) {
+    const style = document.createElement("style");
+    style.id = "notification-styles";
     style.textContent = `
       .notification {
         position: fixed;
@@ -173,16 +175,16 @@ function showNotification(message, type = 'info') {
 
 // === RENDERIZADO DE ESTADOS ===
 function renderLoadingState() {
-  const loadingEl = document.querySelector('[data-expenses-loading]');
+  const loadingEl = document.querySelector("[data-expenses-loading]");
   if (loadingEl) loadingEl.hidden = !isLoading;
 }
 
 function renderErrorState(message) {
-  const errorEl = document.querySelector('[data-expenses-error]');
+  const errorEl = document.querySelector("[data-expenses-error]");
   if (!errorEl) return;
   if (!message) {
     errorEl.hidden = true;
-    errorEl.innerHTML = '';
+    errorEl.innerHTML = "";
     return;
   }
   errorEl.hidden = false;
@@ -196,26 +198,26 @@ function renderErrorState(message) {
       <button type="button" class="btn btn-secondary" data-expenses-retry>Reintentar</button>
     </div>
   `;
-  const retryBtn = errorEl.querySelector('[data-expenses-retry]');
-  if (retryBtn) retryBtn.addEventListener('click', () => loadExpenses());
+  const retryBtn = errorEl.querySelector("[data-expenses-retry]");
+  if (retryBtn) retryBtn.addEventListener("click", () => loadExpenses());
 }
 
 // === CARGA DE DATOS ===
 async function loadExpenses() {
-  if (typeof window.api === 'undefined') {
-    renderErrorState('Servicio API no disponible. Verifica la carga de api.js');
+  if (typeof window.api === "undefined") {
+    renderErrorState("Servicio API no disponible. Verifica la carga de api.js");
     return;
   }
 
   if (!window.api.isAuthenticated()) {
-    renderErrorState('Inicia sesión para revisar tus gastos.');
+    renderErrorState("Inicia sesión para revisar tus gastos.");
     isLoading = false;
     return;
   }
 
   isLoading = true;
   renderLoadingState();
-  renderErrorState('');
+  renderErrorState("");
 
   try {
     const query = buildFiltersQuery();
@@ -230,13 +232,14 @@ async function loadExpenses() {
     renderExpensesTable();
     updateSummaryCards();
   } catch (error) {
-    console.error('Error cargando gastos:', error);
-    let message = error?.message || 'Se produjo un error al cargar los gastos';
+    console.error("Error cargando gastos:", error);
+    let message = error?.message || "Se produjo un error al cargar los gastos";
     if (error instanceof window.APIError && error.status === 0) {
-      message = 'No se pudo conectar con el backend (http://localhost:8020). Comprueba que el servicio esté activo.';
+      message =
+        "No se pudo conectar con el backend (http://localhost:8020). Comprueba que el servicio esté activo.";
     }
     renderErrorState(message);
-    showNotification(message, 'error');
+    showNotification(message, "error");
   } finally {
     isLoading = false;
     renderLoadingState();
@@ -247,7 +250,8 @@ function buildFiltersQuery() {
   const query = {};
   if (currentFilters.search) query.search = currentFilters.search;
   if (currentFilters.category) query.category = currentFilters.category;
-  if (currentFilters.isDeductible !== '') query.isDeductible = currentFilters.isDeductible;
+  if (currentFilters.isDeductible !== "")
+    query.isDeductible = currentFilters.isDeductible;
   if (currentFilters.dateFrom) query.dateFrom = currentFilters.dateFrom;
   if (currentFilters.dateTo) query.dateTo = currentFilters.dateTo;
   return query;
@@ -255,7 +259,7 @@ function buildFiltersQuery() {
 
 // === TABLA ===
 function renderExpensesTable() {
-  const tbody = document.querySelector('[data-expenses-tbody]');
+  const tbody = document.querySelector("[data-expenses-tbody]");
   if (!tbody) return;
 
   filteredExpenses = Array.isArray(expensesData) ? [...expensesData] : [];
@@ -283,13 +287,20 @@ function renderExpensesTable() {
 
   const pageItems = filteredExpenses.slice(start - 1, start - 1 + PAGE_SIZE);
 
-  tbody.innerHTML = pageItems.map(expense => {
-    const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || 'Sin categoría';
-    const paymentLabel = PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || 'N/A';
-    return `
+  tbody.innerHTML = pageItems
+    .map((expense) => {
+      const categoryLabel =
+        EXPENSE_CATEGORIES[expense.category] ||
+        expense.category ||
+        "Sin categoría";
+      const paymentLabel =
+        PAYMENT_METHODS[expense.paymentMethod] ||
+        expense.paymentMethod ||
+        "N/A";
+      return `
       <tr class="expenses-table__row" data-expense-id="${expense.id}">
         <td>
-          <time datetime="${escapeHtml(expense.expenseDate || '')}">
+          <time datetime="${escapeHtml(expense.expenseDate || "")}">
             ${formatDate(expense.expenseDate)}
           </time>
         </td>
@@ -297,21 +308,39 @@ function renderExpensesTable() {
           <span class="category-badge">
             ${escapeHtml(categoryLabel)}
           </span>
-          ${expense.subcategory ? `<small>${escapeHtml(expense.subcategory)}</small>` : ''}
+          ${
+            expense.subcategory
+              ? `<small>${escapeHtml(expense.subcategory)}</small>`
+              : ""
+          }
         </td>
         <td>
           <div class="expense-description">
-            <strong>${escapeHtml(expense.description || 'Sin descripción')}</strong>
-            ${expense.vendor ? `<small>${escapeHtml(expense.vendor)}</small>` : ''}
+            <strong>${escapeHtml(
+              expense.description || "Sin descripción"
+            )}</strong>
+            ${
+              expense.vendor
+                ? `<small>${escapeHtml(expense.vendor)}</small>`
+                : ""
+            }
           </div>
         </td>
         <td class="expenses-table__amount">
           ${formatCurrency(expense.amount)}
-          <small class="vat-indicator">IVA ${expense.vatPercentage.toFixed(2)}% (${formatCurrency(expense.vatAmount)})</small>
+          <small class="vat-indicator">IVA ${expense.vatPercentage.toFixed(
+            2
+          )}% (${formatCurrency(expense.vatAmount)})</small>
         </td>
         <td>
-          <span class="status-pill status-pill--${expense.isDeductible ? 'success' : 'neutral'}">
-            ${expense.isDeductible ? `Deducible ${expense.deductiblePercentage}%` : 'No deducible'}
+          <span class="status-pill status-pill--${
+            expense.isDeductible ? "success" : "neutral"
+          }">
+            ${
+              expense.isDeductible
+                ? `Deducible ${expense.deductiblePercentage}%`
+                : "No deducible"
+            }
           </span>
         </td>
         <td class="expenses-table__client">${escapeHtml(paymentLabel)}</td>
@@ -325,19 +354,20 @@ function renderExpensesTable() {
         </td>
       </tr>
     `;
-  }).join('');
+    })
+    .join("");
 
   renderExpensesPagination(totalPages);
 }
 
 function updateFilterCount(total, start = 0, end = 0) {
-  const counter = document.querySelector('[data-expenses-count]');
+  const counter = document.querySelector("[data-expenses-count]");
   if (!counter) return;
   if (!total) {
-    counter.textContent = 'Sin gastos disponibles';
+    counter.textContent = "Sin gastos disponibles";
     return;
   }
-  const label = total === 1 ? 'gasto' : 'gastos';
+  const label = total === 1 ? "gasto" : "gastos";
   counter.textContent = `Mostrando ${start}-${end} de ${total} ${label}`;
 }
 
@@ -346,16 +376,20 @@ function renderExpensesPagination(totalPages) {
   if (!pager) return;
 
   if (filteredExpenses.length <= PAGE_SIZE) {
-    pager.innerHTML = '';
+    pager.innerHTML = "";
     return;
   }
 
   pager.innerHTML = `
-    <button type="button" class="pager-btn" onclick="window.changeExpensesPage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+    <button type="button" class="pager-btn" onclick="window.changeExpensesPage(-1)" ${
+      currentPage === 1 ? "disabled" : ""
+    }>
       Anterior
     </button>
     <span class="pager-status">Página ${currentPage} de ${totalPages}</span>
-    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeExpensesPage(1)" ${currentPage === totalPages ? 'disabled' : ''}>
+    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeExpensesPage(1)" ${
+      currentPage === totalPages ? "disabled" : ""
+    }>
       Siguiente
     </button>
   `;
@@ -363,18 +397,30 @@ function renderExpensesPagination(totalPages) {
 
 // === TARJETAS RESUMEN ===
 function updateSummaryCards() {
-  const total = expensesData.reduce((sum, expense) => sum + sanitizeNumber(expense.amount, 0), 0);
+  const total = expensesData.reduce(
+    (sum, expense) => sum + sanitizeNumber(expense.amount, 0),
+    0
+  );
   const deductible = expensesData
-    .filter(expense => expense.isDeductible)
-    .reduce((sum, expense) => sum + sanitizeNumber(expense.amount, 0) * (sanitizeNumber(expense.deductiblePercentage, 0) / 100), 0);
-  const vatRecoverable = expensesData.reduce((sum, expense) => sum + sanitizeNumber(expense.vatAmount, 0), 0);
+    .filter((expense) => expense.isDeductible)
+    .reduce(
+      (sum, expense) =>
+        sum +
+        sanitizeNumber(expense.amount, 0) *
+          (sanitizeNumber(expense.deductiblePercentage, 0) / 100),
+      0
+    );
+  const vatRecoverable = expensesData.reduce(
+    (sum, expense) => sum + sanitizeNumber(expense.vatAmount, 0),
+    0
+  );
   const average = expensesData.length ? total / expensesData.length : 0;
 
   const map = {
-    total: document.getElementById('total-expenses'),
-    deductible: document.getElementById('deductible-expenses'),
-    vat: document.getElementById('recoverable-vat'),
-    average: document.getElementById('average-expense')
+    total: document.getElementById("total-expenses"),
+    deductible: document.getElementById("deductible-expenses"),
+    vat: document.getElementById("recoverable-vat"),
+    average: document.getElementById("average-expense"),
   };
 
   if (map.total) map.total.textContent = formatCurrency(total);
@@ -385,66 +431,66 @@ function updateSummaryCards() {
 
 // === FILTROS ===
 function setupFilters() {
-  const searchInput = document.getElementById('expense-search');
+  const searchInput = document.getElementById("expense-search");
   if (searchInput) {
     searchInput.value = currentFilters.search;
-    searchInput.addEventListener('input', event => {
+    searchInput.addEventListener("input", (event) => {
       currentFilters.search = event.target.value;
       scheduleExpenseReload();
     });
   }
 
-  const categorySelect = document.getElementById('expense-category-filter');
+  const categorySelect = document.getElementById("expense-category-filter");
   if (categorySelect) {
     categorySelect.value = currentFilters.category;
-    categorySelect.addEventListener('change', event => {
+    categorySelect.addEventListener("change", (event) => {
       currentFilters.category = event.target.value;
       loadExpenses();
     });
   }
 
-  const deductibleSelect = document.getElementById('expense-deductible-filter');
+  const deductibleSelect = document.getElementById("expense-deductible-filter");
   if (deductibleSelect) {
     deductibleSelect.value = currentFilters.isDeductible;
-    deductibleSelect.addEventListener('change', event => {
+    deductibleSelect.addEventListener("change", (event) => {
       currentFilters.isDeductible = event.target.value;
       loadExpenses();
     });
   }
 
-  const dateFromInput = document.getElementById('expense-date-from');
+  const dateFromInput = document.getElementById("expense-date-from");
   if (dateFromInput) {
     dateFromInput.value = currentFilters.dateFrom;
-    dateFromInput.addEventListener('change', event => {
+    dateFromInput.addEventListener("change", (event) => {
       currentFilters.dateFrom = event.target.value;
       loadExpenses();
     });
   }
 
-  const dateToInput = document.getElementById('expense-date-to');
+  const dateToInput = document.getElementById("expense-date-to");
   if (dateToInput) {
     dateToInput.value = currentFilters.dateTo;
-    dateToInput.addEventListener('change', event => {
+    dateToInput.addEventListener("change", (event) => {
       currentFilters.dateTo = event.target.value;
       loadExpenses();
     });
   }
 
-  const resetBtn = document.querySelector('[data-expenses-reset]');
+  const resetBtn = document.querySelector("[data-expenses-reset]");
   if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
+    resetBtn.addEventListener("click", () => {
       currentFilters = {
-        search: '',
-        category: '',
-        isDeductible: '',
-        dateFrom: '',
-        dateTo: ''
+        search: "",
+        category: "",
+        isDeductible: "",
+        dateFrom: "",
+        dateTo: "",
       };
-      if (searchInput) searchInput.value = '';
-      if (categorySelect) categorySelect.value = '';
-      if (deductibleSelect) deductibleSelect.value = '';
-      if (dateFromInput) dateFromInput.value = '';
-      if (dateToInput) dateToInput.value = '';
+      if (searchInput) searchInput.value = "";
+      if (categorySelect) categorySelect.value = "";
+      if (deductibleSelect) deductibleSelect.value = "";
+      if (dateFromInput) dateFromInput.value = "";
+      if (dateToInput) dateToInput.value = "";
       loadExpenses();
     });
   }
@@ -458,7 +504,10 @@ function scheduleExpenseReload() {
 }
 
 function changeExpensesPage(delta) {
-  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredExpenses.length / PAGE_SIZE)
+  );
   const next = Math.min(Math.max(1, currentPage + delta), totalPages);
   if (next === currentPage) return;
   currentPage = next;
@@ -466,38 +515,40 @@ function changeExpensesPage(delta) {
 }
 
 // === MODALES ===
-async function openExpenseModal(mode = 'create', expenseId = null) {
+async function openExpenseModal(mode = "create", expenseId = null) {
   activeExpenseId = expenseId;
   let expense = null;
 
-  if (mode === 'edit' && expenseId) {
+  if (mode === "edit" && expenseId) {
     try {
       expense = await window.api.getExpense(expenseId);
     } catch (error) {
-      console.error('Error obteniendo gasto:', error);
-      showNotification('No se pudo cargar el gasto seleccionado', 'error');
+      console.error("Error obteniendo gasto:", error);
+      showNotification("No se pudo cargar el gasto seleccionado", "error");
       return;
     }
   }
 
   const modalHtml = buildExpenseModalHtml(mode, expense);
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
 
-  const modal = document.getElementById('expense-modal');
-  const form = document.getElementById('expense-form');
+  const modal = document.getElementById("expense-modal");
+  const form = document.getElementById("expense-form");
 
   if (!modal || !form) return;
 
-  modal.querySelectorAll('[data-modal-close]').forEach(btn => {
-    btn.addEventListener('click', closeExpenseModal);
+  modal.querySelectorAll("[data-modal-close]").forEach((btn) => {
+    btn.addEventListener("click", closeExpenseModal);
   });
-  modal.querySelector('.modal__backdrop')?.addEventListener('click', closeExpenseModal);
+  modal
+    .querySelector(".modal__backdrop")
+    ?.addEventListener("click", closeExpenseModal);
 
   setupExpenseForm(form, expense);
 }
 
 function closeExpenseModal() {
-  const modal = document.getElementById('expense-modal');
+  const modal = document.getElementById("expense-modal");
   if (modal) modal.remove();
   activeExpenseId = null;
 }
@@ -527,7 +578,11 @@ function buildExpenseModalHtml(mode, expense) {
         <header class="modal__head">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
-            <p class="modal__subtitle">${isEdit ? 'Actualiza los datos del gasto seleccionado' : 'Introduce la información fiscal del nuevo gasto'}</p>
+            <p class="modal__subtitle">${
+              isEdit
+                ? "Actualiza los datos del gasto seleccionado"
+                : "Introduce la información fiscal del nuevo gasto"
+            }</p>
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
@@ -596,7 +651,7 @@ function buildExpenseModalHtml(mode, expense) {
                   <label class="toggle">
                     <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} />
                     <span class="toggle__slider"></span>
-                    <span class="toggle__label">Deducible</span>
+                    <span class="toggle__label">Sí, es deducible</span>
                   </label>
                 </div>
               </div>
@@ -628,11 +683,11 @@ function buildExpenseModalHtml(mode, expense) {
 }
 
 function setupExpenseForm(form, expense) {
-  const amountInput = form.querySelector('#expense-amount');
-  const vatPercentageInput = form.querySelector('#expense-vat-percentage');
-  const vatAmountInput = form.querySelector('#expense-vat-amount');
-  const deductibleToggle = form.querySelector('#expense-deductible');
-  const deductibleGroup = form.querySelector('#deductible-percentage-group');
+  const amountInput = form.querySelector("#expense-amount");
+  const vatPercentageInput = form.querySelector("#expense-vat-percentage");
+  const vatAmountInput = form.querySelector("#expense-vat-amount");
+  const deductibleToggle = form.querySelector("#expense-deductible");
+  const deductibleGroup = form.querySelector("#deductible-percentage-group");
 
   const syncVatAmount = () => {
     const amount = sanitizeNumber(amountInput.value, 0);
@@ -640,23 +695,23 @@ function setupExpenseForm(form, expense) {
     vatAmountInput.value = calculateVatAmount(amount, vatPercentage);
   };
 
-  amountInput?.addEventListener('input', syncVatAmount);
-  vatPercentageInput?.addEventListener('input', syncVatAmount);
+  amountInput?.addEventListener("input", syncVatAmount);
+  vatPercentageInput?.addEventListener("input", syncVatAmount);
 
   const toggleDeductibleFields = () => {
     const isChecked = deductibleToggle.checked;
-    deductibleGroup.style.display = isChecked ? 'block' : 'none';
+    deductibleGroup.style.display = isChecked ? "block" : "none";
     if (!isChecked) {
-      form.querySelector('#expense-deductible-percentage').value = '0';
+      form.querySelector("#expense-deductible-percentage").value = "0";
     } else if (!expense) {
-      form.querySelector('#expense-deductible-percentage').value = '100';
+      form.querySelector("#expense-deductible-percentage").value = "100";
     }
   };
 
-  deductibleToggle?.addEventListener('change', toggleDeductibleFields);
+  deductibleToggle?.addEventListener("change", toggleDeductibleFields);
   toggleDeductibleFields();
 
-  form.addEventListener('submit', async event => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     await handleExpenseSubmit(form);
   });
@@ -664,7 +719,7 @@ function setupExpenseForm(form, expense) {
 
 async function handleExpenseSubmit(form) {
   const formData = new FormData(form);
-  const mode = form.dataset.mode || 'create';
+  const mode = form.dataset.mode || "create";
 
   const payload = {
     expenseDate: formData.get('expenseDate'),
@@ -698,17 +753,17 @@ async function handleExpenseSubmit(form) {
   if (notes) payload.notes = notes;
 
   if (!payload.expenseDate) {
-    showNotification('Selecciona la fecha del gasto', 'warning');
+    showNotification("Selecciona la fecha del gasto", "warning");
     return;
   }
 
   if (!payload.category) {
-    showNotification('Selecciona una categoría', 'warning');
+    showNotification("Selecciona una categoría", "warning");
     return;
   }
 
   if (!payload.description) {
-    showNotification('Añade una descripción del gasto', 'warning');
+    showNotification("Añade una descripción del gasto", "warning");
     return;
   }
 
@@ -758,8 +813,8 @@ async function handleExpenseSubmit(form) {
     // Sincroniza con backend pero sin bloquear el feedback inmediato
     loadExpenses();
   } catch (error) {
-    console.error('Error guardando gasto:', error);
-    showNotification(error?.message || 'No se pudo guardar el gasto', 'error');
+    console.error("Error guardando gasto:", error);
+    showNotification(error?.message || "No se pudo guardar el gasto", "error");
   }
 }
 
@@ -767,7 +822,7 @@ async function viewExpense(expenseId) {
   try {
     const expense = await window.api.getExpense(expenseId);
     if (!expense) {
-      showNotification('No se encontró el gasto', 'error');
+      showNotification("No se encontró el gasto", "error");
       return;
     }
 
@@ -859,10 +914,10 @@ async function viewExpense(expenseId) {
       </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const modal = document.getElementById('expense-view-modal');
-    modal?.querySelectorAll('[data-modal-close]').forEach(btn => {
-      btn.addEventListener('click', () => modal.remove());
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+    const modal = document.getElementById("expense-view-modal");
+    modal?.querySelectorAll("[data-modal-close]").forEach((btn) => {
+      btn.addEventListener("click", () => modal.remove());
     });
     modal?.querySelector('.modal__backdrop')?.addEventListener('click', () => modal.remove());
     modal?.querySelector('[data-expense-edit]')?.addEventListener('click', () => {
@@ -870,22 +925,24 @@ async function viewExpense(expenseId) {
       openExpenseModal('edit', String(expense.id));
     });
   } catch (error) {
-    console.error('Error mostrando gasto:', error);
-    showNotification('No se pudo mostrar el detalle del gasto', 'error');
+    console.error("Error mostrando gasto:", error);
+    showNotification("No se pudo mostrar el detalle del gasto", "error");
   }
 }
 
 async function confirmDeleteExpense(expenseId) {
-  const confirmed = window.confirm('¿Seguro que deseas eliminar este gasto? Esta acción no se puede deshacer.');
+  const confirmed = window.confirm(
+    "¿Seguro que deseas eliminar este gasto? Esta acción no se puede deshacer."
+  );
   if (!confirmed) return;
 
   try {
     await window.api.deleteExpense(expenseId);
-    showNotification('Gasto eliminado correctamente', 'success');
+    showNotification("Gasto eliminado correctamente", "success");
     await loadExpenses();
   } catch (error) {
-    console.error('Error eliminando gasto:', error);
-    showNotification(error?.message || 'No se pudo eliminar el gasto', 'error');
+    console.error("Error eliminando gasto:", error);
+    showNotification(error?.message || "No se pudo eliminar el gasto", "error");
   }
 }
 
@@ -948,7 +1005,9 @@ export default function renderExpenses() {
           <label class="visually-hidden" for="expense-category-filter">Categoría</label>
           <select id="expense-category-filter" class="expenses__select">
             <option value="">Todas las categorías</option>
-            ${Object.entries(EXPENSE_CATEGORIES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+            ${Object.entries(EXPENSE_CATEGORIES)
+              .map(([key, label]) => `<option value="${key}">${label}</option>`)
+              .join("")}
           </select>
         </div>
         <div class="expenses__filters-group">
@@ -1015,8 +1074,8 @@ export function initExpenses() {
   window.viewExpense = viewExpense;
   window.confirmDeleteExpense = confirmDeleteExpense;
 
-  const newExpenseBtn = document.getElementById('new-expense-btn');
-  newExpenseBtn?.addEventListener('click', () => openExpenseModal('create'));
+  const newExpenseBtn = document.getElementById("new-expense-btn");
+  newExpenseBtn?.addEventListener("click", () => openExpenseModal("create"));
 
   setupFilters();
   loadExpenses();
