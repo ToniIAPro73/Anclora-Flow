@@ -1000,8 +1000,8 @@ async function viewInvoice(invoiceId) {
     const modalHTML = `
       <div class="modal is-open" id="view-invoice-modal">
         <div class="modal__backdrop" onclick="document.getElementById('view-invoice-modal').remove()"></div>
-        <div class="modal__panel" style="max-width: 900px; max-height: 95vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="flex-shrink: 0;">
+        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
+          <header class="modal__head">
             <div>
               <h2 class="modal__title">Factura ${invoice.invoice_number}</h2>
               <p class="modal__subtitle">Detalles completos de la factura</p>
@@ -1130,16 +1130,16 @@ async function editInvoice(invoiceId) {
     const modalHTML = `
       <div class="modal is-open" id="edit-invoice-modal">
         <div class="modal__backdrop" onclick="closeEditInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 950px); max-width: 950px; max-height: 95vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="flex-shrink: 0;">
+        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
+          <header class="modal__head">
             <div>
               <h2 class="modal__title">Editar factura ${invoice.invoice_number}</h2>
               <p class="modal__subtitle">Actualiza datos y conceptos</p>
             </div>
             <button type="button" class="modal__close" onclick="closeEditInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 1.5rem;">
-            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <div class="modal__body" style="overflow-y: auto; flex: 1;">
+            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
               ${invoice.verifactu_status === 'registered' ? `
                 <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
                   <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
@@ -1274,16 +1274,16 @@ async function openNewInvoiceModal() {
     const modalHTML = `
       <div class="modal is-open" id="new-invoice-modal">
         <div class="modal__backdrop" onclick="closeNewInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 950px); max-width: 950px; max-height: 95vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="flex-shrink: 0;">
+        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
+          <header class="modal__head">
             <div>
               <h2 class="modal__title">Nueva factura</h2>
               <p class="modal__subtitle">Completa los datos y conceptos para generar la factura</p>
             </div>
             <button type="button" class="modal__close" onclick="closeNewInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body" style="overflow-y: auto; flex: 1; padding: 1.5rem;">
-            <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <div class="modal__body" style="overflow-y: auto; flex: 1;">
+            <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
               <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
                 <div>
                   <label for="new-invoice-number" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Numero de factura</label>
@@ -1937,17 +1937,19 @@ function renderInvoiceRows() {
         <td data-column="Dias">
           <span class="invoices-table__days">${invoice.daysLate || "-"}</span>
         </td>
-        <td data-column="Acciones" class="invoices-table__actions">
-          <button type="button" class="table-action" title="Ver factura" onclick="viewInvoice('${invoice.id}')">
-            <span>👁️</span>
-          </button>
-          <button type="button" class="table-action" title="Editar factura" onclick="editInvoice('${invoice.id}')">
-            <span>✏️</span>
-          </button>
-          <button type="button" class="table-action" title="Descargar PDF" onclick="downloadInvoicePDF('${invoice.id}')">
-            <span>📄</span>
-          </button>
-          ${verifactuActions}
+        <td data-column="Acciones">
+          <div class="invoices-table__actions">
+            <button type="button" class="table-action" title="Ver factura" onclick="viewInvoice('${invoice.id}')">
+              <span>👁️</span>
+            </button>
+            <button type="button" class="table-action" title="Editar factura" onclick="editInvoice('${invoice.id}')">
+              <span>✏️</span>
+            </button>
+            <button type="button" class="table-action" title="Descargar PDF" onclick="downloadInvoicePDF('${invoice.id}')">
+              <span>📄</span>
+            </button>
+            ${verifactuActions}
+          </div>
         </td>
       </tr>
     `;
@@ -2141,7 +2143,7 @@ export function renderInvoices() {
                 <th scope="col">Estado</th>
                 <th scope="col">Verifactu</th>
                 <th scope="col">Días</th>
-                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                <th scope="col">ACCIONES</th>
               </tr>
             </thead>
             <tbody>

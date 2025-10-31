@@ -1702,7 +1702,8 @@ a:hover {
 }
 
 .invoices-table__actions,
-.expenses-table__actions {
+.expenses-table__actions,
+.table-actions {
   display: inline-flex;
   gap: 0.4rem;
 }
@@ -1729,7 +1730,8 @@ a:hover {
   color: var(--text-dark-secondary);
 }
 
-.table-action {
+.table-action,
+.btn-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1737,25 +1739,28 @@ a:hover {
   height: 36px;
   border-radius: 10px;
   border: 1px solid transparent;
-  background: rgba(51, 102, 255, 0.12);
+  background: rgba(51, 102, 255, 0.35);
   cursor: pointer;
   transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease;
 }
 
-.table-action:hover {
+.table-action:hover,
+.btn-icon:hover {
   transform: translateY(-2px);
   border-color: rgba(51, 102, 255, 0.4);
-  background: rgba(51, 102, 255, 0.18);
+  background: rgba(51, 102, 255, 0.45);
 }
 
-[data-theme="dark"] .table-action {
-  background: rgba(148, 163, 184, 0.18);
+[data-theme="dark"] .table-action,
+[data-theme="dark"] .btn-icon {
+  background: rgba(51, 102, 255, 0.35);
   color: var(--text-dark-primary);
 }
 
-[data-theme="dark"] .table-action:hover {
-  border-color: rgba(148, 163, 184, 0.45);
-  background: rgba(148, 163, 184, 0.28);
+[data-theme="dark"] .table-action:hover,
+[data-theme="dark"] .btn-icon:hover {
+  border-color: rgba(51, 102, 255, 0.5);
+  background: rgba(51, 102, 255, 0.45);
 }
 
 .status-pill {
@@ -2351,8 +2356,8 @@ table tr[hidden] {
 
 .modal__panel {
   position: relative;
-  width: min(960px, 96vw);
-  max-height: min(92vh, 880px);
+  width: min(1000px, 96vw);
+  max-height: min(96vh, 980px);
   overflow-y: auto;
   border-radius: 28px;
   background: linear-gradient(
@@ -2361,7 +2366,7 @@ table tr[hidden] {
     rgba(241, 245, 255, 0.96) 100%
   );
   color: var(--text-primary);
-  padding: 2.4rem 2.6rem;
+  padding: 2.2rem 2.4rem;
   border: 1px solid rgba(51, 102, 255, 0.08);
   box-shadow: 0 40px 120px rgba(51, 102, 255, 0.25);
 }
@@ -2459,6 +2464,125 @@ table tr[hidden] {
 .form-field span {
   font-weight: 600;
   letter-spacing: 0.04em;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: inherit;
+}
+
+.modal-form__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.modal-form__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.modal-form__grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.modal-form__grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.modal-form__grid--align-center {
+  align-items: center;
+}
+
+.modal-form__field--span-2 {
+  grid-column: span 2;
+}
+
+.modal-form__field--span-3 {
+  grid-column: span 3;
+}
+
+.modal-form__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.9rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(51, 102, 255, 0.18);
+}
+
+[data-theme="dark"] .modal-form__footer {
+  border-top-color: rgba(148, 163, 184, 0.25);
+}
+
+.modal-form__footer .btn-primary,
+.modal-form__footer .btn-secondary {
+  min-width: 180px;
+}
+
+.form-field--inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.form-field--inline > span {
+  margin: 0;
+}
+
+.form-field--inline .toggle-group {
+  margin-top: 0;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .form-hint {
+  color: rgba(148, 163, 184, 0.82);
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 1.5rem;
+  margin: 0;
+}
+
+.detail-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.detail-list__item--full {
+  grid-column: span 2;
+}
+
+.detail-list dt {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.detail-list dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .detail-list dt {
+  color: rgba(226, 232, 240, 0.65);
+}
+
+[data-theme="dark"] .detail-list dd {
+  color: rgba(226, 232, 240, 0.9);
 }
 
 .form-field input,
@@ -3287,10 +3411,56 @@ table tr[hidden] {
   }
 }
 
+@media (max-width: 1040px) {
+  .modal-form__grid--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .modal-form__field--span-3 {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 860px) {
+  .modal-form__grid--two,
+  .modal-form__grid--three {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-form__field--span-2,
+  .modal-form__field--span-3 {
+    grid-column: span 1;
+  }
+
+  .modal-form__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-form__footer .btn-primary,
+  .modal-form__footer .btn-secondary {
+    width: 100%;
+  }
+
+  .form-field--inline {
+    align-items: flex-start;
+  }
+}
+
 @media (max-width: 720px) {
   .grid--two,
   .grid--three {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .detail-list {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-list__item--full {
+    grid-column: span 1;
   }
 }
 

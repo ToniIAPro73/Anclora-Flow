@@ -32,9 +32,10 @@ router.get('/',
   validate,
   async (req, res) => {
     try {
+      const hasDeductibleFilter = Object.prototype.hasOwnProperty.call(req.query, 'isDeductible');
       const filters = {
         category: req.query.category,
-        isDeductible: req.query.isDeductible === 'true',
+        isDeductible: hasDeductibleFilter ? req.query.isDeductible === 'true' : undefined,
         projectId: req.query.projectId,
         search: req.query.search,
         dateFrom: req.query.dateFrom,
