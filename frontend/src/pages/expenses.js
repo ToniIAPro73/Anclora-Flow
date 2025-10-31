@@ -15,6 +15,7 @@ let activeExpenseId = null;
 let filteredExpenses = [];
 const PAGE_SIZE = 10;
 let currentPage = 1;
+let selectedExpenseId = null;
 
 // === CONSTANTES ===
 const EXPENSE_CATEGORIES = {
@@ -46,10 +47,13 @@ function normalizeExpense(expense) {
     projectName: expense.project_name ?? expense.projectName ?? null,
     category: expense.category ?? null,
     subcategory: expense.subcategory ?? null,
-    description: expense.description ?? '',
+    description: expense.description ?? "",
     amount: sanitizeNumber(expense.amount, 0),
     vatAmount: sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0),
-    vatPercentage: sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 0),
+    vatPercentage: sanitizeNumber(
+      expense.vat_percentage ?? expense.vatPercentage,
+      0
+    ),
     isDeductible: Boolean(
       expense.is_deductible ?? expense.isDeductible ?? true
     ),
@@ -61,7 +65,7 @@ function normalizeExpense(expense) {
     paymentMethod: expense.payment_method ?? expense.paymentMethod ?? null,
     vendor: expense.vendor ?? null,
     receiptUrl: expense.receipt_url ?? expense.receiptUrl ?? null,
-    notes: expense.notes ?? null
+    notes: expense.notes ?? null,
   };
 }
 
@@ -226,7 +230,18 @@ async function loadExpenses() {
 
     expensesData = expenses
       .map(normalizeExpense)
-      .filter(expense => expense !== null);
+      .filter((expense) => expense !== null);
+
+    if (expensesData.length > 0) {
+      const hasSelection = expensesData.some(
+        (expense) => String(expense.id) === String(selectedExpenseId)
+      );
+      if (!hasSelection) {
+        selectedExpenseId = String(expensesData[0].id);
+      }
+    } else {
+      selectedExpenseId = null;
+    }
 
     currentPage = 1;
     renderExpensesTable();
@@ -274,6 +289,7 @@ function renderExpensesTable() {
   updateFilterCount(total, start, end);
 
   if (!filteredExpenses.length) {
+    selectedExpenseId = null;
     tbody.innerHTML = `
       <tr>
         <td colspan="8" class="empty-state">
@@ -287,6 +303,24 @@ function renderExpensesTable() {
 
   const pageItems = filteredExpenses.slice(start - 1, start - 1 + PAGE_SIZE);
 
+  if (filteredExpenses.length) {
+    const selectionExists = filteredExpenses.some(
+      (expense) => String(expense.id) === String(selectedExpenseId)
+    );
+    if (!selectionExists) {
+      selectedExpenseId = String(filteredExpenses[0].id);
+    }
+  }
+
+  if (pageItems.length) {
+    const pageSelectionExists = pageItems.some(
+      (expense) => String(expense.id) === String(selectedExpenseId)
+    );
+    if (!pageSelectionExists) {
+      selectedExpenseId = String(pageItems[0].id);
+    }
+  }
+
   tbody.innerHTML = pageItems
     .map((expense) => {
       const categoryLabel =
@@ -297,8 +331,11 @@ function renderExpensesTable() {
         PAYMENT_METHODS[expense.paymentMethod] ||
         expense.paymentMethod ||
         "N/A";
+      const isSelected = String(expense.id) === String(selectedExpenseId);
       return `
-      <tr class="expenses-table__row" data-expense-id="${expense.id}">
+      <tr class="expenses-table__row${
+        isSelected ? " is-selected expenses-table__row--highlight" : ""
+      }" data-expense-id="${expense.id}">
         <td>
           <time datetime="${escapeHtml(expense.expenseDate || "")}">
             ${formatDate(expense.expenseDate)}
@@ -344,18 +381,37 @@ function renderExpensesTable() {
           </span>
         </td>
         <td class="expenses-table__client">${escapeHtml(paymentLabel)}</td>
-        <td class="expenses-table__client">${expense.projectName ? escapeHtml(expense.projectName) : '-'}</td>
+        <td class="expenses-table__client">${
+          expense.projectName ? escapeHtml(expense.projectName) : "-"
+        }</td>
         <td>
           <div class="expenses-table__actions">
-            <button type="button" class="table-action" title="Ver gasto" onclick="viewExpense('${expense.id}')">👁️</button>
-            <button type="button" class="table-action" title="Editar gasto" onclick="openExpenseModal('edit', '${expense.id}')">✏️</button>
-            <button type="button" class="table-action" title="Eliminar gasto" onclick="confirmDeleteExpense('${expense.id}')">🗑️</button>
+            <button type="button" class="table-action" title="Ver gasto" onclick="viewExpense('${
+              expense.id
+            }')">👁️</button>
+            <button type="button" class="table-action" title="Editar gasto" onclick="openExpenseModal('edit', '${
+              expense.id
+            }')">✏️</button>
+            <button type="button" class="table-action" title="Eliminar gasto" onclick="confirmDeleteExpense('${
+              expense.id
+            }')">🗑️</button>
           </div>
         </td>
       </tr>
     `;
     })
     .join("");
+
+  tbody.querySelectorAll(".expenses-table__row").forEach((row) => {
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("button") || event.target.closest("a")) return;
+      const expenseId = String(row.dataset.expenseId);
+      if (selectedExpenseId !== expenseId) {
+        selectedExpenseId = expenseId;
+        renderExpensesTable();
+      }
+    });
+  });
 
   renderExpensesPagination(totalPages);
 }
@@ -554,22 +610,30 @@ function closeExpenseModal() {
 }
 
 function buildExpenseModalHtml(mode, expense) {
-  const isEdit = mode === 'edit' && expense;
-  const title = isEdit ? 'Editar gasto' : 'Registrar nuevo gasto';
-  const actionLabel = isEdit ? 'Guardar cambios' : 'Crear gasto';
-  const selectedCategory = expense?.category ?? '';
-  const paymentMethodValue = expense?.payment_method ?? expense?.paymentMethod ?? '';
-  const amountValue = expense ? sanitizeNumber(expense.amount, 0) : '';
-  const vatPercentageValue = expense ? sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 21) : 21;
-  const vatAmountValue = expense ? sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0) : 0;
+  const isEdit = mode === "edit" && expense;
+  const title = isEdit ? "Editar gasto" : "Registrar nuevo gasto";
+  const actionLabel = isEdit ? "Guardar cambios" : "Crear gasto";
+  const selectedCategory = expense?.category ?? "";
+  const paymentMethodValue =
+    expense?.payment_method ?? expense?.paymentMethod ?? "";
+  const amountValue = expense ? sanitizeNumber(expense.amount, 0) : "";
+  const vatPercentageValue = expense
+    ? sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 21)
+    : 21;
+  const vatAmountValue = expense
+    ? sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0)
+    : 0;
   const deductiblePercentageValue = expense
-    ? sanitizeNumber(expense.deductible_percentage ?? expense.deductiblePercentage, 100)
+    ? sanitizeNumber(
+        expense.deductible_percentage ?? expense.deductiblePercentage,
+        100
+      )
     : 100;
   const isDeductibleChecked = expense
-    ? (expense.is_deductible ?? expense.isDeductible ?? true)
-      ? 'checked'
-      : ''
-    : 'checked';
+    ? expense.is_deductible ?? expense.isDeductible ?? true
+      ? "checked"
+      : ""
+    : "checked";
 
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
@@ -591,24 +655,38 @@ function buildExpenseModalHtml(mode, expense) {
             <div class="modal-form__grid modal-form__grid--three">
               <label class="form-field">
                 <span>Fecha del gasto *</span>
-                <input type="date" id="expense-date" name="expenseDate" value="${formatDateForInput(expense?.expense_date)}" required />
+                <input type="date" id="expense-date" name="expenseDate" value="${formatDateForInput(
+                  expense?.expense_date
+                )}" required />
               </label>
               <label class="form-field">
                 <span>Categoría *</span>
                 <select id="expense-category" name="category" required>
-                  <option value="" disabled ${!expense ? 'selected' : ''}>Selecciona una categoría</option>
-                  ${Object.entries(EXPENSE_CATEGORIES).map(([key, label]) => `
-                    <option value="${key}" ${selectedCategory === key ? 'selected' : ''}>${label}</option>
-                  `).join('')}
+                  <option value="" disabled ${
+                    !expense ? "selected" : ""
+                  }>Selecciona una categoría</option>
+                  ${Object.entries(EXPENSE_CATEGORIES)
+                    .map(
+                      ([key, label]) => `
+                    <option value="${key}" ${
+                        selectedCategory === key ? "selected" : ""
+                      }>${label}</option>
+                  `
+                    )
+                    .join("")}
                 </select>
               </label>
               <label class="form-field">
                 <span>Subcategoría</span>
-                <input type="text" id="expense-subcategory" name="subcategory" placeholder="Opcional" value="${escapeHtml(expense?.subcategory || '')}" />
+                <input type="text" id="expense-subcategory" name="subcategory" placeholder="Opcional" value="${escapeHtml(
+                  expense?.subcategory || ""
+                )}" />
               </label>
               <label class="form-field modal-form__field--span-3">
                 <span>Descripción *</span>
-                <input type="text" id="expense-description" name="description" placeholder="Describe el gasto" value="${escapeHtml(expense?.description || '')}" required maxlength="200" />
+                <input type="text" id="expense-description" name="description" placeholder="Describe el gasto" value="${escapeHtml(
+                  expense?.description || ""
+                )}" required maxlength="200" />
               </label>
             </div>
 
@@ -632,15 +710,25 @@ function buildExpenseModalHtml(mode, expense) {
               <label class="form-field">
                 <span>Método de pago</span>
                 <select id="expense-payment-method" name="paymentMethod">
-                  <option value="" disabled ${!paymentMethodValue ? 'selected' : ''}>Selecciona un método</option>
-                  ${Object.entries(PAYMENT_METHODS).map(([key, label]) => `
-                    <option value="${key}" ${paymentMethodValue === key ? 'selected' : ''}>${label}</option>
-                  `).join('')}
+                  <option value="" disabled ${
+                    !paymentMethodValue ? "selected" : ""
+                  }>Selecciona un método</option>
+                  ${Object.entries(PAYMENT_METHODS)
+                    .map(
+                      ([key, label]) => `
+                    <option value="${key}" ${
+                        paymentMethodValue === key ? "selected" : ""
+                      }>${label}</option>
+                  `
+                    )
+                    .join("")}
                 </select>
               </label>
               <label class="form-field">
                 <span>Proveedor</span>
-                <input type="text" id="expense-vendor" name="vendor" placeholder="Nombre del proveedor" value="${escapeHtml(expense?.vendor || '')}" />
+                <input type="text" id="expense-vendor" name="vendor" placeholder="Nombre del proveedor" value="${escapeHtml(
+                  expense?.vendor || ""
+                )}" />
               </label>
             </div>
 
@@ -664,11 +752,15 @@ function buildExpenseModalHtml(mode, expense) {
             <div class="modal-form__grid modal-form__grid--three">
               <label class="form-field">
                 <span>Enlace al justificante</span>
-                <input type="url" id="expense-receipt-url" name="receiptUrl" placeholder="https://..." value="${escapeHtml(expense?.receipt_url || expense?.receiptUrl || '')}" />
+                <input type="url" id="expense-receipt-url" name="receiptUrl" placeholder="https://..." value="${escapeHtml(
+                  expense?.receipt_url || expense?.receiptUrl || ""
+                )}" />
               </label>
               <label class="form-field modal-form__field--span-2">
                 <span>Notas</span>
-                <textarea id="expense-notes" name="notes" rows="3" placeholder="Información adicional">${escapeHtml(expense?.notes || '')}</textarea>
+                <textarea id="expense-notes" name="notes" rows="3" placeholder="Información adicional">${escapeHtml(
+                  expense?.notes || ""
+                )}</textarea>
               </label>
             </div>
           </div>
@@ -722,34 +814,37 @@ async function handleExpenseSubmit(form) {
   const mode = form.dataset.mode || "create";
 
   const payload = {
-    expenseDate: formData.get('expenseDate'),
-    category: formData.get('category'),
-    description: (formData.get('description') || '').trim(),
-    amount: sanitizeNumber(formData.get('amount'), 0),
-    vatPercentage: sanitizeNumber(formData.get('vatPercentage'), 0),
-    vatAmount: sanitizeNumber(formData.get('vatAmount'), 0),
-    isDeductible: formData.get('isDeductible') === 'on'
+    expenseDate: formData.get("expenseDate"),
+    category: formData.get("category"),
+    description: (formData.get("description") || "").trim(),
+    amount: sanitizeNumber(formData.get("amount"), 0),
+    vatPercentage: sanitizeNumber(formData.get("vatPercentage"), 0),
+    vatAmount: sanitizeNumber(formData.get("vatAmount"), 0),
+    isDeductible: formData.get("isDeductible") === "on",
   };
 
   if (payload.isDeductible) {
-    payload.deductiblePercentage = sanitizeNumber(formData.get('deductiblePercentage'), 0);
+    payload.deductiblePercentage = sanitizeNumber(
+      formData.get("deductiblePercentage"),
+      0
+    );
   } else {
     payload.deductiblePercentage = 0;
   }
 
-  const subcategory = (formData.get('subcategory') || '').trim();
+  const subcategory = (formData.get("subcategory") || "").trim();
   if (subcategory) payload.subcategory = subcategory;
 
-  const paymentMethod = formData.get('paymentMethod');
+  const paymentMethod = formData.get("paymentMethod");
   if (paymentMethod) payload.paymentMethod = paymentMethod;
 
-  const vendor = (formData.get('vendor') || '').trim();
+  const vendor = (formData.get("vendor") || "").trim();
   if (vendor) payload.vendor = vendor;
 
-  const receiptUrl = (formData.get('receiptUrl') || '').trim();
+  const receiptUrl = (formData.get("receiptUrl") || "").trim();
   if (receiptUrl) payload.receiptUrl = receiptUrl;
 
-  const notes = (formData.get('notes') || '').trim();
+  const notes = (formData.get("notes") || "").trim();
   if (notes) payload.notes = notes;
 
   if (!payload.expenseDate) {
@@ -768,45 +863,56 @@ async function handleExpenseSubmit(form) {
   }
 
   if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
-    showNotification('Introduce un importe mayor que 0', 'warning');
+    showNotification("Introduce un importe mayor que 0", "warning");
     return;
   }
 
   try {
-    if (mode === 'edit' && activeExpenseId) {
-      const updatedExpense = await window.api.updateExpense(activeExpenseId, payload);
-      const normalized = normalizeExpense(updatedExpense?.expense ?? updatedExpense);
+    if (mode === "edit" && activeExpenseId) {
+      const updatedExpense = await window.api.updateExpense(
+        activeExpenseId,
+        payload
+      );
+      const normalized = normalizeExpense(
+        updatedExpense?.expense ?? updatedExpense
+      );
       if (normalized) {
-        expensesData = expensesData
-          .filter(expense => expense.id !== normalized.id);
+        expensesData = expensesData.filter(
+          (expense) => expense.id !== normalized.id
+        );
         expensesData.unshift(normalized);
         expensesData.sort((a, b) => {
           const dateA = new Date(a.expenseDate || 0).getTime();
           const dateB = new Date(b.expenseDate || 0).getTime();
           return dateB - dateA;
         });
+        selectedExpenseId = String(normalized.id);
         currentPage = 1;
         renderExpensesTable();
         updateSummaryCards();
       }
-      showNotification('Gasto actualizado correctamente', 'success');
+      showNotification("Gasto actualizado correctamente", "success");
     } else {
       const createdExpense = await window.api.createExpense(payload);
-      const normalized = normalizeExpense(createdExpense?.expense ?? createdExpense);
+      const normalized = normalizeExpense(
+        createdExpense?.expense ?? createdExpense
+      );
       if (normalized) {
-        expensesData = expensesData
-          .filter(expense => expense.id !== normalized.id);
+        expensesData = expensesData.filter(
+          (expense) => expense.id !== normalized.id
+        );
         expensesData.unshift(normalized);
         expensesData.sort((a, b) => {
           const dateA = new Date(a.expenseDate || 0).getTime();
           const dateB = new Date(b.expenseDate || 0).getTime();
           return dateB - dateA;
         });
+        selectedExpenseId = String(normalized.id);
         currentPage = 1;
         renderExpensesTable();
         updateSummaryCards();
       }
-      showNotification('Gasto registrado correctamente', 'success');
+      showNotification("Gasto registrado correctamente", "success");
     }
 
     closeExpenseModal();
@@ -827,21 +933,31 @@ async function viewExpense(expenseId) {
     }
 
     const formattedDate = formatDate(expense.expense_date);
-    const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || 'Sin categoría';
-    const subcategoryLabel = expense.subcategory || '-';
-    const paymentMethodLabel = PAYMENT_METHODS[expense.payment_method] || expense.payment_method || '-';
-    const projectLabel = expense.project_name || '-';
-    const vatPercentageDisplay = sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 0);
+    const categoryLabel =
+      EXPENSE_CATEGORIES[expense.category] ||
+      expense.category ||
+      "Sin categoría";
+    const subcategoryLabel = expense.subcategory || "-";
+    const paymentMethodLabel =
+      PAYMENT_METHODS[expense.payment_method] || expense.payment_method || "-";
+    const projectLabel = expense.project_name || "-";
+    const vatPercentageDisplay = sanitizeNumber(
+      expense.vat_percentage ?? expense.vatPercentage,
+      0
+    );
     const deductiblePercentageDisplay = sanitizeNumber(
       expense.deductible_percentage ?? expense.deductiblePercentage,
       0
     );
-    const isDeductibleText = (expense.is_deductible ?? expense.isDeductible ?? true)
-      ? `Sí, ${deductiblePercentageDisplay}%`
-      : 'No deducible';
+    const isDeductibleText =
+      expense.is_deductible ?? expense.isDeductible ?? true
+        ? `Sí, ${deductiblePercentageDisplay}%`
+        : "No deducible";
     const receiptLink = expense.receipt_url
-      ? `<a href="${escapeHtml(expense.receipt_url)}" target="_blank" rel="noopener">Abrir justificante</a>`
-      : 'No adjuntado';
+      ? `<a href="${escapeHtml(
+          expense.receipt_url
+        )}" target="_blank" rel="noopener">Abrir justificante</a>`
+      : "No adjuntado";
 
     const modalHtml = `
       <div class="modal is-open" id="expense-view-modal" role="dialog" aria-modal="true">
@@ -850,7 +966,9 @@ async function viewExpense(expenseId) {
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Detalle del gasto</h2>
-              <p class="modal__subtitle">${formattedDate} - ${escapeHtml(categoryLabel)}</p>
+              <p class="modal__subtitle">${formattedDate} - ${escapeHtml(
+      categoryLabel
+    )}</p>
             </div>
             <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
           </header>
@@ -858,7 +976,7 @@ async function viewExpense(expenseId) {
             <dl class="detail-list">
               <div class="detail-list__item detail-list__item--full">
                 <dt>Descripción</dt>
-                <dd>${escapeHtml(expense.description || '-')}</dd>
+                <dd>${escapeHtml(expense.description || "-")}</dd>
               </div>
               <div class="detail-list__item">
                 <dt>Fecha del gasto</dt>
@@ -878,7 +996,7 @@ async function viewExpense(expenseId) {
               </div>
               <div class="detail-list__item">
                 <dt>Proveedor</dt>
-                <dd>${escapeHtml(expense.vendor || '-')}</dd>
+                <dd>${escapeHtml(expense.vendor || "-")}</dd>
               </div>
               <div class="detail-list__item">
                 <dt>Importe base</dt>
@@ -886,7 +1004,9 @@ async function viewExpense(expenseId) {
               </div>
               <div class="detail-list__item">
                 <dt>IVA</dt>
-                <dd>${formatCurrency(expense.vat_amount)} (${vatPercentageDisplay}%)</dd>
+                <dd>${formatCurrency(
+                  expense.vat_amount
+                )} (${vatPercentageDisplay}%)</dd>
               </div>
               <div class="detail-list__item">
                 <dt>Tratamiento fiscal</dt>
@@ -902,13 +1022,15 @@ async function viewExpense(expenseId) {
               </div>
               <div class="detail-list__item detail-list__item--full">
                 <dt>Notas</dt>
-                <dd>${escapeHtml(expense.notes || '-')}</dd>
+                <dd>${escapeHtml(expense.notes || "-")}</dd>
               </div>
             </dl>
           </div>
           <footer class="modal__footer modal-form__footer">
             <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-            <button type="button" class="btn-primary" data-expense-edit="${expense.id}">Editar gasto</button>
+            <button type="button" class="btn-primary" data-expense-edit="${
+              expense.id
+            }">Editar gasto</button>
           </footer>
         </div>
       </div>
@@ -919,11 +1041,15 @@ async function viewExpense(expenseId) {
     modal?.querySelectorAll("[data-modal-close]").forEach((btn) => {
       btn.addEventListener("click", () => modal.remove());
     });
-    modal?.querySelector('.modal__backdrop')?.addEventListener('click', () => modal.remove());
-    modal?.querySelector('[data-expense-edit]')?.addEventListener('click', () => {
-      modal.remove();
-      openExpenseModal('edit', String(expense.id));
-    });
+    modal
+      ?.querySelector(".modal__backdrop")
+      ?.addEventListener("click", () => modal.remove());
+    modal
+      ?.querySelector("[data-expense-edit]")
+      ?.addEventListener("click", () => {
+        modal.remove();
+        openExpenseModal("edit", String(expense.id));
+      });
   } catch (error) {
     console.error("Error mostrando gasto:", error);
     showNotification("No se pudo mostrar el detalle del gasto", "error");
