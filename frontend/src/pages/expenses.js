@@ -720,11 +720,16 @@ async function handleExpenseSubmit(form) {
   try {
     if (mode === 'edit' && activeExpenseId) {
       const updatedExpense = await window.api.updateExpense(activeExpenseId, payload);
-      const normalized = normalizeExpense(updatedExpense);
+      const normalized = normalizeExpense(updatedExpense?.expense ?? updatedExpense);
       if (normalized) {
         expensesData = expensesData
           .filter(expense => expense.id !== normalized.id);
         expensesData.unshift(normalized);
+        expensesData.sort((a, b) => {
+          const dateA = new Date(a.expenseDate || 0).getTime();
+          const dateB = new Date(b.expenseDate || 0).getTime();
+          return dateB - dateA;
+        });
         currentPage = 1;
         renderExpensesTable();
         updateSummaryCards();
@@ -732,11 +737,16 @@ async function handleExpenseSubmit(form) {
       showNotification('Gasto actualizado correctamente', 'success');
     } else {
       const createdExpense = await window.api.createExpense(payload);
-      const normalized = normalizeExpense(createdExpense);
+      const normalized = normalizeExpense(createdExpense?.expense ?? createdExpense);
       if (normalized) {
         expensesData = expensesData
           .filter(expense => expense.id !== normalized.id);
         expensesData.unshift(normalized);
+        expensesData.sort((a, b) => {
+          const dateA = new Date(a.expenseDate || 0).getTime();
+          const dateB = new Date(b.expenseDate || 0).getTime();
+          return dateB - dateA;
+        });
         currentPage = 1;
         renderExpensesTable();
         updateSummaryCards();
