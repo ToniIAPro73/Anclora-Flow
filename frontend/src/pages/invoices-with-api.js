@@ -1331,86 +1331,93 @@ async function viewInvoice(invoiceId) {
             </div>
             <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
           </header>
-          <div class="modal__body modal-form__body">
-            <section class="modal-section">
-              <h3 class="modal-section__title">Resumen</h3>
-              <dl class="detail-list">
-                <div class="detail-list__item detail-list__item--full">
-                  <dt>Cliente</dt>
-                  <dd>
-                    <strong>${escapeHtml(clientName)}</strong>
-                    ${
-                      clientEmail
-                        ? `<span class="detail-list__meta">${escapeHtml(
-                            clientEmail
-                          )}</span>`
-                        : ""
-                    }
-                  </dd>
+          <div class="modal__body modal-form__body modal-form__body--split modal-form__body--view">
+            <div class="modal-form__column modal-form__column--main">
+              <section class="modal-section">
+                <h3 class="modal-section__title">Resumen</h3>
+                <dl class="detail-list">
+                  <div class="detail-list__item detail-list__item--full">
+                    <dt>Cliente</dt>
+                    <dd>
+                      <strong>${escapeHtml(clientName)}</strong>
+                      ${
+                        clientEmail
+                          ? `<span class="detail-list__meta">${escapeHtml(
+                              clientEmail
+                            )}</span>`
+                          : ""
+                      }
+                    </dd>
+                  </div>
+                  <div class="detail-list__item">
+                    <dt>Número de factura</dt>
+                    <dd>${escapeHtml(invoice.invoice_number || "—")}</dd>
+                  </div>
+                  <div class="detail-list__item">
+                    <dt>Importe total</dt>
+                    <dd>${formatCurrency(total)}</dd>
+                  </div>
+                  <div class="detail-list__item">
+                    <dt>Estado</dt>
+                    <dd>
+                      <span class="status-pill status-pill--${
+                        statusInfo.tone || "draft"
+                      }">
+                        ${statusInfo.label}
+                      </span>
+                    </dd>
+                  </div>
+                  <div class="detail-list__item">
+                    <dt>Verifactu</dt>
+                    <dd>
+                      <span class="status-pill status-pill--${
+                        verifactuInfo.tone
+                      }">
+                        ${verifactuInfo.icon} ${verifactuInfo.label}
+                      </span>
+                    </dd>
+                  </div>
+                  <div class="detail-list__item">
+                    <dt>Fecha de emisión</dt>
+                    <dd>${formatDate(invoice.issue_date)}</dd>
+                  </div>
+                  <div class="detail-list__item">
+                    <dt>Fecha de vencimiento</dt>
+                    <dd>${formatDate(invoice.due_date)}</dd>
+                  </div>
+                  ${
+                    invoice.payment_date
+                      ? `
+                  <div class="detail-list__item">
+                    <dt>Fecha de cobro</dt>
+                    <dd>${formatDate(invoice.payment_date)}</dd>
+                  </div>
+                `
+                      : ""
+                  }
+                </dl>
+              </section>
+              ${notesSection}
+            </div>
+            <div class="modal-form__column modal-form__column--side">
+              <section class="modal-section modal-section--card">
+                <div class="modal-section__header">
+                  <h3 class="modal-section__title">Conceptos facturados</h3>
+                  <p class="modal-section__description">${
+                    normalizedItems.length
+                      ? "Navega por cada línea para revisar cantidades e importes."
+                      : "Esta factura no tiene conceptos registrados."
+                  }</p>
                 </div>
-                <div class="detail-list__item">
-                  <dt>Número de factura</dt>
-                  <dd>${escapeHtml(invoice.invoice_number || "—")}</dd>
+                <div class="modal-tabs" data-view-tabs></div>
+              </section>
+              <section class="modal-section modal-section--card modal-section--totals">
+                <div class="modal-section__header">
+                  <h3 class="modal-section__title">Resumen económico</h3>
                 </div>
-                <div class="detail-list__item">
-                  <dt>Importe total</dt>
-                  <dd>${formatCurrency(total)}</dd>
-                </div>
-                <div class="detail-list__item">
-                  <dt>Estado</dt>
-                  <dd>
-                    <span class="status-pill status-pill--${
-                      statusInfo.tone || "draft"
-                    }">
-                      ${statusInfo.label}
-                    </span>
-                  </dd>
-                </div>
-                <div class="detail-list__item">
-                  <dt>Verifactu</dt>
-                  <dd>
-                    <span class="status-pill status-pill--${
-                      verifactuInfo.tone
-                    }">
-                      ${verifactuInfo.icon} ${verifactuInfo.label}
-                    </span>
-                  </dd>
-                </div>
-                <div class="detail-list__item">
-                  <dt>Fecha de emisión</dt>
-                  <dd>${formatDate(invoice.issue_date)}</dd>
-                </div>
-                <div class="detail-list__item">
-                  <dt>Fecha de vencimiento</dt>
-                  <dd>${formatDate(invoice.due_date)}</dd>
-                </div>
-                ${
-                  invoice.payment_date
-                    ? `
-                <div class="detail-list__item">
-                  <dt>Fecha de cobro</dt>
-                  <dd>${formatDate(invoice.payment_date)}</dd>
-                </div>
-              `
-                    : ""
-                }
-              </dl>
-            </section>
-            <section class="modal-section modal-section--card">
-              <div class="modal-section__header">
-                <h3 class="modal-section__title">Conceptos facturados</h3>
-                <p class="modal-section__description">${
-                  normalizedItems.length
-                    ? "Navega por cada línea para revisar cantidades e importes."
-                    : "Esta factura no tiene conceptos registrados."
-                }</p>
-              </div>
-              <div class="modal-tabs" data-view-tabs></div>
-            </section>
-            <section class="modal-section">
-              ${totalsSection}
-            </section>
-            ${notesSection}
+                ${totalsSection}
+              </section>
+            </div>
           </div>
           <footer class="modal__footer modal-form__footer">
             <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
@@ -1477,10 +1484,11 @@ async function editInvoice(invoiceId) {
           <form id="edit-invoice-form" data-invoice-id="${
             invoice.id
           }" class="modal-form" novalidate>
-            <div class="modal__body modal-form__body">
-              ${
-                invoice.verifactu_status === "registered"
-                  ? `
+            <div class="modal__body modal-form__body modal-form__body--split">
+              <div class="modal-form__column modal-form__column--main">
+                ${
+                  invoice.verifactu_status === "registered"
+                    ? `
                 <div class="modal-banner modal-banner--info">
                   <span class="modal-banner__icon">ℹ️</span>
                   <div class="modal-banner__content">
@@ -1489,80 +1497,90 @@ async function editInvoice(invoiceId) {
                   </div>
                 </div>
               `
-                  : ""
-              }
-              <section class="modal-section">
-                <div class="modal-section__header">
-                  <h3 class="modal-section__title">Datos generales</h3>
-                </div>
-                <div class="modal-form__grid modal-form__grid--two">
-                  <label class="form-field">
-                    <span>Estado</span>
-                    <select id="edit-status" name="status">
-                      <option value="draft" ${
-                        invoice.status === "draft" ? "selected" : ""
-                      }>Borrador</option>
-                      <option value="pending" ${
-                        invoice.status === "pending" ? "selected" : ""
-                      }>Pendiente</option>
-                      <option value="sent" ${
-                        invoice.status === "sent" ? "selected" : ""
-                      }>Enviada</option>
-                      <option value="paid" ${
-                        invoice.status === "paid" ? "selected" : ""
-                      }>Cobrada</option>
-                      <option value="overdue" ${
-                        invoice.status === "overdue" ? "selected" : ""
-                      }>Vencida</option>
-                    </select>
+                    : ""
+                }
+                <section class="modal-section">
+                  <div class="modal-section__header">
+                    <h3 class="modal-section__title">Datos generales</h3>
+                  </div>
+                  <div class="modal-form__grid modal-form__grid--two">
+                    <label class="form-field">
+                      <span>Estado</span>
+                      <select id="edit-status" name="status">
+                        <option value="draft" ${
+                          invoice.status === "draft" ? "selected" : ""
+                        }>Borrador</option>
+                        <option value="pending" ${
+                          invoice.status === "pending" ? "selected" : ""
+                        }>Pendiente</option>
+                        <option value="sent" ${
+                          invoice.status === "sent" ? "selected" : ""
+                        }>Enviada</option>
+                        <option value="paid" ${
+                          invoice.status === "paid" ? "selected" : ""
+                        }>Cobrada</option>
+                        <option value="overdue" ${
+                          invoice.status === "overdue" ? "selected" : ""
+                        }>Vencida</option>
+                      </select>
+                    </label>
+                    <label class="form-field">
+                      <span>Fecha de emisión *</span>
+                      <input type="date" id="edit-issue-date" name="issue_date" value="${
+                        issueDateValue || ""
+                      }" required />
+                    </label>
+                    <label class="form-field">
+                      <span>Fecha de vencimiento *</span>
+                      <input type="date" id="edit-due-date" name="due_date" value="${
+                        dueDateValue || ""
+                      }" required />
+                    </label>
+                    <label class="form-field" id="payment-date-container"${
+                      invoice.status === "paid" ? "" : " hidden"
+                    }>
+                      <span>Fecha de pago</span>
+                      <input type="date" id="edit-payment-date" name="payment_date" value="${
+                        paymentDateValue || ""
+                      }" />
+                    </label>
+                  </div>
+                </section>
+                <section class="modal-section">
+                  <label class="form-field modal-form__field--span-2">
+                    <span>Notas</span>
+                    <textarea id="edit-notes" name="notes" rows="3" placeholder="Observaciones">${escapeHtml(
+                      invoice.notes || ""
+                    )}</textarea>
                   </label>
-                  <label class="form-field">
-                    <span>Fecha de emisión *</span>
-                    <input type="date" id="edit-issue-date" name="issue_date" value="${
-                      issueDateValue || ""
-                    }" required />
-                  </label>
-                  <label class="form-field">
-                    <span>Fecha de vencimiento *</span>
-                    <input type="date" id="edit-due-date" name="due_date" value="${
-                      dueDateValue || ""
-                    }" required />
-                  </label>
-                  <label class="form-field" id="payment-date-container"${
-                    invoice.status === "paid" ? "" : " hidden"
-                  }>
-                    <span>Fecha de pago</span>
-                    <input type="date" id="edit-payment-date" name="payment_date" value="${
-                      paymentDateValue || ""
-                    }" />
-                  </label>
-                </div>
-                <label class="form-field modal-form__field--span-2">
-                  <span>Notas</span>
-                  <textarea id="edit-notes" name="notes" rows="4" placeholder="Observaciones">${escapeHtml(
-                    invoice.notes || ""
-                  )}</textarea>
-                </label>
-              </section>
-              <div id="edit-lock-message" class="modal-banner"${
-                invoice.status === "draft" ? " hidden" : ""
-              }>
-                <span class="modal-banner__icon">🔒</span>
-                <div class="modal-banner__content">
-                  <strong>Importes bloqueados</strong>
-                  <p>Para editar conceptos e importes cambia el estado a Borrador.</p>
-                </div>
-              </div>
-              <section class="modal-section modal-section--card">
-                <div class="modal-section__header">
-                  <h3 class="modal-section__title">Conceptos facturados</h3>
-                  <div class="modal-section__actions">
-                    <button type="button" class="btn-secondary" id="add-edit-invoice-item">Añadir línea</button>
+                </section>
+                <div id="edit-lock-message" class="modal-banner${
+                  invoice.status === "draft" ? " hidden" : ""
+                }">
+                  <span class="modal-banner__icon">🔒</span>
+                  <div class="modal-banner__content">
+                    <strong>Importes bloqueados</strong>
+                    <p>Para editar conceptos e importes cambia el estado a Borrador.</p>
                   </div>
                 </div>
-                <div id="edit-invoice-items"></div>
-                <div id="edit-invoice-totals"></div>
-              </section>
+              </div>
+              <div class="modal-form__column modal-form__column--side">
+                <section class="modal-section modal-section--card">
+                  <div class="modal-section__header">
+                    <h3 class="modal-section__title">Conceptos facturados</h3>
+                    <div class="modal-section__actions">
+                      <button type="button" class="btn-secondary" id="add-edit-invoice-item">Añadir línea</button>
+                    </div>
+                  </div>
+                  <div id="edit-invoice-items"></div>
+                </section>
+                <section class="modal-section modal-section--card modal-section--totals">
+                  <div class="modal-section__header">
+                    <h3 class="modal-section__title">Totales estimados</h3>
+                  </div>
+                  <div id="edit-invoice-totals"></div>
+                </section>
+              </div>
             </div>
             <footer class="modal__footer modal-form__footer">
               <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
@@ -1673,76 +1691,87 @@ async function openNewInvoiceModal() {
             <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
           </header>
           <form id="new-invoice-form" class="modal-form" novalidate>
-            <div class="modal__body modal-form__body">
-              <section class="modal-section">
-                <div class="modal-section__header">
-                  <h3 class="modal-section__title">Datos principales</h3>
-                </div>
-                <div class="modal-form__grid modal-form__grid--two">
-                  <label class="form-field">
-                    <span>Número de factura *</span>
-                    <input type="text" id="new-invoice-number" name="invoice_number" placeholder="EJ: 2024-001" required />
-                  </label>
-                  <label class="form-field">
-                    <span>Estado</span>
-                    <select id="new-invoice-status" name="status">
-                      <option value="draft" selected>Borrador</option>
-                      <option value="pending">Pendiente</option>
-                      <option value="sent">Enviada</option>
-                      <option value="paid">Cobrada</option>
-                      <option value="overdue">Vencida</option>
-                    </select>
-                  </label>
-                  <label class="form-field">
-                    <span>Fecha de emisión *</span>
-                    <input type="date" id="new-invoice-issue-date" name="issue_date" value="${today}" required />
-                  </label>
-                  <label class="form-field">
-                    <span>Fecha de vencimiento *</span>
-                    <input type="date" id="new-invoice-due-date" name="due_date" value="${dueDefaultDate}" required />
-                  </label>
-                  <label class="form-field" id="new-payment-date-container" hidden>
-                    <span>Fecha de pago</span>
-                    <input type="date" id="new-payment-date" name="payment_date" />
-                  </label>
-                  <label class="form-field">
-                    <span>Cliente</span>
-                    <select id="new-invoice-client" name="client_id">
-                      <option value="">Sin cliente asignado</option>
-                      ${clients
-                        .map(
-                          (client) =>
-                            `<option value="${client.id}">${escapeHtml(
-                              client.name ||
-                                client.business_name ||
-                                "Cliente sin nombre"
-                            )}</option>`
-                        )
-                        .join("")}
-                    </select>
-                  </label>
-                </div>
-                <label class="form-field modal-form__field--span-2">
-                  <span>Notas</span>
-                  <textarea id="new-invoice-notes" name="notes" rows="4" placeholder="Observaciones internas o para el cliente"></textarea>
-                </label>
-              </section>
-              <section class="modal-section modal-section--card">
-                <div class="modal-section__header">
-                  <h3 class="modal-section__title">Conceptos facturados</h3>
-                  <div class="modal-section__actions">
-                    <button type="button" class="btn-secondary" id="add-new-invoice-item">Añadir línea</button>
+            <div class="modal__body modal-form__body modal-form__body--split">
+              <div class="modal-form__column modal-form__column--main">
+                <section class="modal-section">
+                  <div class="modal-section__header">
+                    <h3 class="modal-section__title">Datos principales</h3>
                   </div>
-                </div>
-                <div id="new-invoice-items"></div>
-                <div id="new-invoice-totals"></div>
-              </section>
+                  <div class="modal-form__grid modal-form__grid--two">
+                    <label class="form-field">
+                      <span>Número de factura *</span>
+                      <input type="text" id="new-invoice-number" name="invoice_number" placeholder="EJ: 2024-001" required />
+                    </label>
+                    <label class="form-field">
+                      <span>Estado</span>
+                      <select id="new-invoice-status" name="status">
+                        <option value="draft" selected>Borrador</option>
+                        <option value="pending">Pendiente</option>
+                        <option value="sent">Enviada</option>
+                        <option value="paid">Cobrada</option>
+                        <option value="overdue">Vencida</option>
+                      </select>
+                    </label>
+                    <label class="form-field">
+                      <span>Fecha de emisión *</span>
+                      <input type="date" id="new-invoice-issue-date" name="issue_date" value="${today}" required />
+                    </label>
+                    <label class="form-field">
+                      <span>Fecha de vencimiento *</span>
+                      <input type="date" id="new-invoice-due-date" name="due_date" value="${dueDefaultDate}" required />
+                    </label>
+                    <label class="form-field" id="new-payment-date-container" hidden>
+                      <span>Fecha de pago</span>
+                      <input type="date" id="new-payment-date" name="payment_date" />
+                    </label>
+                    <label class="form-field">
+                      <span>Cliente</span>
+                      <select id="new-invoice-client" name="client_id">
+                        <option value="">Sin cliente asignado</option>
+                        ${clients
+                          .map(
+                            (client) =>
+                              `<option value="${client.id}">${escapeHtml(
+                                client.name ||
+                                  client.business_name ||
+                                  "Cliente sin nombre"
+                              )}</option>`
+                          )
+                          .join("")}
+                      </select>
+                    </label>
+                  </div>
+                </section>
+                <section class="modal-section">
+                  <label class="form-field modal-form__field--span-2">
+                    <span>Notas</span>
+                    <textarea id="new-invoice-notes" name="notes" rows="3" placeholder="Observaciones internas o para el cliente"></textarea>
+                  </label>
+                </section>
+              </div>
+              <div class="modal-form__column modal-form__column--side">
+                <section class="modal-section modal-section--card">
+                  <div class="modal-section__header">
+                    <h3 class="modal-section__title">Conceptos facturados</h3>
+                    <div class="modal-section__actions">
+                      <button type="button" class="btn-secondary" id="add-new-invoice-item">Añadir línea</button>
+                    </div>
+                  </div>
+                  <div id="new-invoice-items"></div>
+                </section>
+                <section class="modal-section modal-section--card modal-section--totals">
+                  <div class="modal-section__header">
+                    <h3 class="modal-section__title">Totales estimados</h3>
+                  </div>
+                  <div id="new-invoice-totals"></div>
+                </section>
+              </div>
             </div>
-            <footer class="modal__footer modal-form__footer">
-              <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
-              <button type="submit" class="btn-primary">Crear factura</button>
-            </footer>
-          </form>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+            <button type="submit" class="btn-primary">Crear factura</button>
+          </footer>
+        </form>
         </div>
       </div>
     `;

@@ -140,6 +140,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 - Añade `modal-section--card` cuando la sección requiera fondo propio (conceptos facturados, notas, adjuntos).
 - Usa `modal-section__header` para alinear títulos y acciones contextuales (`modal-section__actions`).
 - Mantén el cuerpo del formulario dentro de `modal__body modal-form__body` para que el `flex` gestione el alto.
+- En modales con mucha densidad (crear/editar factura) activa el modo dividido con `modal-form__body--split` y distribuye el contenido en dos columnas (`modal-form__column--main` y `modal-form__column--side`) para aprovechar el ancho sin introducir scroll.
 
 ### 2.6 Tablas y Totales Dentro del Modal
 
