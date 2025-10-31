@@ -351,8 +351,10 @@ function renderItemsEditor(editorKey) {
 
   container.innerHTML = `
     <div class="modal-tabs">
-      <div class="modal-tabs__nav" role="tablist">
-        ${tabsMarkup}
+      <div class="modal-tabs__bar">
+        <button type="button" class="modal-tabs__scroller" data-action="scroll-tabs" data-direction="prev" aria-label="Línea anterior"${state.activeIndex === 0 ? " disabled" : ""}>‹</button>
+        <div class="modal-tabs__nav" role="tablist">${tabsMarkup}</div>
+        <button type="button" class="modal-tabs__scroller" data-action="scroll-tabs" data-direction="next" aria-label="Línea siguiente"${state.activeIndex === state.items.length - 1 ? " disabled" : ""}>›</button>
       </div>
       <div class="modal-tabs__panel" data-editor-panel data-index="${state.activeIndex}" role="tabpanel">
         ${getItemPanelMarkup(activeItem, state.activeIndex, state.editable)}
@@ -377,8 +379,8 @@ function getItemPanelMarkup(item, index, editable) {
   }
 
   return `
-    <div class="modal-tab__grid modal-form__grid modal-form__grid--two">
-      <label class="form-field modal-form__field--span-2">
+    <div class="modal-tab__grid">
+      <label class="form-field modal-tab__concept">
         <span>Concepto *</span>
         <input
           type="text"
@@ -390,7 +392,7 @@ function getItemPanelMarkup(item, index, editable) {
           placeholder="Servicio o producto"
         />
       </label>
-      <label class="form-field">
+      <label class="form-field modal-tab__field modal-tab__field--sm">
         <span>Unidad</span>
         <input
           type="text"
@@ -401,7 +403,7 @@ function getItemPanelMarkup(item, index, editable) {
           placeholder="unidad"
         />
       </label>
-      <label class="form-field">
+      <label class="form-field modal-tab__field modal-tab__field--xs">
         <span>Cantidad *</span>
         <input
           type="number"
@@ -413,7 +415,7 @@ function getItemPanelMarkup(item, index, editable) {
           ${editable ? "" : "disabled"}
         />
       </label>
-      <label class="form-field">
+      <label class="form-field modal-tab__field modal-tab__field--sm">
         <span>Precio unitario *</span>
         <input
           type="number"
@@ -425,7 +427,7 @@ function getItemPanelMarkup(item, index, editable) {
           ${editable ? "" : "disabled"}
         />
       </label>
-      <label class="form-field">
+      <label class="form-field modal-tab__field modal-tab__field--xs">
         <span>IVA (%)</span>
         <input
           type="number"
@@ -438,7 +440,7 @@ function getItemPanelMarkup(item, index, editable) {
           ${editable ? "" : "disabled"}
         />
       </label>
-      <div class="form-field">
+      <div class="form-field modal-tab__summary">
         <span>Importe de la línea</span>
         <div class="modal-tab__line-total" data-field="line-total">${formatCurrency(
           item.amount
@@ -487,8 +489,12 @@ function renderInvoiceViewTabs(container, items, activeIndex = 0) {
     .join("");
 
   container.innerHTML = `
-    <div class="modal-tabs__nav" role="tablist">
-      ${navMarkup}
+    <div class="modal-tabs__bar">
+      <button type="button" class="modal-tabs__scroller" data-view-scroll="prev" aria-label="Concepto anterior">‹</button>
+      <div class="modal-tabs__nav" role="tablist">
+        ${navMarkup}
+      </div>
+      <button type="button" class="modal-tabs__scroller" data-view-scroll="next" aria-label="Concepto siguiente">›</button>
     </div>
     <div class="modal-tabs__panel" role="tabpanel">
       ${getViewItemPanelMarkup(items[safeIndex])}
@@ -504,6 +510,26 @@ function renderInvoiceViewTabs(container, items, activeIndex = 0) {
         renderInvoiceViewTabs(container, items, next);
       });
     });
+
+  container
+    .querySelectorAll("[data-view-scroll]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const direction = button.dataset.viewScroll === "prev" ? -1 : 1;
+        const next = Math.min(
+          Math.max(safeIndex + direction, 0),
+          items.length - 1
+        );
+        if (next !== safeIndex) {
+          renderInvoiceViewTabs(container, items, next);
+        }
+      });
+    });
+
+  const prevBtn = container.querySelector('[data-view-scroll="prev"]');
+  const nextBtn = container.querySelector('[data-view-scroll="next"]');
+  if (prevBtn) prevBtn.disabled = safeIndex === 0;
+  if (nextBtn) nextBtn.disabled = safeIndex === items.length - 1;
 }
 
 function getViewItemPanelMarkup(item) {
@@ -692,6 +718,20 @@ function handleItemEditorClick(event) {
   if (!state) return;
 
   const action = button.dataset.action;
+
+  if (action === "scroll-tabs") {
+    const direction = button.dataset.direction === "prev" ? -1 : 1;
+    const nextIndex = Math.min(
+      Math.max(state.activeIndex + direction, 0),
+      state.items.length - 1
+    );
+    if (nextIndex !== state.activeIndex) {
+      state.activeIndex = nextIndex;
+      renderItemsEditor(editorKey);
+      updateEditorControlsState(state);
+    }
+    return;
+  }
 
   if (action === "switch-tab") {
     const tabIndex = Number.parseInt(button.dataset.tabIndex, 10);
@@ -1503,8 +1543,8 @@ async function editInvoice(invoiceId) {
                   <div class="modal-section__header">
                     <h3 class="modal-section__title">Datos generales</h3>
                   </div>
-                  <div class="modal-form__grid modal-form__grid--two">
-                    <label class="form-field">
+                  <div class="invoice-modal__row">
+                    <label class="form-field invoice-modal__field invoice-modal__field--sm">
                       <span>Estado</span>
                       <select id="edit-status" name="status">
                         <option value="draft" ${
@@ -1520,23 +1560,25 @@ async function editInvoice(invoiceId) {
                           invoice.status === "paid" ? "selected" : ""
                         }>Cobrada</option>
                         <option value="overdue" ${
-                          invoice.status === "overdue" ? "selected" : ""
-                        }>Vencida</option>
-                      </select>
-                    </label>
-                    <label class="form-field">
+                        invoice.status === "overdue" ? "selected" : ""
+                      }>Vencida</option>
+                    </select>
+                  </label>
+                    <label class="form-field invoice-modal__field invoice-modal__field--xs">
                       <span>Fecha de emisión *</span>
                       <input type="date" id="edit-issue-date" name="issue_date" value="${
                         issueDateValue || ""
                       }" required />
                     </label>
-                    <label class="form-field">
+                    <label class="form-field invoice-modal__field invoice-modal__field--xs">
                       <span>Fecha de vencimiento *</span>
                       <input type="date" id="edit-due-date" name="due_date" value="${
                         dueDateValue || ""
                       }" required />
                     </label>
-                    <label class="form-field" id="payment-date-container"${
+                  </div>
+                  <div class="invoice-modal__row">
+                    <label class="form-field invoice-modal__field invoice-modal__field--md" id="payment-date-container"${
                       invoice.status === "paid" ? "" : " hidden"
                     }>
                       <span>Fecha de pago</span>
@@ -1544,15 +1586,13 @@ async function editInvoice(invoiceId) {
                         paymentDateValue || ""
                       }" />
                     </label>
+                    <label class="form-field invoice-modal__field invoice-modal__field--lg">
+                      <span>Notas</span>
+                      <textarea id="edit-notes" name="notes" rows="3" placeholder="Observaciones">${escapeHtml(
+                        invoice.notes || ""
+                      )}</textarea>
+                    </label>
                   </div>
-                </section>
-                <section class="modal-section">
-                  <label class="form-field modal-form__field--span-2">
-                    <span>Notas</span>
-                    <textarea id="edit-notes" name="notes" rows="3" placeholder="Observaciones">${escapeHtml(
-                      invoice.notes || ""
-                    )}</textarea>
-                  </label>
                 </section>
                 <div id="edit-lock-message" class="modal-banner${
                   invoice.status === "draft" ? " hidden" : ""
@@ -1697,12 +1737,12 @@ async function openNewInvoiceModal() {
                   <div class="modal-section__header">
                     <h3 class="modal-section__title">Datos principales</h3>
                   </div>
-                  <div class="modal-form__grid modal-form__grid--two">
-                    <label class="form-field">
+                  <div class="invoice-modal__row">
+                    <label class="form-field invoice-modal__field invoice-modal__field--sm">
                       <span>Número de factura *</span>
                       <input type="text" id="new-invoice-number" name="invoice_number" placeholder="EJ: 2024-001" required />
                     </label>
-                    <label class="form-field">
+                    <label class="form-field invoice-modal__field invoice-modal__field--xs">
                       <span>Estado</span>
                       <select id="new-invoice-status" name="status">
                         <option value="draft" selected>Borrador</option>
@@ -1712,19 +1752,21 @@ async function openNewInvoiceModal() {
                         <option value="overdue">Vencida</option>
                       </select>
                     </label>
-                    <label class="form-field">
+                    <label class="form-field invoice-modal__field invoice-modal__field--xs">
                       <span>Fecha de emisión *</span>
                       <input type="date" id="new-invoice-issue-date" name="issue_date" value="${today}" required />
                     </label>
-                    <label class="form-field">
+                    <label class="form-field invoice-modal__field invoice-modal__field--xs">
                       <span>Fecha de vencimiento *</span>
                       <input type="date" id="new-invoice-due-date" name="due_date" value="${dueDefaultDate}" required />
                     </label>
-                    <label class="form-field" id="new-payment-date-container" hidden>
+                  </div>
+                  <div class="invoice-modal__row">
+                    <label class="form-field invoice-modal__field invoice-modal__field--md" id="new-payment-date-container" hidden>
                       <span>Fecha de pago</span>
                       <input type="date" id="new-payment-date" name="payment_date" />
                     </label>
-                    <label class="form-field">
+                    <label class="form-field invoice-modal__field invoice-modal__field--md">
                       <span>Cliente</span>
                       <select id="new-invoice-client" name="client_id">
                         <option value="">Sin cliente asignado</option>
@@ -1740,13 +1782,11 @@ async function openNewInvoiceModal() {
                           .join("")}
                       </select>
                     </label>
+                    <label class="form-field invoice-modal__field invoice-modal__field--lg">
+                      <span>Notas</span>
+                      <textarea id="new-invoice-notes" name="notes" rows="3" placeholder="Observaciones internas o para el cliente"></textarea>
+                    </label>
                   </div>
-                </section>
-                <section class="modal-section">
-                  <label class="form-field modal-form__field--span-2">
-                    <span>Notas</span>
-                    <textarea id="new-invoice-notes" name="notes" rows="3" placeholder="Observaciones internas o para el cliente"></textarea>
-                  </label>
                 </section>
               </div>
               <div class="modal-form__column modal-form__column--side">

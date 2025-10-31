@@ -31,6 +31,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 - Espaciado consistente entre campos
 - Sin solapamientos entre elementos
 - Jerarquía visual clara (títulos, secciones, campos)
+- Ajusta el ancho de cada campo al contenido que espera recibir (fechas, números de factura, importes): evita inputs desproporcionados que generen espacios muertos.
 
 ## 2. Estructura del Modal
 

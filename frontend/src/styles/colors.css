@@ -2504,7 +2504,7 @@ table tr[hidden] {
 
 .modal-form__body--split {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.8fr) minmax(320px, 360px);
   gap: 1.75rem;
 }
 
@@ -2534,7 +2534,7 @@ table tr[hidden] {
   gap: 0.75rem;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1320px) {
   .modal-form__body--split {
     grid-template-columns: 1fr;
     gap: 1.5rem;
@@ -2650,10 +2650,23 @@ table tr[hidden] {
   min-height: 0;
 }
 
+.modal-tabs__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.modal-tabs__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .modal-tabs__nav {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.75rem;
+  overflow: hidden;
+  flex: 1;
 }
 
 .modal-tabs__tab {
@@ -2706,6 +2719,31 @@ table tr[hidden] {
   padding: 1.45rem;
   flex: 1;
   min-height: 0;
+}
+
+.modal-tabs__scroller {
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(248, 250, 252, 0.85);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-tabs__scroller:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--primary-700);
+}
+
+.modal-tabs__scroller:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 [data-theme="dark"] .modal-tabs__panel {
@@ -2833,8 +2871,65 @@ table tr[hidden] {
   width: 110px;
 }
 
+/* Invoice modal specific layout */
+
+.invoice-modal__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: flex-end;
+}
+
+.invoice-modal__field {
+  flex: 0 0 auto;
+}
+
+.invoice-modal__field--xs {
+  width: 140px;
+}
+
+.invoice-modal__field--sm {
+  width: 170px;
+}
+
+.invoice-modal__field--md {
+  width: 230px;
+}
+
+.invoice-modal__field--lg {
+  flex: 1 1 280px;
+}
+
+.invoice-modal__field--full {
+  flex: 1 1 100%;
+}
+
 .modal-tab__grid {
-  gap: 1.1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.3fr);
+  gap: 0.75rem 0.85rem;
+  align-items: end;
+}
+
+.modal-tab__concept {
+  grid-column: 1 / span 5;
+}
+
+.modal-tab__field--xs {
+  max-width: 150px;
+}
+
+.modal-tab__field--sm {
+  max-width: 190px;
+}
+
+.modal-tab__field {
+  min-width: 0;
+}
+
+.modal-tab__summary {
+  align-self: end;
+  grid-column: 5 / -1;
 }
 
 .modal-tab__line-total {
@@ -2845,6 +2940,7 @@ table tr[hidden] {
   font-weight: 600;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+  justify-self: end;
 }
 
 [data-theme="dark"] .modal-tab__line-total {
@@ -2856,7 +2952,7 @@ table tr[hidden] {
 .modal-tab__footer {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
 }
 
 .modal-notes {
