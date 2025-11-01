@@ -2581,12 +2581,12 @@ table tr[hidden] {
 
 [data-theme="dark"] .modal-form__footer {
   border-top-color: rgba(148, 163, 184, 0.25);
+}
 
-  .modal-form__separator {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 1rem 0;
-  }
+.modal-form__separator {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 1rem 0;
 }
 
 .modal-form__footer .btn-primary,
