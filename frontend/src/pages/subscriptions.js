@@ -252,6 +252,8 @@ function renderSubscriptionsTable() {
     return;
   }
 
+  const highlightSingle = subscriptionState.subscriptions.length === 1;
+
   tbody.innerHTML = subscriptionState.subscriptions
     .map((sub) => {
       const statusBadge =
@@ -272,7 +274,9 @@ function renderSubscriptionsTable() {
         sub.type === "income" ? "Ingreso recurrente" : "Gasto recurrente";
 
       return `
-        <tr data-subscription-row="${sub.id}">
+        <tr data-subscription-row="${sub.id}" class="subscriptions-table__row${
+        highlightSingle ? " is-selected" : ""
+      }">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(sub.name)}</strong>
@@ -312,9 +316,15 @@ function renderSubscriptionsTable() {
           </td>
           <td>
             <div class="table-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-              <button type="button" class="btn-link" data-subscription-view="${sub.id}">Ver</button>
-              <button type="button" class="btn-link" data-subscription-edit="${sub.id}">Editar</button>
-              <button type="button" class="btn-link" data-subscription-delete="${sub.id}" style="color: var(--danger, #ef4444);">Eliminar</button>
+              <button type="button" class="btn-link" data-subscription-view="${
+                sub.id
+              }">Ver</button>
+              <button type="button" class="btn-link" data-subscription-edit="${
+                sub.id
+              }">Editar</button>
+              <button type="button" class="btn-link" data-subscription-delete="${
+                sub.id
+              }" style="color: var(--danger, #ef4444);">Eliminar</button>
             </div>
           </td>
         </tr>
@@ -427,8 +437,8 @@ function buildSubscriptionFormFields(subscription = {}) {
               subscription.status === "paused" ? "selected" : ""
             }>Pausada</option>
             <option value="cancelled" ${
-            subscription.status === "cancelled" ? "selected" : ""
-          }>Cancelada</option>
+              subscription.status === "cancelled" ? "selected" : ""
+            }>Cancelada</option>
         </select>
       </label>
     </div>
@@ -476,9 +486,7 @@ function buildSubscriptionFormFields(subscription = {}) {
       <label class="form-field">
         <span>Inicio *</span>
         <input type="date" name="startDate" value="${
-          subscription.startDate
-            ? subscription.startDate.split("T")[0]
-            : ""
+          subscription.startDate ? subscription.startDate.split("T")[0] : ""
         }" required />
       </label>
       <label class="form-field">
@@ -527,9 +535,7 @@ function buildSubscriptionDetail(subscription) {
       ? "Anual"
       : "Personalizado";
   const typeLabel =
-    subscription.type === "income"
-      ? "Ingreso recurrente"
-      : "Gasto recurrente";
+    subscription.type === "income" ? "Ingreso recurrente" : "Gasto recurrente";
 
   return `
     <div style="display: grid; gap: 1.25rem;">
@@ -550,11 +556,13 @@ function buildSubscriptionDetail(subscription) {
               ? "warning"
               : "danger"
           }">
-            ${subscription.status === "active"
-              ? "Activa"
-              : subscription.status === "paused"
-              ? "Pausada"
-              : "Cancelada"}
+            ${
+              subscription.status === "active"
+                ? "Activa"
+                : subscription.status === "paused"
+                ? "Pausada"
+                : "Cancelada"
+            }
           </span>
           <span class="badge badge--info">${cycleLabel}</span>
           <span class="badge badge--${
@@ -622,8 +630,8 @@ function openSubscriptionModal(mode, subscriptionId = null) {
   }
 
   if (mode === "view") {
-  const detailHtml = buildSubscriptionDetail(subscription);
-  const modalHtml = `
+    const detailHtml = buildSubscriptionDetail(subscription);
+    const modalHtml = `
     <div class="modal is-open" id="subscription-modal">
       <div class="modal__backdrop" data-modal-close></div>
       <div class="modal__panel" style="width: min(95vw, 640px);">
@@ -636,12 +644,14 @@ function openSubscriptionModal(mode, subscriptionId = null) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
         </header>
-          <div class="modal__body" style="display: grid; gap: 1.5rem;">
+          <div class="modal__body modal-form__body" style="display: grid; gap: 1.5rem;">
             ${detailHtml}
           </div>
         <footer class="modal__footer modal-form__footer">
           <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-          <button type="button" class="btn-primary" data-modal-edit="${subscription?.id}">Editar</button>
+          <button type="button" class="btn-primary" data-modal-edit="${
+            subscription?.id
+          }">Editar</button>
           </footer>
         </div>
       </div>
@@ -664,14 +674,13 @@ function openSubscriptionModal(mode, subscriptionId = null) {
     return;
   }
 
-  const title =
-    mode === "edit" ? "Editar suscripción" : "Nueva suscripción";
+  const title = mode === "edit" ? "Editar suscripción" : "Nueva suscripción";
   const formId = "subscription-form";
   const formFields = buildSubscriptionFormFields(subscription || {});
   const modalHtml = `
     <div class="modal is-open" id="subscription-modal">
       <div class="modal__backdrop" data-modal-close></div>
-      <div class="modal__panel" style="width: min(95vw, 720px);">
+      <div class="modal__panel" style="width: min(95vw, 720px); max-width: 720px; overflow-x: hidden;">
         <header class="modal__head">
           <div>
             <h2 class="modal__title">${title}</h2>
@@ -679,16 +688,19 @@ function openSubscriptionModal(mode, subscriptionId = null) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
         </header>
-        <form class="modal-form" id="${formId}" data-form-type="subscription" data-subscription-id="${subscription?.id || ""}" novalidate>
+        <form class="modal-form" id="${formId}" data-form-type="subscription" data-subscription-id="${
+    subscription?.id || ""
+  }" novalidate>
           <div class="modal__body modal-form__body">
             ${formFields}
           </div>
+          <div class="modal-form__separator"></div>
         </form>
         <footer class="modal__footer modal-form__footer">
           <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
           <button type="submit" form="${formId}" class="btn-primary">${
-            mode === "edit" ? "Guardar cambios" : "Crear suscripción"
-          }</button>
+    mode === "edit" ? "Guardar cambios" : "Crear suscripción"
+  }</button>
         </footer>
       </div>
     </div>
@@ -1013,7 +1025,7 @@ export default function renderSubscriptions() {
                 <th scope="col">Importe</th>
                 <th scope="col">Auto-Fact.</th>
                 <th scope="col">Estado</th>
-                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                <th scope="col">Acciones</th>
               </tr>
             </thead>
             <tbody data-subscriptions-table>
@@ -1036,15 +1048,15 @@ export default function renderSubscriptions() {
         <h2 style="grid-column: 1 / -1; margin: 0; font-size: 1.1rem;">Indicadores clave</h2>
         <article class="card" style="padding: 1.5rem;">
           <h3 style="margin-top: 0;">Próximos cobros</h3>
-          <ul class="insight-list" data-upcoming-subscriptions></ul>
+          <ul class="insight-list" data-upcoming-subscriptions style="max-height: 180px; overflow-y: auto;"></ul>
         </article>
         <article class="card" style="padding: 1.5rem;">
           <h3 style="margin-top: 0;">Distribución por estado</h3>
-          <ul class="insight-list" data-status-breakdown></ul>
+          <ul class="insight-list" data-status-breakdown style="max-height: 180px; overflow-y: auto;"></ul>
         </article>
         <article class="card" style="padding: 1.5rem;">
           <h3 style="margin-top: 0;">Recomendaciones</h3>
-          <ul class="insight-list" data-subscription-suggestions></ul>
+          <ul class="insight-list" data-subscription-suggestions style="max-height: 180px; overflow-y: auto;"></ul>
         </article>
       </section>
     </section>
