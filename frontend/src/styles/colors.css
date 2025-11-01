@@ -2656,17 +2656,42 @@ table tr[hidden] {
   gap: 0.6rem;
 }
 
-.modal-tabs__bar {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
 .modal-tabs__nav {
   display: flex;
   gap: 0.75rem;
   overflow: hidden;
   flex: 1;
+}
+
+.modal-tabs__ellipsis {
+  align-self: center;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.modal-tabs__add {
+  border-radius: 999px;
+  border: 1px dashed rgba(59, 130, 246, 0.45);
+  background: transparent;
+  color: var(--primary-700);
+  padding: 0.55rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-tabs__add:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+[data-theme="dark"] .modal-tabs__ellipsis {
+  color: rgba(226, 232, 240, 0.65);
+}
+
+[data-theme="dark"] .modal-tabs__add {
+  border-color: rgba(96, 165, 250, 0.45);
+  color: rgba(191, 219, 254, 0.92);
 }
 
 .modal-tabs__tab {

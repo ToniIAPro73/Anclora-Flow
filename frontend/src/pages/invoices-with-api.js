@@ -329,8 +329,18 @@ function renderItemsEditor(editorKey) {
   }
   state.activeIndex = Math.min(Math.max(state.activeIndex, 0), lastIndex);
 
+  const totalTabs = state.items.length;
+  const maxVisibleTabs = totalTabs >= 3 ? 3 : totalTabs;
+  let start = Math.max(0, state.activeIndex - 1);
+  if (start + maxVisibleTabs > totalTabs) {
+    start = Math.max(0, totalTabs - maxVisibleTabs);
+  }
+  const end = Math.min(totalTabs, start + maxVisibleTabs);
+
   const tabsMarkup = state.items
-    .map((item, index) => {
+    .slice(start, end)
+    .map((item, offset) => {
+      const index = start + offset;
       const label = getLineTabLabel(item, index);
       return `
         <button
@@ -348,13 +358,26 @@ function renderItemsEditor(editorKey) {
     .join("");
 
   const activeItem = state.items[state.activeIndex] || null;
+  const showStartEllipsis = start > 0;
+  const showEndEllipsis = end < totalTabs;
+  const prevDisabled = state.activeIndex === 0;
+  const nextDisabled = state.activeIndex === totalTabs - 1;
 
   container.innerHTML = `
     <div class="modal-tabs">
       <div class="modal-tabs__bar">
-        <button type="button" class="modal-tabs__scroller" data-action="scroll-tabs" data-direction="prev" aria-label="Línea anterior"${state.activeIndex === 0 ? " disabled" : ""}>‹</button>
-        <div class="modal-tabs__nav" role="tablist">${tabsMarkup}</div>
-        <button type="button" class="modal-tabs__scroller" data-action="scroll-tabs" data-direction="next" aria-label="Línea siguiente"${state.activeIndex === state.items.length - 1 ? " disabled" : ""}>›</button>
+        <button type="button" class="modal-tabs__scroller" data-action="scroll-tabs" data-direction="prev" aria-label="Línea anterior"${prevDisabled ? " disabled" : ""}>‹</button>
+        <div class="modal-tabs__nav" role="tablist">
+          ${showStartEllipsis ? '<span class="modal-tabs__ellipsis">…</span>' : ""}
+          ${tabsMarkup}
+          ${showEndEllipsis ? '<span class="modal-tabs__ellipsis">…</span>' : ""}
+        </div>
+        <button type="button" class="modal-tabs__scroller" data-action="scroll-tabs" data-direction="next" aria-label="Línea siguiente"${nextDisabled ? " disabled" : ""}>›</button>
+        ${
+          state.editable
+            ? `<button type="button" class="modal-tabs__add" data-action="add-line" aria-label="Añadir línea">+ Añadir</button>`
+            : ""
+        }
       </div>
       <div class="modal-tabs__panel" data-editor-panel data-index="${state.activeIndex}" role="tabpanel">
         ${getItemPanelMarkup(activeItem, state.activeIndex, state.editable)}
@@ -473,8 +496,18 @@ function renderInvoiceViewTabs(container, items, activeIndex = 0) {
 
   const safeIndex = Math.min(Math.max(activeIndex, 0), items.length - 1);
 
+  const totalTabs = items.length;
+  const maxVisibleTabs = totalTabs >= 3 ? 3 : totalTabs;
+  let start = Math.max(0, safeIndex - 1);
+  if (start + maxVisibleTabs > totalTabs) {
+    start = Math.max(0, totalTabs - maxVisibleTabs);
+  }
+  const end = Math.min(totalTabs, start + maxVisibleTabs);
+
   const navMarkup = items
-    .map((item, index) => {
+    .slice(start, end)
+    .map((item, offset) => {
+      const index = start + offset;
       const label = getLineTabLabel(item, index);
       return `
         <button
@@ -488,13 +521,20 @@ function renderInvoiceViewTabs(container, items, activeIndex = 0) {
     })
     .join("");
 
+  const showStartEllipsis = start > 0;
+  const showEndEllipsis = end < totalTabs;
+  const prevDisabled = safeIndex === 0;
+  const nextDisabled = safeIndex === totalTabs - 1;
+
   container.innerHTML = `
     <div class="modal-tabs__bar">
-      <button type="button" class="modal-tabs__scroller" data-view-scroll="prev" aria-label="Concepto anterior">‹</button>
+      <button type="button" class="modal-tabs__scroller" data-view-scroll="prev" aria-label="Concepto anterior"${prevDisabled ? " disabled" : ""}>‹</button>
       <div class="modal-tabs__nav" role="tablist">
+        ${showStartEllipsis ? '<span class="modal-tabs__ellipsis">…</span>' : ""}
         ${navMarkup}
+        ${showEndEllipsis ? '<span class="modal-tabs__ellipsis">…</span>' : ""}
       </div>
-      <button type="button" class="modal-tabs__scroller" data-view-scroll="next" aria-label="Concepto siguiente">›</button>
+      <button type="button" class="modal-tabs__scroller" data-view-scroll="next" aria-label="Concepto siguiente"${nextDisabled ? " disabled" : ""}>›</button>
     </div>
     <div class="modal-tabs__panel" role="tabpanel">
       ${getViewItemPanelMarkup(items[safeIndex])}
@@ -525,11 +565,6 @@ function renderInvoiceViewTabs(container, items, activeIndex = 0) {
         }
       });
     });
-
-  const prevBtn = container.querySelector('[data-view-scroll="prev"]');
-  const nextBtn = container.querySelector('[data-view-scroll="next"]');
-  if (prevBtn) prevBtn.disabled = safeIndex === 0;
-  if (nextBtn) nextBtn.disabled = safeIndex === items.length - 1;
 }
 
 function getViewItemPanelMarkup(item) {
@@ -744,6 +779,15 @@ function handleItemEditorClick(event) {
       return;
     }
     state.activeIndex = tabIndex;
+    renderItemsEditor(editorKey);
+    updateEditorControlsState(state);
+    return;
+  }
+
+  if (action === "add-line") {
+    if (!state.editable) return;
+    state.items.push(normalizeInvoiceItem({ unitType: state.defaultUnitType }));
+    state.activeIndex = state.items.length - 1;
     renderItemsEditor(editorKey);
     updateEditorControlsState(state);
     return;

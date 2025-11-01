@@ -161,6 +161,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 - Utiliza el patrón `.modal-tabs` para agrupar colecciones dinámicas (líneas de factura, partidas de presupuesto, etc.).
 - El encabezado (`.modal-tabs__nav`) aloja botones `.modal-tabs__tab`; el elemento activo lleva la clase `.is-active` y nunca debe provocar salto vertical en el contenido.
 - El cuerpo visible se renderiza dentro de `.modal-tabs__panel`. No apiles varios paneles a la vez: solo el activo permanece en el DOM o se muestra.
+- La navegación se realiza con flechas `.modal-tabs__scroller`; nunca dependas de scroll horizontal. Limita las pestañas visibles (3 máx.) y muestra el resto mediante esas flechas.
 - En formularios editables, combina `.modal-tab__grid` con `modal-form__grid--two` y cierra el bloque con `.modal-tab__footer` para las acciones por línea (eliminar, duplicar, etc.).
 - Para vistas de solo lectura reutiliza el mismo contenedor y muestra la información con `detail-list`. Los helpers de referencia (`renderInvoiceViewTabs` / `getViewItemPanelMarkup` en `invoices-with-api.js`) ilustran la implementación recomendada.
 - Al añadir una nueva línea debe generarse automáticamente una pestaña adicional y activarse sin introducir scroll vertical ni horizontal.
