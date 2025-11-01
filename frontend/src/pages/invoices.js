@@ -311,9 +311,9 @@ function buildInvoiceModalHtml(mode, invoice) {
               </dd></div>
             </dl>
           </div>
-            <footer class="modal__footer">
-            <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cerrar</button>
-            <button type="button" class="btn-primary" style="flex: 1;" onclick="closeInvoiceModal(); openInvoiceModal('edit', '${
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
+            <button type="button" class="btn-primary" onclick="closeInvoiceModal(); openInvoiceModal('edit', '${
               invoice.id
             }')">Editar</button>
           </footer>
@@ -333,8 +333,8 @@ function buildInvoiceModalHtml(mode, invoice) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
-        <div class="modal__body">
-          <form id="invoice-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <form id="invoice-form" data-mode="${mode}" novalidate>
+          <div class="modal__body" style="display: flex; flex-direction: column; gap: 1.5rem;">
             <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
               <div class="form-group">
                 <label for="invoice-number">Número de factura</label>
@@ -433,12 +433,12 @@ function buildInvoiceModalHtml(mode, invoice) {
                 </div>
               </div>
             </div>
-          </form>
-        </div>
-          <footer class="modal__footer">
-          <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cancelar</button>
-          <button type="submit" form="invoice-form" class="btn-primary" style="flex: 1;">${actionLabel}</button>
-        </footer>
+          </div>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+            <button type="submit" class="btn-primary">${actionLabel}</button>
+          </footer>
+        </form>
       </div>
     </div>
   `;
