@@ -764,7 +764,7 @@ function buildExpenseModalHtml(mode, expense) {
               </label>
             </div>
           </div>
-          <footer class="modal__footer modal-form__footer">
+          <footer class="modal__footer modal-form__footer" style="margin-top: 0.75rem;">
             <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
             <button type="submit" class="btn-primary">${actionLabel}</button>
           </footer>
@@ -972,61 +972,47 @@ async function viewExpense(expenseId) {
             </div>
             <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
           </header>
-          <div class="modal__body">
-            <dl class="detail-list">
-              <div class="detail-list__item detail-list__item--full">
-                <dt>Descripción</dt>
-                <dd>${escapeHtml(expense.description || "-")}</dd>
+          <div class="modal__body" style="padding: 1.75rem;">
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; height: 100%; min-height: 0;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
+                ${[
+                  { label: "Descripción", value: escapeHtml(expense.description || "-") },
+                  { label: "Fecha del gasto", value: formattedDate },
+                  { label: "Categoría", value: escapeHtml(categoryLabel) },
+                  { label: "Subcategoría", value: escapeHtml(subcategoryLabel) },
+                  { label: "Método de pago", value: escapeHtml(paymentMethodLabel) },
+                  { label: "Proveedor", value: escapeHtml(expense.vendor || "-") },
+                  { label: "Importe base", value: formatCurrency(expense.amount) },
+                  {
+                    label: "IVA",
+                    value: `${formatCurrency(expense.vat_amount)} (${vatPercentageDisplay}%)`,
+                  },
+                  { label: "Tratamiento fiscal", value: escapeHtml(isDeductibleText) },
+                  { label: "Proyecto", value: escapeHtml(projectLabel) },
+                ]
+                  .map(
+                    ({ label, value }) => `
+                      <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary);">
+                        <h3 style="margin: 0 0 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-weight: 600;">${label}</h3>
+                        <p style="margin: 0; font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">${value}</p>
+                      </div>
+                    `
+                  )
+                  .join("")}
               </div>
-              <div class="detail-list__item">
-                <dt>Fecha del gasto</dt>
-                <dd>${formattedDate}</dd>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
+                <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary);">
+                  <h3 style="margin: 0 0 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-weight: 600;">Justificante</h3>
+                  <p style="margin: 0; font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">${receiptLink}</p>
+                </div>
+                <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary);">
+                  <h3 style="margin: 0 0 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-weight: 600;">Notas</h3>
+                  <p style="margin: 0; font-size: 0.95rem; color: var(--text-primary); font-weight: 500; white-space: pre-wrap;">${escapeHtml(expense.notes || "-")}</p>
+                </div>
               </div>
-              <div class="detail-list__item">
-                <dt>Categoría</dt>
-                <dd>${escapeHtml(categoryLabel)}</dd>
-              </div>
-              <div class="detail-list__item">
-                <dt>Subcategoría</dt>
-                <dd>${escapeHtml(subcategoryLabel)}</dd>
-              </div>
-              <div class="detail-list__item">
-                <dt>Método de pago</dt>
-                <dd>${escapeHtml(paymentMethodLabel)}</dd>
-              </div>
-              <div class="detail-list__item">
-                <dt>Proveedor</dt>
-                <dd>${escapeHtml(expense.vendor || "-")}</dd>
-              </div>
-              <div class="detail-list__item">
-                <dt>Importe base</dt>
-                <dd>${formatCurrency(expense.amount)}</dd>
-              </div>
-              <div class="detail-list__item">
-                <dt>IVA</dt>
-                <dd>${formatCurrency(
-                  expense.vat_amount
-                )} (${vatPercentageDisplay}%)</dd>
-              </div>
-              <div class="detail-list__item">
-                <dt>Tratamiento fiscal</dt>
-                <dd>${escapeHtml(isDeductibleText)}</dd>
-              </div>
-              <div class="detail-list__item">
-                <dt>Proyecto</dt>
-                <dd>${escapeHtml(projectLabel)}</dd>
-              </div>
-              <div class="detail-list__item detail-list__item--full">
-                <dt>Justificante</dt>
-                <dd>${receiptLink}</dd>
-              </div>
-              <div class="detail-list__item detail-list__item--full">
-                <dt>Notas</dt>
-                <dd>${escapeHtml(expense.notes || "-")}</dd>
-              </div>
-            </dl>
+            </div>
           </div>
-          <footer class="modal__footer modal-form__footer">
+          <footer class="modal__footer modal-form__footer" style="margin-top: 0.75rem;">
             <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
             <button type="button" class="btn-primary" data-expense-edit="${
               expense.id
