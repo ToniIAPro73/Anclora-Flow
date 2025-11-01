@@ -11,6 +11,7 @@ Esta guía define cómo deben construirse, estilizarse y comportarse las tablas 
 - **Acciones contextualizadas**: la columna `ACCIONES` siempre está visible y alinea los botones en horizontal.
 - **Sin scroll horizontal** en resoluciones ≥ 1280 px. Ajustar el orden y el ancho de columnas antes de habilitar un `overflow`.
 - **Soporte oscuro/claro**: utilizar las variables de `colors.css`. Evitar estilos inline.
+- En zooms altos (≥110 %) o resoluciones estrechas, el contenedor activa `overflow-x: auto` para evitar que se oculten columnas; verifica el comportamiento en estas condiciones.
 
 ---
 

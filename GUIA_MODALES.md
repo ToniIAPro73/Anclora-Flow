@@ -11,6 +11,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
   - Todos los campos del formulario principal
   - Primera línea de ítems (en caso de facturas/presupuestos)
   - Botones de acción (Cancelar, Crear/Guardar)
+- Validar visualmente a **100 %, 110 % y 125 %** de zoom del navegador; el contenido debe seguir mostrándose completo sin scroll inicial.
 - El scroll **SOLO** debe aparecer cuando:
   - Se añaden líneas adicionales de ítems (2+)
   - El usuario añade contenido dinámico
@@ -30,6 +31,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 - Espaciado consistente entre campos
 - Sin solapamientos entre elementos
 - Jerarquía visual clara (títulos, secciones, campos)
+- Ajusta el ancho de cada campo al contenido que espera recibir (fechas, números de factura, importes): evita inputs desproporcionados que generen espacios muertos.
 
 ## 2. Estructura del Modal
 
@@ -139,6 +141,7 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 - Añade `modal-section--card` cuando la sección requiera fondo propio (conceptos facturados, notas, adjuntos).
 - Usa `modal-section__header` para alinear títulos y acciones contextuales (`modal-section__actions`).
 - Mantén el cuerpo del formulario dentro de `modal__body modal-form__body` para que el `flex` gestione el alto.
+- En modales con mucha densidad (crear/editar factura) activa el modo dividido con `modal-form__body--split` y distribuye el contenido en dos columnas (`modal-form__column--main` y `modal-form__column--side`) para aprovechar el ancho sin introducir scroll.
 
 ### 2.6 Tablas y Totales Dentro del Modal
 
@@ -152,6 +155,16 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 - Variantes disponibles: `modal-banner--info` (azul), y se puede extender con nuevos tonos según se necesite.
 - Estructura interna: `modal-banner__icon` para el glifo leading y `modal-banner__content` para texto + subtítulo.
 - Usa el atributo `hidden` en el banner para mostrar/ocultar mediante lógica JS (`element.hidden = true/false`). 
+
+### 2.8 Pestañas en Secciones Repetibles
+
+- Utiliza el patrón `.modal-tabs` para agrupar colecciones dinámicas (líneas de factura, partidas de presupuesto, etc.).
+- El encabezado (`.modal-tabs__nav`) aloja botones `.modal-tabs__tab`; el elemento activo lleva la clase `.is-active` y nunca debe provocar salto vertical en el contenido.
+- El cuerpo visible se renderiza dentro de `.modal-tabs__panel`. No apiles varios paneles a la vez: solo el activo permanece en el DOM o se muestra.
+- La navegación se realiza con flechas `.modal-tabs__scroller`; nunca dependas de scroll horizontal. Limita las pestañas visibles (3 máx.) y muestra el resto mediante esas flechas.
+- En formularios editables, combina `.modal-tab__grid` con `modal-form__grid--two` y cierra el bloque con `.modal-tab__footer` para las acciones por línea (eliminar, duplicar, etc.).
+- Para vistas de solo lectura reutiliza el mismo contenedor y muestra la información con `detail-list`. Los helpers de referencia (`renderInvoiceViewTabs` / `getViewItemPanelMarkup` en `invoices-with-api.js`) ilustran la implementación recomendada.
+- Al añadir una nueva línea debe generarse automáticamente una pestaña adicional y activarse sin introducir scroll vertical ni horizontal.
 
 ## 3. Estilos de Botones
 
@@ -177,34 +190,53 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 
 ### 4.1 Sección de Conceptos
 
-- Título de sección claro: "Conceptos facturados", "Partidas del presupuesto"
-- Botón "Añadir línea" visible y accesible (color teal, esquina superior derecha de la sección)
-- Primera línea **SIEMPRE** visible sin scroll
-- Campos de línea en una fila:
-  - Concepto | Unidad | Cantidad | Precio unitario | IVA (%)
-  - Botón "Eliminar línea" al final de cada fila (excepto si es la única)
+- Encapsula las líneas dentro de `modal-section modal-section--card`.
+- La cabecera (`modal-section__header`) incluye el título y el CTA `Añadir línea` (`btn-secondary`).
+- El cuerpo renderiza un único contenedor `.modal-tabs` con pestañas dinámicas (ver 2.8); nunca muestres varias líneas simultáneamente.
+- La primera pestaña **DEBE** estar visible al abrir el modal sin provocar scroll.
 
-### 4.2 Grid de Línea de Ítem
+### 4.2 Formulario de Línea
 
-```css
-.invoice-line-item {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr auto;
-  gap: 0.75rem;
-  align-items: end;
-}
+```html
+<div class="modal-tab__grid modal-form__grid modal-form__grid--two">
+  <label class="form-field modal-form__field--span-2">
+    <span>Concepto *</span>
+    <input type="text" name="description" required />
+  </label>
+  <label class="form-field">
+    <span>Unidad</span>
+    <input type="text" name="unitType" />
+  </label>
+  <label class="form-field">
+    <span>Cantidad *</span>
+    <input type="number" step="0.01" min="0" name="quantity" required />
+  </label>
+  <label class="form-field">
+    <span>Precio unitario *</span>
+    <input type="number" step="0.01" min="0" name="unitPrice" required />
+  </label>
+  <label class="form-field">
+    <span>IVA (%)</span>
+    <input type="number" step="0.1" min="0" max="100" name="vatPercentage" />
+  </label>
+  <div class="form-field">
+    <span>Importe de la línea</span>
+    <div class="modal-tab__line-total" data-field="line-total">€0,00</div>
+  </div>
+</div>
+<div class="modal-tab__footer">
+  <button type="button" class="btn-ghost" data-action="remove-item">Eliminar línea</button>
+</div>
 ```
+
+- El importe mostrado en `modal-tab__line-total` es de sólo lectura y se actualiza con JavaScript.
+- En modo lectura, sustituye el formulario por un `detail-list` dentro de la misma pestaña para mantener la altura controlada.
 
 ### 4.3 Resumen de Totales
 
-- **SIEMPRE** visible al abrir el modal (parte del contenido inicial)
-- Alineado a la derecha
-- Campos:
-  - Subtotal
-  - IVA estimado
-  - IRPF (%)
-  - Total (destacado)
-- Sin scroll para ver el total en el estado inicial
+- Utiliza el bloque `modal-totals` y sus filas (`modal-totals__row`) para mostrar Subtotal, IVA, IRPF y Total.
+- Cuando el IRPF es editable, incluye `modal-totals__control` con el input correspondiente y el valor en `modal-totals__value--negative`.
+- El bloque debe permanecer siempre bajo las pestañas y ser visible sin scroll inicial.
 
 ## 5. Tipos de Modales
 
