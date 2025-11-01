@@ -4,44 +4,76 @@
 let expensesData = [];
 let isLoading = false;
 let currentFilters = {
-  search: '',
-  category: '',
-  isDeductible: '',
-  dateFrom: '',
-  dateTo: ''
+  search: "",
+  category: "",
+  isDeductible: "",
+  dateFrom: "",
+  dateTo: "",
 };
 let filterRefreshTimeout = null;
 let activeExpenseId = null;
 let filteredExpenses = [];
 const PAGE_SIZE = 10;
 let currentPage = 1;
+let selectedExpenseId = null;
 
 // === CONSTANTES ===
 const EXPENSE_CATEGORIES = {
-  office: 'Oficina',
-  software: 'Software',
-  hardware: 'Hardware',
-  marketing: 'Marketing',
-  travel: 'Viajes',
-  meals: 'Comidas',
-  professional_services: 'Servicios profesionales',
-  supplies: 'Suministros',
-  insurance: 'Seguros',
-  other: 'Otros'
+  office: "Oficina",
+  software: "Software",
+  hardware: "Hardware",
+  marketing: "Marketing",
+  travel: "Viajes",
+  meals: "Comidas",
+  professional_services: "Servicios profesionales",
+  supplies: "Suministros",
+  insurance: "Seguros",
+  other: "Otros",
 };
 
 const PAYMENT_METHODS = {
-  bank_transfer: 'Transferencia bancaria',
-  card: 'Tarjeta',
-  cash: 'Efectivo',
-  other: 'Otro'
+  bank_transfer: "Transferencia bancaria",
+  card: "Tarjeta",
+  cash: "Efectivo",
+  other: "Otro",
 };
 
+function normalizeExpense(expense) {
+  if (!expense) return null;
+
+  return {
+    id: expense.id,
+    projectId: expense.project_id ?? expense.projectId ?? null,
+    projectName: expense.project_name ?? expense.projectName ?? null,
+    category: expense.category ?? null,
+    subcategory: expense.subcategory ?? null,
+    description: expense.description ?? "",
+    amount: sanitizeNumber(expense.amount, 0),
+    vatAmount: sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0),
+    vatPercentage: sanitizeNumber(
+      expense.vat_percentage ?? expense.vatPercentage,
+      0
+    ),
+    isDeductible: Boolean(
+      expense.is_deductible ?? expense.isDeductible ?? true
+    ),
+    deductiblePercentage: sanitizeNumber(
+      expense.deductible_percentage ?? expense.deductiblePercentage,
+      0
+    ),
+    expenseDate: expense.expense_date ?? expense.expenseDate ?? null,
+    paymentMethod: expense.payment_method ?? expense.paymentMethod ?? null,
+    vendor: expense.vendor ?? null,
+    receiptUrl: expense.receipt_url ?? expense.receiptUrl ?? null,
+    notes: expense.notes ?? null,
+  };
+}
+
 // === FORMATTERS ===
-const currencyFormatter = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 2
+const currencyFormatter = new Intl.NumberFormat("es-ES", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 2,
 });
 
 function formatCurrency(value) {
@@ -51,21 +83,21 @@ function formatCurrency(value) {
 }
 
 function formatDate(value) {
-  if (!value) return '-';
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 }
 
 function formatDateForInput(value) {
-  if (!value) return '';
+  if (!value) return "";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().split('T')[0];
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().split("T")[0];
 }
 
 function sanitizeNumber(value, fallback = 0) {
@@ -73,13 +105,13 @@ function sanitizeNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function escapeHtml(value = '') {
+function escapeHtml(value = "") {
   return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function calculateVatAmount(amount, vatPercentage) {
@@ -89,21 +121,23 @@ function calculateVatAmount(amount, vatPercentage) {
 }
 
 // === NOTIFICACIONES ===
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
+function showNotification(message, type = "info") {
+  const notification = document.createElement("div");
   notification.className = `notification notification--${type}`;
   notification.innerHTML = `
     <span>${message}</span>
     <button type="button" class="notification__close" aria-label="Cerrar notificación">×</button>
   `;
 
-  notification.querySelector('.notification__close').addEventListener('click', () => {
-    notification.remove();
-  });
+  notification
+    .querySelector(".notification__close")
+    .addEventListener("click", () => {
+      notification.remove();
+    });
 
-  if (!document.getElementById('notification-styles')) {
-    const style = document.createElement('style');
-    style.id = 'notification-styles';
+  if (!document.getElementById("notification-styles")) {
+    const style = document.createElement("style");
+    style.id = "notification-styles";
     style.textContent = `
       .notification {
         position: fixed;
@@ -145,16 +179,16 @@ function showNotification(message, type = 'info') {
 
 // === RENDERIZADO DE ESTADOS ===
 function renderLoadingState() {
-  const loadingEl = document.querySelector('[data-expenses-loading]');
+  const loadingEl = document.querySelector("[data-expenses-loading]");
   if (loadingEl) loadingEl.hidden = !isLoading;
 }
 
 function renderErrorState(message) {
-  const errorEl = document.querySelector('[data-expenses-error]');
+  const errorEl = document.querySelector("[data-expenses-error]");
   if (!errorEl) return;
   if (!message) {
     errorEl.hidden = true;
-    errorEl.innerHTML = '';
+    errorEl.innerHTML = "";
     return;
   }
   errorEl.hidden = false;
@@ -168,62 +202,59 @@ function renderErrorState(message) {
       <button type="button" class="btn btn-secondary" data-expenses-retry>Reintentar</button>
     </div>
   `;
-  const retryBtn = errorEl.querySelector('[data-expenses-retry]');
-  if (retryBtn) retryBtn.addEventListener('click', () => loadExpenses());
+  const retryBtn = errorEl.querySelector("[data-expenses-retry]");
+  if (retryBtn) retryBtn.addEventListener("click", () => loadExpenses());
 }
 
 // === CARGA DE DATOS ===
 async function loadExpenses() {
-  if (typeof window.api === 'undefined') {
-    renderErrorState('Servicio API no disponible. Verifica la carga de api.js');
+  if (typeof window.api === "undefined") {
+    renderErrorState("Servicio API no disponible. Verifica la carga de api.js");
     return;
   }
 
   if (!window.api.isAuthenticated()) {
-    renderErrorState('Inicia sesión para revisar tus gastos.');
+    renderErrorState("Inicia sesión para revisar tus gastos.");
     isLoading = false;
     return;
   }
 
   isLoading = true;
   renderLoadingState();
-  renderErrorState('');
+  renderErrorState("");
 
   try {
     const query = buildFiltersQuery();
     const response = await window.api.getExpenses(query);
     const expenses = response?.expenses || response || [];
 
-    expensesData = expenses.map(expense => ({
-      id: expense.id,
-      projectId: expense.project_id || null,
-      projectName: expense.project_name || null,
-      category: expense.category,
-      subcategory: expense.subcategory,
-      description: expense.description,
-      amount: sanitizeNumber(expense.amount, 0),
-      vatAmount: sanitizeNumber(expense.vat_amount, 0),
-      vatPercentage: sanitizeNumber(expense.vat_percentage, 0),
-      isDeductible: Boolean(expense.is_deductible),
-      deductiblePercentage: sanitizeNumber(expense.deductible_percentage, 0),
-      expenseDate: expense.expense_date,
-      paymentMethod: expense.payment_method,
-      vendor: expense.vendor,
-      receiptUrl: expense.receipt_url,
-      notes: expense.notes
-    }));
+    expensesData = expenses
+      .map(normalizeExpense)
+      .filter((expense) => expense !== null);
+
+    if (expensesData.length > 0) {
+      const hasSelection = expensesData.some(
+        (expense) => String(expense.id) === String(selectedExpenseId)
+      );
+      if (!hasSelection) {
+        selectedExpenseId = String(expensesData[0].id);
+      }
+    } else {
+      selectedExpenseId = null;
+    }
 
     currentPage = 1;
     renderExpensesTable();
     updateSummaryCards();
   } catch (error) {
-    console.error('Error cargando gastos:', error);
-    let message = error?.message || 'Se produjo un error al cargar los gastos';
+    console.error("Error cargando gastos:", error);
+    let message = error?.message || "Se produjo un error al cargar los gastos";
     if (error instanceof window.APIError && error.status === 0) {
-      message = 'No se pudo conectar con el backend (http://localhost:8020). Comprueba que el servicio esté activo.';
+      message =
+        "No se pudo conectar con el backend (http://localhost:8020). Comprueba que el servicio esté activo.";
     }
     renderErrorState(message);
-    showNotification(message, 'error');
+    showNotification(message, "error");
   } finally {
     isLoading = false;
     renderLoadingState();
@@ -234,7 +265,8 @@ function buildFiltersQuery() {
   const query = {};
   if (currentFilters.search) query.search = currentFilters.search;
   if (currentFilters.category) query.category = currentFilters.category;
-  if (currentFilters.isDeductible !== '') query.isDeductible = currentFilters.isDeductible;
+  if (currentFilters.isDeductible !== "")
+    query.isDeductible = currentFilters.isDeductible;
   if (currentFilters.dateFrom) query.dateFrom = currentFilters.dateFrom;
   if (currentFilters.dateTo) query.dateTo = currentFilters.dateTo;
   return query;
@@ -242,7 +274,7 @@ function buildFiltersQuery() {
 
 // === TABLA ===
 function renderExpensesTable() {
-  const tbody = document.querySelector('[data-expenses-tbody]');
+  const tbody = document.querySelector("[data-expenses-tbody]");
   if (!tbody) return;
 
   filteredExpenses = Array.isArray(expensesData) ? [...expensesData] : [];
@@ -257,6 +289,7 @@ function renderExpensesTable() {
   updateFilterCount(total, start, end);
 
   if (!filteredExpenses.length) {
+    selectedExpenseId = null;
     tbody.innerHTML = `
       <tr>
         <td colspan="8" class="empty-state">
@@ -270,13 +303,41 @@ function renderExpensesTable() {
 
   const pageItems = filteredExpenses.slice(start - 1, start - 1 + PAGE_SIZE);
 
-  tbody.innerHTML = pageItems.map(expense => {
-    const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || 'Sin categoría';
-    const paymentLabel = PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || 'N/A';
-    return `
-      <tr class="expenses-table__row" data-expense-id="${expense.id}">
+  if (filteredExpenses.length) {
+    const selectionExists = filteredExpenses.some(
+      (expense) => String(expense.id) === String(selectedExpenseId)
+    );
+    if (!selectionExists) {
+      selectedExpenseId = String(filteredExpenses[0].id);
+    }
+  }
+
+  if (pageItems.length) {
+    const pageSelectionExists = pageItems.some(
+      (expense) => String(expense.id) === String(selectedExpenseId)
+    );
+    if (!pageSelectionExists) {
+      selectedExpenseId = String(pageItems[0].id);
+    }
+  }
+
+  tbody.innerHTML = pageItems
+    .map((expense) => {
+      const categoryLabel =
+        EXPENSE_CATEGORIES[expense.category] ||
+        expense.category ||
+        "Sin categoría";
+      const paymentLabel =
+        PAYMENT_METHODS[expense.paymentMethod] ||
+        expense.paymentMethod ||
+        "N/A";
+      const isSelected = String(expense.id) === String(selectedExpenseId);
+      return `
+      <tr class="expenses-table__row${
+        isSelected ? " is-selected expenses-table__row--highlight" : ""
+      }" data-expense-id="${expense.id}">
         <td>
-          <time datetime="${escapeHtml(expense.expenseDate || '')}">
+          <time datetime="${escapeHtml(expense.expenseDate || "")}">
             ${formatDate(expense.expenseDate)}
           </time>
         </td>
@@ -284,47 +345,85 @@ function renderExpensesTable() {
           <span class="category-badge">
             ${escapeHtml(categoryLabel)}
           </span>
-          ${expense.subcategory ? `<small>${escapeHtml(expense.subcategory)}</small>` : ''}
+          ${
+            expense.subcategory
+              ? `<small>${escapeHtml(expense.subcategory)}</small>`
+              : ""
+          }
         </td>
         <td>
           <div class="expense-description">
-            <strong>${escapeHtml(expense.description || 'Sin descripción')}</strong>
-            ${expense.vendor ? `<small>${escapeHtml(expense.vendor)}</small>` : ''}
+            <strong>${escapeHtml(
+              expense.description || "Sin descripción"
+            )}</strong>
+            ${
+              expense.vendor
+                ? `<small>${escapeHtml(expense.vendor)}</small>`
+                : ""
+            }
           </div>
         </td>
         <td class="expenses-table__amount">
           ${formatCurrency(expense.amount)}
-          <small class="vat-indicator">IVA ${expense.vatPercentage.toFixed(2)}% (${formatCurrency(expense.vatAmount)})</small>
+          <small class="vat-indicator">IVA ${expense.vatPercentage.toFixed(
+            2
+          )}% (${formatCurrency(expense.vatAmount)})</small>
         </td>
         <td>
-          <span class="status-pill status-pill--${expense.isDeductible ? 'success' : 'neutral'}">
-            ${expense.isDeductible ? `Deducible ${expense.deductiblePercentage}%` : 'No deducible'}
+          <span class="status-pill status-pill--${
+            expense.isDeductible ? "success" : "neutral"
+          }">
+            ${
+              expense.isDeductible
+                ? `Deducible ${expense.deductiblePercentage}%`
+                : "No deducible"
+            }
           </span>
         </td>
         <td class="expenses-table__client">${escapeHtml(paymentLabel)}</td>
-        <td class="expenses-table__client">${expense.projectName ? escapeHtml(expense.projectName) : '-'}</td>
+        <td class="expenses-table__client">${
+          expense.projectName ? escapeHtml(expense.projectName) : "-"
+        }</td>
         <td>
           <div class="expenses-table__actions">
-            <button type="button" class="table-action" title="Ver gasto" onclick="viewExpense('${expense.id}')">👁️</button>
-            <button type="button" class="table-action" title="Editar gasto" onclick="openExpenseModal('edit', '${expense.id}')">✏️</button>
-            <button type="button" class="table-action" title="Eliminar gasto" onclick="confirmDeleteExpense('${expense.id}')">🗑️</button>
+            <button type="button" class="table-action" title="Ver gasto" onclick="viewExpense('${
+              expense.id
+            }')">👁️</button>
+            <button type="button" class="table-action" title="Editar gasto" onclick="openExpenseModal('edit', '${
+              expense.id
+            }')">✏️</button>
+            <button type="button" class="table-action" title="Eliminar gasto" onclick="confirmDeleteExpense('${
+              expense.id
+            }')">🗑️</button>
           </div>
         </td>
       </tr>
     `;
-  }).join('');
+    })
+    .join("");
+
+  tbody.querySelectorAll(".expenses-table__row").forEach((row) => {
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("button") || event.target.closest("a")) return;
+      const expenseId = String(row.dataset.expenseId);
+      if (selectedExpenseId !== expenseId) {
+        selectedExpenseId = expenseId;
+        renderExpensesTable();
+      }
+    });
+  });
 
   renderExpensesPagination(totalPages);
 }
 
 function updateFilterCount(total, start = 0, end = 0) {
-  const counter = document.querySelector('[data-expenses-count]');
+  const counter = document.querySelector("[data-expenses-count]");
   if (!counter) return;
   if (!total) {
-    counter.textContent = 'Sin gastos disponibles';
+    counter.textContent = "Sin gastos disponibles";
     return;
   }
-  const label = total === 1 ? 'gasto' : 'gastos';
+  const label = total === 1 ? "gasto" : "gastos";
   counter.textContent = `Mostrando ${start}-${end} de ${total} ${label}`;
 }
 
@@ -333,16 +432,20 @@ function renderExpensesPagination(totalPages) {
   if (!pager) return;
 
   if (filteredExpenses.length <= PAGE_SIZE) {
-    pager.innerHTML = '';
+    pager.innerHTML = "";
     return;
   }
 
   pager.innerHTML = `
-    <button type="button" class="pager-btn" onclick="window.changeExpensesPage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+    <button type="button" class="pager-btn" onclick="window.changeExpensesPage(-1)" ${
+      currentPage === 1 ? "disabled" : ""
+    }>
       Anterior
     </button>
     <span class="pager-status">Página ${currentPage} de ${totalPages}</span>
-    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeExpensesPage(1)" ${currentPage === totalPages ? 'disabled' : ''}>
+    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeExpensesPage(1)" ${
+      currentPage === totalPages ? "disabled" : ""
+    }>
       Siguiente
     </button>
   `;
@@ -350,18 +453,30 @@ function renderExpensesPagination(totalPages) {
 
 // === TARJETAS RESUMEN ===
 function updateSummaryCards() {
-  const total = expensesData.reduce((sum, expense) => sum + sanitizeNumber(expense.amount, 0), 0);
+  const total = expensesData.reduce(
+    (sum, expense) => sum + sanitizeNumber(expense.amount, 0),
+    0
+  );
   const deductible = expensesData
-    .filter(expense => expense.isDeductible)
-    .reduce((sum, expense) => sum + sanitizeNumber(expense.amount, 0) * (sanitizeNumber(expense.deductiblePercentage, 0) / 100), 0);
-  const vatRecoverable = expensesData.reduce((sum, expense) => sum + sanitizeNumber(expense.vatAmount, 0), 0);
+    .filter((expense) => expense.isDeductible)
+    .reduce(
+      (sum, expense) =>
+        sum +
+        sanitizeNumber(expense.amount, 0) *
+          (sanitizeNumber(expense.deductiblePercentage, 0) / 100),
+      0
+    );
+  const vatRecoverable = expensesData.reduce(
+    (sum, expense) => sum + sanitizeNumber(expense.vatAmount, 0),
+    0
+  );
   const average = expensesData.length ? total / expensesData.length : 0;
 
   const map = {
-    total: document.getElementById('total-expenses'),
-    deductible: document.getElementById('deductible-expenses'),
-    vat: document.getElementById('recoverable-vat'),
-    average: document.getElementById('average-expense')
+    total: document.getElementById("total-expenses"),
+    deductible: document.getElementById("deductible-expenses"),
+    vat: document.getElementById("recoverable-vat"),
+    average: document.getElementById("average-expense"),
   };
 
   if (map.total) map.total.textContent = formatCurrency(total);
@@ -372,66 +487,66 @@ function updateSummaryCards() {
 
 // === FILTROS ===
 function setupFilters() {
-  const searchInput = document.getElementById('expense-search');
+  const searchInput = document.getElementById("expense-search");
   if (searchInput) {
     searchInput.value = currentFilters.search;
-    searchInput.addEventListener('input', event => {
+    searchInput.addEventListener("input", (event) => {
       currentFilters.search = event.target.value;
       scheduleExpenseReload();
     });
   }
 
-  const categorySelect = document.getElementById('expense-category-filter');
+  const categorySelect = document.getElementById("expense-category-filter");
   if (categorySelect) {
     categorySelect.value = currentFilters.category;
-    categorySelect.addEventListener('change', event => {
+    categorySelect.addEventListener("change", (event) => {
       currentFilters.category = event.target.value;
       loadExpenses();
     });
   }
 
-  const deductibleSelect = document.getElementById('expense-deductible-filter');
+  const deductibleSelect = document.getElementById("expense-deductible-filter");
   if (deductibleSelect) {
     deductibleSelect.value = currentFilters.isDeductible;
-    deductibleSelect.addEventListener('change', event => {
+    deductibleSelect.addEventListener("change", (event) => {
       currentFilters.isDeductible = event.target.value;
       loadExpenses();
     });
   }
 
-  const dateFromInput = document.getElementById('expense-date-from');
+  const dateFromInput = document.getElementById("expense-date-from");
   if (dateFromInput) {
     dateFromInput.value = currentFilters.dateFrom;
-    dateFromInput.addEventListener('change', event => {
+    dateFromInput.addEventListener("change", (event) => {
       currentFilters.dateFrom = event.target.value;
       loadExpenses();
     });
   }
 
-  const dateToInput = document.getElementById('expense-date-to');
+  const dateToInput = document.getElementById("expense-date-to");
   if (dateToInput) {
     dateToInput.value = currentFilters.dateTo;
-    dateToInput.addEventListener('change', event => {
+    dateToInput.addEventListener("change", (event) => {
       currentFilters.dateTo = event.target.value;
       loadExpenses();
     });
   }
 
-  const resetBtn = document.querySelector('[data-expenses-reset]');
+  const resetBtn = document.querySelector("[data-expenses-reset]");
   if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
+    resetBtn.addEventListener("click", () => {
       currentFilters = {
-        search: '',
-        category: '',
-        isDeductible: '',
-        dateFrom: '',
-        dateTo: ''
+        search: "",
+        category: "",
+        isDeductible: "",
+        dateFrom: "",
+        dateTo: "",
       };
-      if (searchInput) searchInput.value = '';
-      if (categorySelect) categorySelect.value = '';
-      if (deductibleSelect) deductibleSelect.value = '';
-      if (dateFromInput) dateFromInput.value = '';
-      if (dateToInput) dateToInput.value = '';
+      if (searchInput) searchInput.value = "";
+      if (categorySelect) categorySelect.value = "";
+      if (deductibleSelect) deductibleSelect.value = "";
+      if (dateFromInput) dateFromInput.value = "";
+      if (dateToInput) dateToInput.value = "";
       loadExpenses();
     });
   }
@@ -445,7 +560,10 @@ function scheduleExpenseReload() {
 }
 
 function changeExpensesPage(delta) {
-  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredExpenses.length / PAGE_SIZE)
+  );
   const next = Math.min(Math.max(1, currentPage + delta), totalPages);
   if (next === currentPage) return;
   currentPage = next;
@@ -453,163 +571,215 @@ function changeExpensesPage(delta) {
 }
 
 // === MODALES ===
-async function openExpenseModal(mode = 'create', expenseId = null) {
+async function openExpenseModal(mode = "create", expenseId = null) {
   activeExpenseId = expenseId;
   let expense = null;
 
-  if (mode === 'edit' && expenseId) {
+  if (mode === "edit" && expenseId) {
     try {
       expense = await window.api.getExpense(expenseId);
     } catch (error) {
-      console.error('Error obteniendo gasto:', error);
-      showNotification('No se pudo cargar el gasto seleccionado', 'error');
+      console.error("Error obteniendo gasto:", error);
+      showNotification("No se pudo cargar el gasto seleccionado", "error");
       return;
     }
   }
 
   const modalHtml = buildExpenseModalHtml(mode, expense);
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
 
-  const modal = document.getElementById('expense-modal');
-  const form = document.getElementById('expense-form');
+  const modal = document.getElementById("expense-modal");
+  const form = document.getElementById("expense-form");
 
   if (!modal || !form) return;
 
-  modal.querySelectorAll('[data-modal-close]').forEach(btn => {
-    btn.addEventListener('click', closeExpenseModal);
+  modal.querySelectorAll("[data-modal-close]").forEach((btn) => {
+    btn.addEventListener("click", closeExpenseModal);
   });
-  modal.querySelector('.modal__backdrop')?.addEventListener('click', closeExpenseModal);
+  modal
+    .querySelector(".modal__backdrop")
+    ?.addEventListener("click", closeExpenseModal);
 
   setupExpenseForm(form, expense);
 }
 
 function closeExpenseModal() {
-  const modal = document.getElementById('expense-modal');
+  const modal = document.getElementById("expense-modal");
   if (modal) modal.remove();
   activeExpenseId = null;
 }
 
 function buildExpenseModalHtml(mode, expense) {
-  const isEdit = mode === 'edit' && expense;
-  const title = isEdit ? 'Editar gasto' : 'Registrar nuevo gasto';
-  const actionLabel = isEdit ? 'Guardar cambios' : 'Crear gasto';
+  const isEdit = mode === "edit" && expense;
+  const title = isEdit ? "Editar gasto" : "Registrar nuevo gasto";
+  const actionLabel = isEdit ? "Guardar cambios" : "Crear gasto";
+  const selectedCategory = expense?.category ?? "";
+  const paymentMethodValue =
+    expense?.payment_method ?? expense?.paymentMethod ?? "";
+  const amountValue = expense ? sanitizeNumber(expense.amount, 0) : "";
+  const vatPercentageValue = expense
+    ? sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 21)
+    : 21;
+  const vatAmountValue = expense
+    ? sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0)
+    : 0;
+  const deductiblePercentageValue = expense
+    ? sanitizeNumber(
+        expense.deductible_percentage ?? expense.deductiblePercentage,
+        100
+      )
+    : 100;
+  const isDeductibleChecked = expense
+    ? expense.is_deductible ?? expense.isDeductible ?? true
+      ? "checked"
+      : ""
+    : "checked";
 
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(95vw, 960px); max-width: 960px;">
+      <div class="modal__panel">
         <header class="modal__head">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
-            <p class="modal__subtitle">${isEdit ? 'Actualiza los datos del gasto seleccionado' : 'Introduce la información fiscal del nuevo gasto'}</p>
+            <p class="modal__subtitle">${
+              isEdit
+                ? "Actualiza los datos del gasto seleccionado"
+                : "Introduce la información fiscal del nuevo gasto"
+            }</p>
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
-        <div class="modal__body">
-          <form id="expense-form" data-mode="${mode}" novalidate style="display: flex; flex-direction: column; gap: 1.25rem;">
-            <div class="grid grid--three">
-              <div class="form-group">
-                <label for="expense-date">Fecha del gasto</label>
-                <input type="date" id="expense-date" name="expenseDate" class="form-input" value="${formatDateForInput(expense?.expense_date)}" required />
-              </div>
-              <div class="form-group">
-                <label for="expense-category">Categoría</label>
-                <select id="expense-category" name="category" class="form-input" required>
-                  <option value="" disabled ${!expense ? 'selected' : ''}>Selecciona una categoría</option>
-                  ${Object.entries(EXPENSE_CATEGORIES).map(([key, label]) => `
-                    <option value="${key}" ${expense?.category === key ? 'selected' : ''}>${label}</option>
-                  `).join('')}
+        <form id="expense-form" data-mode="${mode}" class="modal-form" novalidate>
+          <div class="modal__body modal-form__body">
+            <div class="modal-form__grid modal-form__grid--three">
+              <label class="form-field">
+                <span>Fecha del gasto *</span>
+                <input type="date" id="expense-date" name="expenseDate" value="${formatDateForInput(
+                  expense?.expense_date
+                )}" required />
+              </label>
+              <label class="form-field">
+                <span>Categoría *</span>
+                <select id="expense-category" name="category" required>
+                  <option value="" disabled ${
+                    !expense ? "selected" : ""
+                  }>Selecciona una categoría</option>
+                  ${Object.entries(EXPENSE_CATEGORIES)
+                    .map(
+                      ([key, label]) => `
+                    <option value="${key}" ${
+                        selectedCategory === key ? "selected" : ""
+                      }>${label}</option>
+                  `
+                    )
+                    .join("")}
                 </select>
-              </div>
+              </label>
+              <label class="form-field">
+                <span>Subcategoría</span>
+                <input type="text" id="expense-subcategory" name="subcategory" placeholder="Opcional" value="${escapeHtml(
+                  expense?.subcategory || ""
+                )}" />
+              </label>
+              <label class="form-field modal-form__field--span-3">
+                <span>Descripción *</span>
+                <input type="text" id="expense-description" name="description" placeholder="Describe el gasto" value="${escapeHtml(
+                  expense?.description || ""
+                )}" required maxlength="200" />
+              </label>
             </div>
 
-            <div class="grid grid--three">
-              <div class="form-group">
-                <label for="expense-description">Descripción</label>
-                <input type="text" id="expense-description" name="description" class="form-input" placeholder="Describe el gasto" value="${escapeHtml(expense?.description || '')}" required maxlength="200" />
-              </div>
-              <div class="form-group">
-                <label for="expense-subcategory">Subcategoría</label>
-                <input type="text" id="expense-subcategory" name="subcategory" class="form-input" placeholder="Opcional" value="${escapeHtml(expense?.subcategory || '')}" />
-              </div>
+            <div class="modal-form__grid modal-form__grid--three">
+              <label class="form-field">
+                <span>Importe base (€) *</span>
+                <input type="number" step="0.01" min="0" id="expense-amount" name="amount" value="${amountValue}" required />
+              </label>
+              <label class="form-field">
+                <span>IVA (%)</span>
+                <input type="number" step="0.1" min="0" id="expense-vat-percentage" name="vatPercentage" value="${vatPercentageValue}" />
+              </label>
+              <label class="form-field">
+                <span>IVA calculado (€)</span>
+                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" value="${vatAmountValue}" />
+                <span class="form-hint">Calculado automáticamente al modificar importe o IVA</span>
+              </label>
             </div>
 
-            <div class="grid grid--three">
-              <div class="form-group">
-                <label for="expense-amount">Importe base (€)</label>
-                <input type="number" step="0.01" min="0" id="expense-amount" name="amount" class="form-input" value="${expense ? sanitizeNumber(expense.amount, 0) : ''}" required />
-              </div>
-              <div class="form-group">
-                <label for="expense-vat-percentage">IVA (%)</label>
-                <input type="number" step="0.1" min="0" id="expense-vat-percentage" name="vatPercentage" class="form-input" value="${expense ? sanitizeNumber(expense.vat_percentage || expense.vatPercentage, 21) : 21}" />
-              </div>
-              <div class="form-group">
-                <label for="expense-vat-amount">IVA calculado (€)</label>
-                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" class="form-input" value="${expense ? sanitizeNumber(expense.vat_amount || expense.vatAmount, 0) : 0}" />
-                <small class="form-hint">Se actualiza al modificar importe o IVA</small>
-              </div>
-            </div>
-
-            <div class="grid grid--two">
-              <div class="form-group">
-                <label for="expense-payment-method">Método de pago</label>
-                <select id="expense-payment-method" name="paymentMethod" class="form-input">
-                  <option value="" disabled ${!expense?.payment_method ? 'selected' : ''}>Selecciona un método</option>
-                  ${Object.entries(PAYMENT_METHODS).map(([key, label]) => `
-                    <option value="${key}" ${expense?.payment_method === key ? 'selected' : ''}>${label}</option>
-                  `).join('')}
+            <div class="modal-form__grid modal-form__grid--two">
+              <label class="form-field">
+                <span>Método de pago</span>
+                <select id="expense-payment-method" name="paymentMethod">
+                  <option value="" disabled ${
+                    !paymentMethodValue ? "selected" : ""
+                  }>Selecciona un método</option>
+                  ${Object.entries(PAYMENT_METHODS)
+                    .map(
+                      ([key, label]) => `
+                    <option value="${key}" ${
+                        paymentMethodValue === key ? "selected" : ""
+                      }>${label}</option>
+                  `
+                    )
+                    .join("")}
                 </select>
-              </div>
-              <div class="form-group">
-                <label for="expense-vendor">Proveedor</label>
-                <input type="text" id="expense-vendor" name="vendor" class="form-input" placeholder="Nombre del proveedor" value="${escapeHtml(expense?.vendor || '')}" />
-              </div>
+              </label>
+              <label class="form-field">
+                <span>Proveedor</span>
+                <input type="text" id="expense-vendor" name="vendor" placeholder="Nombre del proveedor" value="${escapeHtml(
+                  expense?.vendor || ""
+                )}" />
+              </label>
             </div>
 
-            <div class="grid grid--two">
-              <div class="form-group">
-                <label for="expense-deductible">Tratamiento fiscal</label>
+            <div class="modal-form__grid modal-form__grid--two modal-form__grid--align-center">
+              <div class="form-field form-field--inline">
+                <span>Tratamiento fiscal</span>
                 <div class="toggle-group">
                   <label class="toggle">
-                    <input type="checkbox" id="expense-deductible" name="isDeductible" ${expense?.is_deductible || expense?.isDeductible !== false ? 'checked' : ''} />
+                    <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} />
                     <span class="toggle__slider"></span>
-                    <span class="toggle__label">Deducible</span>
+                    <span class="toggle__label">Sí, es deducible</span>
                   </label>
                 </div>
               </div>
-              <div class="form-group" id="deductible-percentage-group">
-                <label for="expense-deductible-percentage">Porcentaje deducible (%)</label>
-                <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" class="form-input" value="${expense ? sanitizeNumber(expense.deductible_percentage || expense.deductiblePercentage, 100) : 100}" />
-              </div>
+              <label class="form-field" id="deductible-percentage-group">
+                <span>Porcentaje deducible (%)</span>
+                <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" value="${deductiblePercentageValue}" />
+              </label>
             </div>
 
-            <div class="form-group">
-              <label for="expense-receipt-url">Enlace al justificante</label>
-              <input type="url" id="expense-receipt-url" name="receiptUrl" class="form-input" placeholder="https://..." value="${escapeHtml(expense?.receipt_url || expense?.receiptUrl || '')}" />
+            <div class="modal-form__grid modal-form__grid--three">
+              <label class="form-field">
+                <span>Enlace al justificante</span>
+                <input type="url" id="expense-receipt-url" name="receiptUrl" placeholder="https://..." value="${escapeHtml(
+                  expense?.receipt_url || expense?.receiptUrl || ""
+                )}" />
+              </label>
+              <label class="form-field modal-form__field--span-2">
+                <span>Notas</span>
+                <textarea id="expense-notes" name="notes" rows="3" placeholder="Información adicional">${escapeHtml(
+                  expense?.notes || ""
+                )}</textarea>
+              </label>
             </div>
-
-            <div class="form-group">
-              <label for="expense-notes">Notas</label>
-              <textarea id="expense-notes" name="notes" rows="3" class="form-input" placeholder="Información adicional">${escapeHtml(expense?.notes || '')}</textarea>
-            </div>
-
-            <div class="modal__footer" style="display: flex; gap: 0.75rem;">
-              <button type="button" class="btn-secondary" style="flex: 1;" data-modal-close>Cancelar</button>
-              <button type="submit" class="btn-primary" style="flex: 1;">${actionLabel}</button>
-            </div>
-          </form>
-        </div>
+          </div>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+            <button type="submit" class="btn-primary">${actionLabel}</button>
+          </footer>
+        </form>
       </div>
     </div>
   `;
 }
 
 function setupExpenseForm(form, expense) {
-  const amountInput = form.querySelector('#expense-amount');
-  const vatPercentageInput = form.querySelector('#expense-vat-percentage');
-  const vatAmountInput = form.querySelector('#expense-vat-amount');
-  const deductibleToggle = form.querySelector('#expense-deductible');
-  const deductibleGroup = form.querySelector('#deductible-percentage-group');
+  const amountInput = form.querySelector("#expense-amount");
+  const vatPercentageInput = form.querySelector("#expense-vat-percentage");
+  const vatAmountInput = form.querySelector("#expense-vat-amount");
+  const deductibleToggle = form.querySelector("#expense-deductible");
+  const deductibleGroup = form.querySelector("#deductible-percentage-group");
 
   const syncVatAmount = () => {
     const amount = sanitizeNumber(amountInput.value, 0);
@@ -617,23 +787,23 @@ function setupExpenseForm(form, expense) {
     vatAmountInput.value = calculateVatAmount(amount, vatPercentage);
   };
 
-  amountInput?.addEventListener('input', syncVatAmount);
-  vatPercentageInput?.addEventListener('input', syncVatAmount);
+  amountInput?.addEventListener("input", syncVatAmount);
+  vatPercentageInput?.addEventListener("input", syncVatAmount);
 
   const toggleDeductibleFields = () => {
     const isChecked = deductibleToggle.checked;
-    deductibleGroup.style.display = isChecked ? 'block' : 'none';
+    deductibleGroup.style.display = isChecked ? "block" : "none";
     if (!isChecked) {
-      form.querySelector('#expense-deductible-percentage').value = '0';
+      form.querySelector("#expense-deductible-percentage").value = "0";
     } else if (!expense) {
-      form.querySelector('#expense-deductible-percentage').value = '100';
+      form.querySelector("#expense-deductible-percentage").value = "100";
     }
   };
 
-  deductibleToggle?.addEventListener('change', toggleDeductibleFields);
+  deductibleToggle?.addEventListener("change", toggleDeductibleFields);
   toggleDeductibleFields();
 
-  form.addEventListener('submit', async event => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     await handleExpenseSubmit(form);
   });
@@ -641,57 +811,116 @@ function setupExpenseForm(form, expense) {
 
 async function handleExpenseSubmit(form) {
   const formData = new FormData(form);
-  const mode = form.dataset.mode || 'create';
+  const mode = form.dataset.mode || "create";
 
   const payload = {
-    expenseDate: formData.get('expenseDate'),
-    category: formData.get('category'),
-    subcategory: (formData.get('subcategory') || '').trim() || null,
-    description: (formData.get('description') || '').trim(),
-    amount: sanitizeNumber(formData.get('amount'), 0),
-    vatPercentage: sanitizeNumber(formData.get('vatPercentage'), 0),
-    vatAmount: sanitizeNumber(formData.get('vatAmount'), 0),
-    paymentMethod: formData.get('paymentMethod') || null,
-    vendor: (formData.get('vendor') || '').trim() || null,
-    receiptUrl: (formData.get('receiptUrl') || '').trim() || null,
-    notes: (formData.get('notes') || '').trim() || null
+    expenseDate: formData.get("expenseDate"),
+    category: formData.get("category"),
+    description: (formData.get("description") || "").trim(),
+    amount: sanitizeNumber(formData.get("amount"), 0),
+    vatPercentage: sanitizeNumber(formData.get("vatPercentage"), 0),
+    vatAmount: sanitizeNumber(formData.get("vatAmount"), 0),
+    isDeductible: formData.get("isDeductible") === "on",
   };
 
-  const isDeductible = formData.get('isDeductible') === 'on';
-  payload.isDeductible = isDeductible;
-  payload.deductiblePercentage = isDeductible
-    ? sanitizeNumber(formData.get('deductiblePercentage'), 0)
-    : 0;
+  if (payload.isDeductible) {
+    payload.deductiblePercentage = sanitizeNumber(
+      formData.get("deductiblePercentage"),
+      0
+    );
+  } else {
+    payload.deductiblePercentage = 0;
+  }
+
+  const subcategory = (formData.get("subcategory") || "").trim();
+  if (subcategory) payload.subcategory = subcategory;
+
+  const paymentMethod = formData.get("paymentMethod");
+  if (paymentMethod) payload.paymentMethod = paymentMethod;
+
+  const vendor = (formData.get("vendor") || "").trim();
+  if (vendor) payload.vendor = vendor;
+
+  const receiptUrl = (formData.get("receiptUrl") || "").trim();
+  if (receiptUrl) payload.receiptUrl = receiptUrl;
+
+  const notes = (formData.get("notes") || "").trim();
+  if (notes) payload.notes = notes;
 
   if (!payload.expenseDate) {
-    showNotification('Selecciona la fecha del gasto', 'warning');
+    showNotification("Selecciona la fecha del gasto", "warning");
     return;
   }
 
   if (!payload.category) {
-    showNotification('Selecciona una categoría', 'warning');
+    showNotification("Selecciona una categoría", "warning");
     return;
   }
 
   if (!payload.description) {
-    showNotification('Añade una descripción del gasto', 'warning');
+    showNotification("Añade una descripción del gasto", "warning");
+    return;
+  }
+
+  if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+    showNotification("Introduce un importe mayor que 0", "warning");
     return;
   }
 
   try {
-    if (mode === 'edit' && activeExpenseId) {
-      await window.api.updateExpense(activeExpenseId, payload);
-      showNotification('Gasto actualizado correctamente', 'success');
+    if (mode === "edit" && activeExpenseId) {
+      const updatedExpense = await window.api.updateExpense(
+        activeExpenseId,
+        payload
+      );
+      const normalized = normalizeExpense(
+        updatedExpense?.expense ?? updatedExpense
+      );
+      if (normalized) {
+        expensesData = expensesData.filter(
+          (expense) => expense.id !== normalized.id
+        );
+        expensesData.unshift(normalized);
+        expensesData.sort((a, b) => {
+          const dateA = new Date(a.expenseDate || 0).getTime();
+          const dateB = new Date(b.expenseDate || 0).getTime();
+          return dateB - dateA;
+        });
+        selectedExpenseId = String(normalized.id);
+        currentPage = 1;
+        renderExpensesTable();
+        updateSummaryCards();
+      }
+      showNotification("Gasto actualizado correctamente", "success");
     } else {
-      await window.api.createExpense(payload);
-      showNotification('Gasto registrado correctamente', 'success');
+      const createdExpense = await window.api.createExpense(payload);
+      const normalized = normalizeExpense(
+        createdExpense?.expense ?? createdExpense
+      );
+      if (normalized) {
+        expensesData = expensesData.filter(
+          (expense) => expense.id !== normalized.id
+        );
+        expensesData.unshift(normalized);
+        expensesData.sort((a, b) => {
+          const dateA = new Date(a.expenseDate || 0).getTime();
+          const dateB = new Date(b.expenseDate || 0).getTime();
+          return dateB - dateA;
+        });
+        selectedExpenseId = String(normalized.id);
+        currentPage = 1;
+        renderExpensesTable();
+        updateSummaryCards();
+      }
+      showNotification("Gasto registrado correctamente", "success");
     }
 
     closeExpenseModal();
-    await loadExpenses();
+    // Sincroniza con backend pero sin bloquear el feedback inmediato
+    loadExpenses();
   } catch (error) {
-    console.error('Error guardando gasto:', error);
-    showNotification(error?.message || 'No se pudo guardar el gasto', 'error');
+    console.error("Error guardando gasto:", error);
+    showNotification(error?.message || "No se pudo guardar el gasto", "error");
   }
 }
 
@@ -699,64 +928,147 @@ async function viewExpense(expenseId) {
   try {
     const expense = await window.api.getExpense(expenseId);
     if (!expense) {
-      showNotification('No se encontró el gasto', 'error');
+      showNotification("No se encontró el gasto", "error");
       return;
     }
+
+    const formattedDate = formatDate(expense.expense_date);
+    const categoryLabel =
+      EXPENSE_CATEGORIES[expense.category] ||
+      expense.category ||
+      "Sin categoría";
+    const subcategoryLabel = expense.subcategory || "-";
+    const paymentMethodLabel =
+      PAYMENT_METHODS[expense.payment_method] || expense.payment_method || "-";
+    const projectLabel = expense.project_name || "-";
+    const vatPercentageDisplay = sanitizeNumber(
+      expense.vat_percentage ?? expense.vatPercentage,
+      0
+    );
+    const deductiblePercentageDisplay = sanitizeNumber(
+      expense.deductible_percentage ?? expense.deductiblePercentage,
+      0
+    );
+    const isDeductibleText =
+      expense.is_deductible ?? expense.isDeductible ?? true
+        ? `Sí, ${deductiblePercentageDisplay}%`
+        : "No deducible";
+    const receiptLink = expense.receipt_url
+      ? `<a href="${escapeHtml(
+          expense.receipt_url
+        )}" target="_blank" rel="noopener">Abrir justificante</a>`
+      : "No adjuntado";
 
     const modalHtml = `
       <div class="modal is-open" id="expense-view-modal" role="dialog" aria-modal="true">
         <div class="modal__backdrop"></div>
-        <div class="modal__panel" style="width: min(90vw, 640px); max-width: 640px;">
+        <div class="modal__panel">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Detalle del gasto</h2>
-              <p class="modal__subtitle">${formatDate(expense.expense_date)} · ${EXPENSE_CATEGORIES[expense.category] || expense.category}</p>
+              <p class="modal__subtitle">${formattedDate} - ${escapeHtml(
+      categoryLabel
+    )}</p>
             </div>
-            <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
+            <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
           </header>
           <div class="modal__body">
             <dl class="detail-list">
-              <div><dt>Descripción</dt><dd>${escapeHtml(expense.description || '-')}</dd></div>
-              <div><dt>Proveedor</dt><dd>${escapeHtml(expense.vendor || '-')}</dd></div>
-              <div><dt>Importe</dt><dd>${formatCurrency(expense.amount)} + IVA ${formatCurrency(expense.vat_amount)} (${sanitizeNumber(expense.vat_percentage, 0)}%)</dd></div>
-              <div><dt>Deducible</dt><dd>${expense.is_deductible ? `Sí, ${sanitizeNumber(expense.deductible_percentage, 0)}%` : 'No deducible'}</dd></div>
-              <div><dt>Método de pago</dt><dd>${PAYMENT_METHODS[expense.payment_method] || expense.payment_method || '-'}</dd></div>
-              <div><dt>Proyecto</dt><dd>${escapeHtml(expense.project_name || '-')}</dd></div>
-              <div><dt>Notas</dt><dd>${escapeHtml(expense.notes || '-')}</dd></div>
-              <div><dt>Justificante</dt><dd>${expense.receipt_url ? `<a href="${escapeHtml(expense.receipt_url)}" target="_blank" rel="noopener">Abrir justificante</a>` : 'No adjuntado'}</dd></div>
+              <div class="detail-list__item detail-list__item--full">
+                <dt>Descripción</dt>
+                <dd>${escapeHtml(expense.description || "-")}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Fecha del gasto</dt>
+                <dd>${formattedDate}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Categoría</dt>
+                <dd>${escapeHtml(categoryLabel)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Subcategoría</dt>
+                <dd>${escapeHtml(subcategoryLabel)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Método de pago</dt>
+                <dd>${escapeHtml(paymentMethodLabel)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Proveedor</dt>
+                <dd>${escapeHtml(expense.vendor || "-")}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Importe base</dt>
+                <dd>${formatCurrency(expense.amount)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>IVA</dt>
+                <dd>${formatCurrency(
+                  expense.vat_amount
+                )} (${vatPercentageDisplay}%)</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Tratamiento fiscal</dt>
+                <dd>${escapeHtml(isDeductibleText)}</dd>
+              </div>
+              <div class="detail-list__item">
+                <dt>Proyecto</dt>
+                <dd>${escapeHtml(projectLabel)}</dd>
+              </div>
+              <div class="detail-list__item detail-list__item--full">
+                <dt>Justificante</dt>
+                <dd>${receiptLink}</dd>
+              </div>
+              <div class="detail-list__item detail-list__item--full">
+                <dt>Notas</dt>
+                <dd>${escapeHtml(expense.notes || "-")}</dd>
+              </div>
             </dl>
           </div>
-          <footer class="modal__footer">
+          <footer class="modal__footer modal-form__footer">
             <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-            <button type="button" class="btn-primary" onclick="openExpenseModal('edit', '${expense.id}')">Editar</button>
+            <button type="button" class="btn-primary" data-expense-edit="${
+              expense.id
+            }">Editar gasto</button>
           </footer>
         </div>
       </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const modal = document.getElementById('expense-view-modal');
-    modal?.querySelectorAll('[data-modal-close]').forEach(btn => {
-      btn.addEventListener('click', () => modal.remove());
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+    const modal = document.getElementById("expense-view-modal");
+    modal?.querySelectorAll("[data-modal-close]").forEach((btn) => {
+      btn.addEventListener("click", () => modal.remove());
     });
-    modal?.querySelector('.modal__backdrop')?.addEventListener('click', () => modal.remove());
+    modal
+      ?.querySelector(".modal__backdrop")
+      ?.addEventListener("click", () => modal.remove());
+    modal
+      ?.querySelector("[data-expense-edit]")
+      ?.addEventListener("click", () => {
+        modal.remove();
+        openExpenseModal("edit", String(expense.id));
+      });
   } catch (error) {
-    console.error('Error mostrando gasto:', error);
-    showNotification('No se pudo mostrar el detalle del gasto', 'error');
+    console.error("Error mostrando gasto:", error);
+    showNotification("No se pudo mostrar el detalle del gasto", "error");
   }
 }
 
 async function confirmDeleteExpense(expenseId) {
-  const confirmed = window.confirm('¿Seguro que deseas eliminar este gasto? Esta acción no se puede deshacer.');
+  const confirmed = window.confirm(
+    "¿Seguro que deseas eliminar este gasto? Esta acción no se puede deshacer."
+  );
   if (!confirmed) return;
 
   try {
     await window.api.deleteExpense(expenseId);
-    showNotification('Gasto eliminado correctamente', 'success');
+    showNotification("Gasto eliminado correctamente", "success");
     await loadExpenses();
   } catch (error) {
-    console.error('Error eliminando gasto:', error);
-    showNotification(error?.message || 'No se pudo eliminar el gasto', 'error');
+    console.error("Error eliminando gasto:", error);
+    showNotification(error?.message || "No se pudo eliminar el gasto", "error");
   }
 }
 
@@ -819,7 +1131,9 @@ export default function renderExpenses() {
           <label class="visually-hidden" for="expense-category-filter">Categoría</label>
           <select id="expense-category-filter" class="expenses__select">
             <option value="">Todas las categorías</option>
-            ${Object.entries(EXPENSE_CATEGORIES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+            ${Object.entries(EXPENSE_CATEGORIES)
+              .map(([key, label]) => `<option value="${key}">${label}</option>`)
+              .join("")}
           </select>
         </div>
         <div class="expenses__filters-group">
@@ -886,8 +1200,8 @@ export function initExpenses() {
   window.viewExpense = viewExpense;
   window.confirmDeleteExpense = confirmDeleteExpense;
 
-  const newExpenseBtn = document.getElementById('new-expense-btn');
-  newExpenseBtn?.addEventListener('click', () => openExpenseModal('create'));
+  const newExpenseBtn = document.getElementById("new-expense-btn");
+  newExpenseBtn?.addEventListener("click", () => openExpenseModal("create"));
 
   setupFilters();
   loadExpenses();

@@ -1,201 +1,193 @@
-# Guía de Mejores Prácticas para Tablas
+# Guía De Tablas - Anclora Flow
 
-Esta guía documenta los estándares y requisitos para crear y mantener tablas en Anclora Flow.
+Esta guía define cómo deben construirse, estilizarse y comportarse las tablas de la aplicación. Toma como referencia inmediata las vistas de **Facturas**, **Clientes** y **Gastos**, que comparten el mismo lenguaje visual.
 
-## 1. Estructura de Columna de Acciones
+---
 
-### ✅ Requisitos Obligatorios
+## 1. Principios De Diseño
 
-#### 1.1 Encabezado de la Columna
-- **DEBE** incluir una columna de encabezado visible con el texto "ACCIONES"
-- **NO** usar `visually-hidden` en esta columna
+- **Consistencia visual**: todas las tablas comparten tipografías, alturas de fila, bordes verticales y colores de selección.
+- **Lectura rápida**: la información clave (número, cliente, importes) va alineada y resaltada con clases utilitarias (`__number`, `__amount`, etc.).
+- **Acciones contextualizadas**: la columna `ACCIONES` siempre está visible y alinea los botones en horizontal.
+- **Sin scroll horizontal** en resoluciones ≥ 1280 px. Ajustar el orden y el ancho de columnas antes de habilitar un `overflow`.
+- **Soporte oscuro/claro**: utilizar las variables de `colors.css`. Evitar estilos inline.
+- En zooms altos (≥110 %) o resoluciones estrechas, el contenedor activa `overflow-x: auto` para evitar que se oculten columnas; verifica el comportamiento en estas condiciones.
 
-```html
-<!-- ✅ CORRECTO -->
-<th scope="col">ACCIONES</th>
+---
 
-<!-- ❌ INCORRECTO -->
-<th scope="col"><span class="visually-hidden">Acciones</span></th>
-<th scope="col"></th>
+## 2. Anatomía
+
 ```
-
-#### 1.2 Contenedor de Botones
-- **DEBE** usar un `<div>` contenedor dentro de `<td>` con clase apropiada
-- La clase **NO DEBE** aplicarse directamente al `<td>`
-- Opciones válidas para la clase del contenedor:
-  - `.invoices-table__actions` para tabla de facturas
-  - `.expenses-table__actions` para tabla de gastos
-  - `.table-actions` para otras tablas (clientes, proyectos)
-
-```html
-<!-- ✅ CORRECTO -->
-<td>
-  <div class="invoices-table__actions">
-    <button type="button" class="table-action">...</button>
-    <button type="button" class="table-action">...</button>
+<section class="module">
+  <header class="module__head">… filtros …</header>
+  <div class="module-table">
+    <table class="invoices-table | expenses-table | clients-table">
+      <thead>…</thead>
+      <tbody data-*-tbody>…</tbody>
+    </table>
   </div>
-</td>
-
-<td>
-  <div class="table-actions">
-    <button type="button" class="btn-icon">...</button>
-    <button type="button" class="btn-icon">...</button>
-  </div>
-</td>
-
-<!-- ❌ INCORRECTO - Clase en <td> directamente -->
-<td class="invoices-table__actions">
-  <button type="button" class="table-action">...</button>
-  <button type="button" class="table-action">...</button>
-</td>
-
-<!-- ❌ INCORRECTO - Sin contenedor -->
-<td>
-  <button type="button" class="table-action">...</button>
-  <button type="button" class="table-action">...</button>
-</td>
+  <footer class="module__footer">
+    <p data-*-count>Mostrando…</p>
+    <div data-pagination="*"></div>
+  </footer>
+</section>
 ```
 
-#### 1.3 Alineación de Botones
-- Los botones **DEBEN** aparecer horizontalmente (uno al lado del otro)
-- Se logra mediante `display: inline-flex` en el contenedor
-- **NO** apilar botones verticalmente
+### 2.1 Encabezados
 
-#### 1.4 Flexibilidad del Contenedor
-- El contenedor **DEBE** ajustarse al tamaño de la celda de la tabla
-- Al hacer zoom o cambiar el tamaño de la ventana, el contenedor se adapta
-- Esto se logra usando `<td>` normal + `<div>` interno con `display: inline-flex`
-- **NUNCA** aplicar `display: inline-flex` directamente al `<td>` (causa tamaño fijo)
+- Utilizar `scope="col"` en todos los `<th>`.
+- La última columna **siempre** se llama `ACCIONES` en mayúsculas.
+- Evitar celdas vacías o `visually-hidden` en cabeceras.
 
-#### 1.5 Bordes
-- El contenedor de botones **NO DEBE** tener bordes visibles
-- Los bordes de la celda deben ajustarse al contenido
-- El contenedor interno no debe tener bordes adicionales
+### 2.2 Filtros
 
-```css
-.table-actions,
-.invoices-table__actions,
-.expenses-table__actions {
-  display: inline-flex;
-  gap: 0.4rem;
-  border-bottom: none !important;
-  border-right: none !important;
-}
-```
+- Contenedores `.invoices__filters`/`.expenses__filters` comparten espaciado.
+- Inputs con `label` accesible (`visually-hidden` permite ocultar el texto pero mantiene la asociación).
+- Botones de acciones de filtro (`Recargar`, `Limpiar filtros`) usan estilos `btn-ghost` o `btn-secondary`.
 
-## 2. Estilos de Botones
+### 2.3 Cuerpo
 
-### 2.1 Clases de Botones
-- `.table-action` - Para botones en facturas, gastos
-- `.btn-icon` - Para botones en clientes, proyectos
+- Fila base `tr` con clase específica (`invoices-table__row`, `expenses-table__row`, etc.).
+- Cada `td` puede tener atributos `data-column` cuando la tabla tenga vista responsive (ver tabla de facturas).
+- Bordes verticales y horizontales los añade `colors.css`; no redefinirlos inline.
 
-### 2.2 Fondo de Botones
-- **DEBE** usar fondo azul claro unificado
-- Valor: `rgba(51, 102, 255, 0.35)`
+### 2.4 Paginación
 
-```css
-.table-action,
-.btn-icon {
-  background: rgba(51, 102, 255, 0.35);
-  /* Otros estilos... */
-}
-```
+- Usar `data-pagination="expenses"` (o equivalente) para construir la paginación dinámica.
+- Ocultar el paginador cuando `filtered.length <= PAGE_SIZE`.
+- Mostrar el contador con `data-*-count`.
 
-## 3. Selección de Filas
+---
 
-### 3.1 Color de Selección
-- **DEBE** ser consistente en todas las tablas
-- Tema claro: `rgba(59, 130, 246, 0.15)`
-- Tema oscuro: `rgba(37, 99, 235, 0.35)`
+## 3. Selección De Filas
 
-### 3.2 Comportamiento de Selección
-- Primera fila **DEBE** estar seleccionada por defecto al cargar
-- Al hacer clic en una fila, **DEBE** cambiar la selección
-- Al hacer clic en la misma fila seleccionada, **NO DEBE** deseleccionarla
-- Ignorar clics en botones/enlaces dentro de las filas
+### 3.1 Estado Inicial
+
+- Al cargar datos, seleccionar la primera fila disponible.
+- Si la tabla se vuelve a rellenar (filtro, creación) y el `selectedId` ya no existe, seleccionar el primer elemento del listado actual.
 
 ```javascript
-// Ejemplo de implementación correcta
-function ensureSelection() {
-  if (data.length > 0) {
-    const isValid = data.some(item => String(item.id) === String(selectedId));
-    if (!isValid) {
-      selectedId = String(data[0].id);
-    }
-  } else {
-    selectedId = null;
-  }
+if (data.length) {
+  const exists = data.some(item => String(item.id) === String(selectedId));
+  if (!exists) selectedId = String(data[0].id);
+} else {
+  selectedId = null;
 }
+```
 
-// Event listener
-tbody.addEventListener('click', (e) => {
-  if (e.target.closest('button') || e.target.closest('a')) {
-    return; // Ignorar clics en botones
-  }
+### 3.2 Comportamiento
 
-  const row = e.target.closest('tr[data-id]');
-  if (row) {
-    const id = String(row.dataset.id);
-    // Solo cambiar si es diferente (no deseleccionar)
-    if (selectedId !== id) {
-      selectedId = id;
-      renderTable();
-    }
+- La clase `is-selected` aplica la banda azul (`rgba(59, 130, 246, 0.15)` en claro / `rgba(37, 99, 235, 0.35)` en oscuro).
+- El clic sobre una fila **no debe** deseleccionar; solo se actualiza cuando se hace clic sobre otra fila distinta.
+- Ignorar clics que se produzcan sobre botones o enlaces dentro de la fila:
+
+```javascript
+tbody.addEventListener('click', event => {
+  if (event.target.closest('button') || event.target.closest('a')) return;
+  const row = event.target.closest('tr[data-expense-id]');
+  if (!row) return;
+  const id = String(row.dataset.expenseId);
+  if (selectedExpenseId !== id) {
+    selectedExpenseId = id;
+    renderExpensesTable();
   }
 });
 ```
 
-## 4. Bordes Verticales entre Columnas
+### 3.3 Estado Visual
 
-- Todas las celdas **DEBEN** tener bordes verticales excepto la última
-- Valor: `border-right: 1px solid rgba(148, 163, 184, 0.15)`
-
-```css
-.table tbody td {
-  border-right: 1px solid rgba(148, 163, 184, 0.15);
-}
-
-.table tbody td:last-child {
-  border-right: none !important;
-  border-bottom: none !important;
-}
-```
-
-## 5. Checklist para Nueva Tabla
-
-Antes de crear una nueva tabla, verifica:
-
-- [ ] ✅ Columna "ACCIONES" con encabezado visible
-- [ ] ✅ Contenedor `<div>` con clase apropiada DENTRO de `<td>` (no en el `<td>`)
-- [ ] ✅ Botones alineados horizontalmente
-- [ ] ✅ Contenedor se ajusta al tamaño de la celda (flexible, no fijo)
-- [ ] ✅ Sin bordes en contenedor de botones
-- [ ] ✅ Fondo azul claro en botones (`rgba(51, 102, 255, 0.35)`)
-- [ ] ✅ Bordes verticales entre columnas (excepto última)
-- [ ] ✅ Primera fila seleccionada por defecto
-- [ ] ✅ Color de selección unificado
-- [ ] ✅ No deseleccionar al re-clicar
-- [ ] ✅ Ignorar clics en botones al seleccionar
-
-## 6. Ejemplos de Referencia
-
-### Tabla de Facturas (invoices-with-api.js)
-- Mejor práctica para estructura de botones
-- Usar como referencia para nuevas tablas
-
-### Tabla de Clientes (clients.js)
-- Ejemplo de uso de `.table-actions`
-- Referencia para selección de filas
-
-## 7. Archivos Importantes
-
-- `frontend/src/styles/colors.css` - Estilos globales de tablas
-- `frontend/src/pages/invoices-with-api.js` - Tabla de facturas (referencia)
-- `frontend/src/pages/clients.js` - Tabla de clientes (referencia)
-- `frontend/src/pages/expenses.js` - Tabla de gastos
-- `GUIA_TABLAS.md` - Este documento
+- Color de fondo y borde ya definido en `colors.css` para todas las tablas.
+- Mantener `box-shadow: inset 0 0 0 1px` en celdas seleccionadas para reforzar el foco.
 
 ---
 
-**Última actualización:** 2025-10-30
-**Versión:** 1.0
+## 4. Columna De Acciones
+
+| Aspecto              | Reglas                                                                                      |
+|----------------------|---------------------------------------------------------------------------------------------|
+| Contenedor           | `<div class="invoices-table__actions">` / `<div class="expenses-table__actions">` / `<div class="table-actions">` |
+| Ubicación            | Dentro del `<td>`, nunca en el propio `<td>`                                                 |
+| Botones              | `table-action` (facturas y gastos) / `btn-icon` (clientes/proyectos)                         |
+| Fondo botón          | `rgba(51, 102, 255, 0.35)` con `border-radius: 12px`                                         |
+| Align                | `display: inline-flex; gap: 0.4rem;`                                                         |
+| Iconografía          | SVG o glifos unicode. Mantener título (`title`) para accesibilidad.                         |
+
+**Ejemplo correcto**
+
+```html
+<td>
+  <div class="expenses-table__actions">
+    <button type="button" class="table-action" title="Ver gasto">👁️</button>
+    <button type="button" class="table-action" title="Editar gasto">✏️</button>
+    <button type="button" class="table-action" title="Eliminar gasto">🗑️</button>
+  </div>
+</td>
+```
+
+---
+
+## 5. Estados
+
+### 5.1 Empty State
+
+- Mensaje dentro de `tbody` con `<td colspan="*">`.
+- Incluir icono o texto guía (`Crea tu primer gasto para empezar.`).
+- Mantener estilos de la clase `empty-state`.
+
+### 5.2 Error
+
+- Mostrar módulo de error (`module-error`) en vez de tabla.
+- Botón “Reintentar” vinculando con la función de carga (`loadExpenses()`).
+
+### 5.3 Loading
+
+- Mostrar overlay `data-*-loading` con spinner y mensaje contextual.
+
+---
+
+## 6. Responsividad
+
+- Para anchuras < 960 px:
+  - Reducir número de columnas visibles (priorizar fecha, descripción, importe).
+  - Convertir acciones en menú contextual si no caben.
+  - Utilizar `data-column` + pseudo-elementos si hay que adaptar a diseño stacked (ver tabla de facturas).
+- Mantener altura mínima de la fila (`min-height: 60px`) para evitar densidad excesiva.
+
+---
+
+## 7. Código Fuente Y Estilos
+
+- **JS**:
+  - `frontend/src/pages/invoices-with-api.js`
+  - `frontend/src/pages/clients.js`
+  - `frontend/src/pages/expenses.js`
+- **CSS**: `frontend/src/styles/colors.css` (sección Tablas, alrededor de las líneas 1400–1600).
+- **Componentes compartidos**: utilidades en `frontend/src/components/table`.
+
+---
+
+## 8. Checklist
+
+- [ ] Tabla envuelta en `module-table` con contador y paginador.
+- [ ] Columna `ACCIONES` con contenedor interno y botones horizontales.
+- [ ] Primera fila seleccionada nada más cargar datos.
+- [ ] Selección persistente tras filtros/acciones (reposicionada si desaparece la fila).
+- [ ] Bordes verticales visibles, excepto en `td:last-child`.
+- [ ] Mensajes de vacío, error y carga implementados.
+- [ ] Pagination oculta cuando no es necesaria.
+- [ ] Sin estilos inline (usar clases o estilos globales).
+- [ ] Botones con `title`/`aria-label` y sin focus outline eliminado.
+- [ ] Eventos de fila ignorando clics en botones/enlaces.
+
+---
+
+## 9. Referencias Visuales
+
+- **Facturas** (`frontend/src/pages/invoices-with-api.js`): ejemplo completo de selección, filtros, acciones y estados Verifactu.
+- **Clientes** (`frontend/src/pages/clients.js`): uso de `.table-actions` con iconos secundarios.
+- **Gastos** (`frontend/src/pages/expenses.js`): referencia para tablas compactas con importes y deducciones.
+
+---
+
+**Última actualización:** 2025-10-31  
+**Responsable:** Equipo Frontend Anclora Flow
