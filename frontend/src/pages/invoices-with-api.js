@@ -1355,9 +1355,9 @@ async function viewInvoice(invoiceId) {
             </div>
             <button type="button" class="modal__close" onclick="document.getElementById('view-invoice-modal').remove()">×</button>
           </header>
-          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 2rem;">
-            <div style="display: flex; flex-direction: column; gap: 1.25rem; height: 100%;">
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 1.25rem; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
+          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 1.75rem;">
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; height: 100%; min-height: 0;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; padding: 1.1rem 1.25rem; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
                 <div>
                   <h3 style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Cliente</h3>
                   <p style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">${invoice.client?.name || invoice.client_name || 'Sin cliente'}</p>
@@ -1379,27 +1379,30 @@ async function viewInvoice(invoiceId) {
                 </div>
               </div>
 
-              ${invoice.notes ? `
-                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                  <h3 style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Notas</h3>
-                  <p style="color: var(--text-primary); white-space: pre-wrap; font-size: 0.9rem;">${invoice.notes}</p>
-                </div>
-              ` : ''}
+              <div style="display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); gap: 1.5rem; flex: 1; min-height: 0;">
+                <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem; background: var(--bg-secondary); display: flex; flex-direction: column; min-height: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
+                  </div>
 
-              <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
-                </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
+                    <button type="button" class="invoice-tab-nav" id="view-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
+                    <div id="view-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
+                    <button type="button" class="invoice-tab-nav" id="view-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
+                  </div>
 
-                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
-                  <button type="button" class="invoice-tab-nav" id="view-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
-                  <div id="view-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
-                  <button type="button" class="invoice-tab-nav" id="view-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
-                </div>
+                  <div id="view-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
+                </section>
 
-                <div id="view-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
-
-                <div id="view-invoice-totals" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); flex-shrink: 0;"></div>
+                <aside style="display: flex; flex-direction: column; gap: 1rem; min-height: 0;">
+                  <div id="view-invoice-totals" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem; background: var(--bg-secondary);"></div>
+                  ${invoice.notes ? `
+                    <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.15rem; background: var(--bg-secondary); color: var(--text-primary); font-size: 0.88rem;">
+                      <h3 style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Notas</h3>
+                      <p style="margin: 0; white-space: pre-wrap; line-height: 1.45;">${invoice.notes}</p>
+                    </div>
+                  ` : ''}
+                </aside>
               </div>
             </div>
           </div>
@@ -1460,19 +1463,22 @@ async function editInvoice(invoiceId) {
             </div>
             <button type="button" class="modal__close" onclick="closeEditInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 2rem;">
-            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.25rem; height: 100%;">
-              ${invoice.verifactu_status === 'registered' ? `
-                <div style="padding: 0.75rem 1rem; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; background: rgba(59, 130, 246, 0.1); font-size: 0.875rem; color: var(--text-primary);">
-                  ℹ️ Esta factura está registrada en Verifactu. Los cambios no afectan al registro enviado.
+          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 1.75rem;">
+            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.15rem; height: 100%; min-height: 0;">
+              <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                ${invoice.verifactu_status === 'registered' ? `
+                  <div style="flex: 1 1 240px; display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.85rem; border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 8px; background: rgba(59, 130, 246, 0.12); font-size: 0.82rem; line-height: 1.45; color: var(--text-primary);">
+                    <span aria-hidden="true" style="font-size: 1rem;">ℹ️</span>
+                    <span>Esta factura está registrada en Verifactu. Los cambios no afectan al registro enviado.</span>
+                  </div>
+                ` : ''}
+                <div id="edit-lock-message" style="display: ${invoice.status === 'draft' ? 'none' : 'flex'}; flex: 1 1 240px; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.85rem; border-radius: 8px; border: 1px solid rgba(234, 179, 8, 0.4); background: rgba(234, 179, 8, 0.12); font-size: 0.82rem; line-height: 1.45; color: var(--text-primary);">
+                  <span aria-hidden="true" style="font-size: 1rem;">⚠️</span>
+                  <span>Para editar conceptos e importes cambia el estado a Borrador.</span>
                 </div>
-              ` : ''}
-
-              <div id="edit-lock-message" style="display: ${invoice.status === 'draft' ? 'none' : 'flex'}; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(234, 179, 8, 0.3); background: rgba(234, 179, 8, 0.1); font-size: 0.875rem; color: var(--text-primary);">
-                ⚠️ Para editar conceptos e importes cambia el estado a Borrador.
               </div>
 
-              <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr 1fr;">
+              <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
                 <div>
                   <label for="edit-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Estado</label>
                   <select id="edit-status" name="status" class="form-input" style="width: 100%;">
@@ -1502,22 +1508,26 @@ async function editInvoice(invoiceId) {
                 <textarea id="edit-notes" name="notes" rows="2" class="form-input" style="resize: none; width: 100%;">${invoice.notes || ''}</textarea>
               </div>
 
-              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
-                  <button type="button" class="btn-secondary" id="add-edit-invoice-item" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Añadir línea</button>
-                </div>
+              <div style="display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr); gap: 1.5rem; flex: 1; min-height: 0;">
+                <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem; background: var(--bg-secondary); display: flex; flex-direction: column; min-height: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
+                    <button type="button" class="btn-secondary" id="add-edit-invoice-item" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Añadir línea</button>
+                  </div>
 
-                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
-                  <button type="button" class="invoice-tab-nav" id="edit-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
-                  <div id="edit-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
-                  <button type="button" class="invoice-tab-nav" id="edit-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
-                </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
+                    <button type="button" class="invoice-tab-nav" id="edit-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
+                    <div id="edit-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
+                    <button type="button" class="invoice-tab-nav" id="edit-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
+                  </div>
 
-                <div id="edit-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
+                  <div id="edit-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
+                </section>
 
-                <div id="edit-invoice-totals" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); flex-shrink: 0;"></div>
-              </section>
+                <aside style="display: flex; flex-direction: column; gap: 1rem; min-height: 0;">
+                  <div id="edit-invoice-totals" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.15rem; background: var(--bg-secondary);"></div>
+                </aside>
+              </div>
             </form>
           </div>
           <footer class="modal__footer modal-form__footer">
