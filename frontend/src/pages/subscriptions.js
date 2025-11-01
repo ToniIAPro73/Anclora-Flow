@@ -503,7 +503,7 @@ function buildSubscriptionFormFields(subscription = {}) {
           subscription.description || ""
         )}</textarea>
       </label>
-      <div class="form-field modal-form__field--span-2">
+      <div class="form-field modal-form__field--span-2" style="margin-top: 1rem;">
         <label class="checkbox">
           <input type="checkbox" name="autoInvoice" ${
             subscription.autoInvoice !== false ? "checked" : ""
@@ -693,14 +693,15 @@ function openSubscriptionModal(mode, subscriptionId = null) {
   }" novalidate>
           <div class="modal__body modal-form__body" style="width: 100%; max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
             ${formFields}
+            <div class="modal-form__separator"></div>
           </div>
-        </form>
-        <footer class="modal__footer modal-form__footer">
-          <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
-          <button type="submit" form="${formId}" class="btn-primary">${
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+            <button type="submit" form="${formId}" class="btn-primary">${
     mode === "edit" ? "Guardar cambios" : "Crear suscripción"
   }</button>
-        </footer>
+          </footer>
+        </form>
       </div>
     </div>
   `;
