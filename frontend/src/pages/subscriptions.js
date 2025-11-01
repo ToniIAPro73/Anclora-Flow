@@ -252,6 +252,8 @@ function renderSubscriptionsTable() {
     return;
   }
 
+  const highlightSingle = subscriptionState.subscriptions.length === 1;
+
   tbody.innerHTML = subscriptionState.subscriptions
     .map((sub) => {
       const statusBadge =
@@ -272,7 +274,9 @@ function renderSubscriptionsTable() {
         sub.type === "income" ? "Ingreso recurrente" : "Gasto recurrente";
 
       return `
-        <tr data-subscription-row="${sub.id}">
+        <tr data-subscription-row="${sub.id}" class="subscriptions-table__row${
+          highlightSingle ? " is-selected" : ""
+        }">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(sub.name)}</strong>
@@ -636,7 +640,7 @@ function openSubscriptionModal(mode, subscriptionId = null) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
         </header>
-          <div class="modal__body" style="display: grid; gap: 1.5rem;">
+          <div class="modal__body modal-form__body" style="display: grid; gap: 1.5rem;">
             ${detailHtml}
           </div>
         <footer class="modal__footer modal-form__footer">
@@ -1036,15 +1040,15 @@ export default function renderSubscriptions() {
         <h2 style="grid-column: 1 / -1; margin: 0; font-size: 1.1rem;">Indicadores clave</h2>
         <article class="card" style="padding: 1.5rem;">
           <h3 style="margin-top: 0;">Próximos cobros</h3>
-          <ul class="insight-list" data-upcoming-subscriptions></ul>
+          <ul class="insight-list" data-upcoming-subscriptions style="max-height: 180px; overflow-y: auto;"></ul>
         </article>
         <article class="card" style="padding: 1.5rem;">
           <h3 style="margin-top: 0;">Distribución por estado</h3>
-          <ul class="insight-list" data-status-breakdown></ul>
+          <ul class="insight-list" data-status-breakdown style="max-height: 180px; overflow-y: auto;"></ul>
         </article>
         <article class="card" style="padding: 1.5rem;">
           <h3 style="margin-top: 0;">Recomendaciones</h3>
-          <ul class="insight-list" data-subscription-suggestions></ul>
+          <ul class="insight-list" data-subscription-suggestions style="max-height: 180px; overflow-y: auto;"></ul>
         </article>
       </section>
     </section>
