@@ -1743,6 +1743,9 @@ a:hover {
   background: rgba(51, 102, 255, 0.35);
   cursor: pointer;
   transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .table-action:hover,
@@ -2359,6 +2362,7 @@ table tr[hidden] {
   position: relative;
   width: min(1000px, 96vw);
   max-height: min(96vh, 980px);
+  overflow-x: hidden;
   overflow-y: auto;
   border-radius: 28px;
   background: linear-gradient(
@@ -2374,19 +2378,23 @@ table tr[hidden] {
 
 .modal__panel--wide {
   width: min(1180px, 96vw);
+  overflow-x: hidden;
 }
 
 .modal__panel--xl {
   width: min(1280px, 96vw);
+  overflow-x: hidden;
 }
 
 .modal__panel--tall {
   max-height: min(94vh, 980px);
+  overflow-x: hidden;
 }
 
 .modal__panel--flex {
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .modal__body {
@@ -2494,6 +2502,9 @@ table tr[hidden] {
   flex-direction: column;
   gap: 0;
   max-height: inherit;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-form__body {
@@ -2549,10 +2560,16 @@ table tr[hidden] {
 .modal-form__grid {
   display: grid;
   gap: 1rem;
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-form__grid--two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .modal-form__grid--three {
@@ -2565,6 +2582,18 @@ table tr[hidden] {
 
 .modal-form__field--span-2 {
   grid-column: span 2;
+}
+
+@media (max-width: 720px) {
+  .modal-form__grid--two,
+  .modal-form__grid--three {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-form__field--span-2,
+  .modal-form__field--span-3 {
+    grid-column: span 1;
+  }
 }
 
 .modal-form__field--span-3 {
@@ -2581,12 +2610,12 @@ table tr[hidden] {
 
 [data-theme="dark"] .modal-form__footer {
   border-top-color: rgba(148, 163, 184, 0.25);
+}
 
-  .modal-form__separator {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 1rem 0;
-  }
+.modal-form__separator {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 1rem 0;
 }
 
 .modal-form__footer .btn-primary,
@@ -3148,6 +3177,7 @@ table tr[hidden] {
 .form-field input,
 .form-field select {
   width: 100%;
+  max-width: 100%;
   padding: 0.65rem 0.9rem;
   border-radius: 12px;
   border: 1px solid rgba(51, 102, 255, 0.22);
@@ -3156,6 +3186,9 @@ table tr[hidden] {
   font-size: 0.95rem;
   font-weight: 500;
   transition: border 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
 }
 
 [data-theme="dark"] .form-field input,
@@ -3978,6 +4011,15 @@ table tr[hidden] {
 
   .modal-form__field--span-3 {
     grid-column: span 2;
+  }
+
+  .modal-form__grid--two {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .modal-form__field--span-2 {
+    grid-column: span 1;
   }
 }
 

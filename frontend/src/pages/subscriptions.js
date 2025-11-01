@@ -315,16 +315,16 @@ function renderSubscriptionsTable() {
             </span>
           </td>
           <td>
-            <div class="table-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-              <button type="button" class="btn-link" data-subscription-view="${
+            <div class="table-actions">
+              <button type="button" class="btn-icon" data-subscription-view="${
                 sub.id
-              }">Ver</button>
-              <button type="button" class="btn-link" data-subscription-edit="${
+              }" title="Ver">👁️</button>
+              <button type="button" class="btn-icon" data-subscription-edit="${
                 sub.id
-              }">Editar</button>
-              <button type="button" class="btn-link" data-subscription-delete="${
+              }" title="Editar">✏️</button>
+              <button type="button" class="btn-icon" data-subscription-delete="${
                 sub.id
-              }" style="color: var(--danger, #ef4444);">Eliminar</button>
+              }" title="Eliminar" style="color: var(--danger, #ef4444);">🗑️</button>
             </div>
           </td>
         </tr>
@@ -503,7 +503,7 @@ function buildSubscriptionFormFields(subscription = {}) {
           subscription.description || ""
         )}</textarea>
       </label>
-      <div class="form-field modal-form__field--span-2">
+      <div class="form-field modal-form__field--span-2" style="margin-top: 1rem;">
         <label class="checkbox">
           <input type="checkbox" name="autoInvoice" ${
             subscription.autoInvoice !== false ? "checked" : ""
@@ -680,7 +680,7 @@ function openSubscriptionModal(mode, subscriptionId = null) {
   const modalHtml = `
     <div class="modal is-open" id="subscription-modal">
       <div class="modal__backdrop" data-modal-close></div>
-      <div class="modal__panel" style="width: min(95vw, 720px); max-width: 720px; overflow-x: hidden;">
+      <div class="modal__panel" style="width: min(92vw, 600px); max-width: 600px; overflow-x: hidden; box-sizing: border-box; margin: 0 auto; padding: 1.5rem;">
         <header class="modal__head">
           <div>
             <h2 class="modal__title">${title}</h2>
@@ -691,17 +691,17 @@ function openSubscriptionModal(mode, subscriptionId = null) {
         <form class="modal-form" id="${formId}" data-form-type="subscription" data-subscription-id="${
     subscription?.id || ""
   }" novalidate>
-          <div class="modal__body modal-form__body">
+          <div class="modal__body modal-form__body" style="width: 100%; max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
             ${formFields}
+            <div class="modal-form__separator"></div>
           </div>
-          <div class="modal-form__separator"></div>
-        </form>
-        <footer class="modal__footer modal-form__footer">
-          <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
-          <button type="submit" form="${formId}" class="btn-primary">${
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+            <button type="submit" form="${formId}" class="btn-primary">${
     mode === "edit" ? "Guardar cambios" : "Crear suscripción"
   }</button>
-        </footer>
+          </footer>
+        </form>
       </div>
     </div>
   `;
