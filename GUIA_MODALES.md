@@ -180,33 +180,79 @@ Esta guía establece los estándares para crear modales consistentes, amigables 
 
 ## 4. Modales con Líneas de Ítems (Facturas, Presupuestos)
 
-### 4.1 Sección de Conceptos
-- Título de sección claro: "Conceptos facturados", "Partidas del presupuesto"
-- Botón "Añadir línea" visible y accesible (color teal, esquina superior derecha de la sección)
-- Primera línea **SIEMPRE** visible sin scroll
-- Campos de línea en una fila:
-  - Concepto | Unidad | Cantidad | Precio unitario | IVA (%)
-  - Botón "Eliminar línea" al final de cada fila (excepto si es la única)
+### 4.1 Sistema de Pestañas para Líneas
+- Las líneas de factura se organizan en **pestañas** (tabs)
+- Cada pestaña representa una línea de factura
+- Solo se muestra **una pestaña a la vez** (evita scroll)
+- Botones de navegación (← →) para moverse entre pestañas
+- Primera pestaña seleccionada por defecto
+- Pestañas numeradas: "Línea 1", "Línea 2", etc.
 
-### 4.2 Grid de Línea de Ítem
+**Ventajas del sistema de pestañas:**
+- ✅ Sin scroll vertical
+- ✅ Campos de línea más espaciados y legibles
+- ✅ Totales de línea visibles inmediatamente
+- ✅ Navegación clara entre líneas
+- ✅ Escalable (funciona con 1 línea o 100 líneas)
+
+### 4.2 Sección de Líneas
+- Título de sección: "Líneas de factura"
+- Botón "+ Añadir línea" en esquina superior derecha
+- Contenedor de pestañas con scroll horizontal si hay muchas
+- Botones de navegación (← →) a los lados
+- Área de contenido muestra solo la línea activa
+
+### 4.3 Grid de Línea de Ítem (Una pestaña)
 ```css
-.invoice-line-item {
+.invoice-item-form {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr auto;
-  gap: 0.75rem;
+  gap: 1rem;
   align-items: end;
 }
 ```
 
-### 4.3 Resumen de Totales
+**Campos de una línea:**
+- Concepto (2 columnas de ancho) *
+- Unidad (1 columna)
+- Cantidad (1 columna)
+- Precio unit. (1.2 columnas)
+- IVA (%) (1 columna)
+- Botón eliminar (auto, solo si hay >1 línea)
+
+**Resumen de línea:** Debajo de los campos, mostrar:
+- Subtotal de línea
+- IVA de línea
+- Total de línea
+
+### 4.4 Resumen de Totales
 - **SIEMPRE** visible al abrir el modal (parte del contenido inicial)
-- Alineado a la derecha
+- Alineado a la derecha o en un grid
 - Campos:
-  - Subtotal
+  - Subtotal (suma de todas las líneas)
   - IVA estimado
-  - IRPF (%)
+  - IRPF (%) si aplica
   - Total (destacado)
 - Sin scroll para ver el total en el estado inicial
+
+### 4.5 Navegación entre Pestañas
+```html
+<div style="display: flex; gap: 0.5rem; align-items: center;">
+  <button id="prev-btn" class="invoice-tab-nav">←</button>
+  <div id="tabs-container" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto;">
+    <!-- Pestañas generadas dinámicamente -->
+  </div>
+  <button id="next-btn" class="invoice-tab-nav">→</button>
+</div>
+```
+
+**Comportamiento:**
+- Pestaña activa: fondo azul, texto blanco
+- Pestañas inactivas: fondo gris, texto gris
+- Botón ← deshabilitado en primera pestaña
+- Botón → deshabilitado en última pestaña
+- Click en pestaña: cambia a esa línea
+- Click en ← o →: navega secuencialmente
 
 ## 5. Tipos de Modales
 

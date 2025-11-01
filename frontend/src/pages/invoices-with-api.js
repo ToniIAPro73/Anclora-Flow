@@ -221,6 +221,357 @@ function resolveQrDownloadSource(invoice) {
   return verificationUrl ? buildQrFallbackSource(verificationUrl) : '';
 }
 
+// Sistema de editor con pestañas para líneas de factura
+function setupItemsEditorWithTabs({
+  editorKey,
+  containerId,
+  tabsContainerId,
+  totalsId,
+  addButtonId,
+  prevButtonId,
+  nextButtonId,
+  initialItems = [],
+  editable = true,
+  allowIrpfEdit = true,
+  defaultUnitType = 'unidad',
+  irpfPercentage = 0
+}) {
+  const items = initialItems && initialItems.length > 0
+    ? initialItems.map(normalizeInvoiceItem)
+    : [normalizeInvoiceItem({ unitType: defaultUnitType })];
+
+  invoiceItemEditors[editorKey] = {
+    key: editorKey,
+    containerId,
+    tabsContainerId,
+    totalsId,
+    addButtonId,
+    prevButtonId,
+    nextButtonId,
+    items,
+    currentTabIndex: 0,
+    editable,
+    baseAllowIrpfEdit: allowIrpfEdit,
+    allowIrpfEdit: editable ? allowIrpfEdit : false,
+    defaultUnitType,
+    irpfPercentage: sanitizeNumber(irpfPercentage, 0),
+    eventsAttached: false,
+    latestTotals: calculateInvoiceTotals(items, irpfPercentage)
+  };
+
+  renderItemsEditorWithTabs(editorKey);
+  attachItemsEditorTabsEvents(editorKey);
+  updateEditorControlsState(invoiceItemEditors[editorKey]);
+}
+
+function renderItemsEditorWithTabs(editorKey) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  // Renderizar pestañas
+  const tabsContainer = document.getElementById(state.tabsContainerId);
+  if (tabsContainer) {
+    tabsContainer.innerHTML = state.items.map((item, index) => `
+      <button type="button"
+              class="invoice-line-tab ${index === state.currentTabIndex ? 'active' : ''}"
+              data-tab-index="${index}"
+              style="padding: 0.5rem 1rem; background: ${index === state.currentTabIndex ? '#3b82f6' : 'var(--bg-primary)'}; color: ${index === state.currentTabIndex ? 'white' : 'var(--text-secondary)'}; border: 1px solid ${index === state.currentTabIndex ? '#3b82f6' : 'var(--border-color)'}; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: ${index === state.currentTabIndex ? '600' : '500'}; white-space: nowrap; transition: all 0.2s;">
+        Línea ${index + 1}
+      </button>
+    `).join('');
+  }
+
+  // Renderizar línea actual
+  const container = document.getElementById(state.containerId);
+  if (container) {
+    const currentItem = state.items[state.currentTabIndex];
+    if (!currentItem) {
+      container.innerHTML = '<p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center; padding: 2rem;">No hay líneas de factura. Añade una línea para empezar.</p>';
+    } else {
+      container.innerHTML = getSingleItemFormMarkup(currentItem, state.currentTabIndex, state.editable, state.items.length > 1);
+    }
+  }
+
+  // Actualizar botones de navegación
+  updateTabNavigation(editorKey);
+
+  updateTotalsDisplay(editorKey);
+}
+
+function getSingleItemFormMarkup(item, index, editable, showDelete) {
+  return `
+    <div class="invoice-item-form" data-index="${index}" style="display: grid; gap: 1rem; grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr auto; align-items: end;">
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Concepto *</label>
+        <input
+          type="text"
+          class="form-input"
+          data-field="description"
+          value="${escapeHtml(item.description)}"
+          ${editable ? '' : 'disabled'}
+          placeholder="Servicio o producto"
+          style="width: 100%;"
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Unidad</label>
+        <input
+          type="text"
+          class="form-input"
+          data-field="unitType"
+          value="${escapeHtml(item.unitType)}"
+          ${editable ? '' : 'disabled'}
+          placeholder="unidad"
+          style="width: 100%;"
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Cantidad</label>
+        <input
+          type="number"
+          class="form-input"
+          data-field="quantity"
+          value="${sanitizeNumber(item.quantity, 1)}"
+          step="0.01"
+          min="0"
+          ${editable ? '' : 'disabled'}
+          style="width: 100%;"
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Precio unit.</label>
+        <input
+          type="number"
+          class="form-input"
+          data-field="unitPrice"
+          value="${sanitizeNumber(item.unitPrice, 0)}"
+          step="0.01"
+          min="0"
+          ${editable ? '' : 'disabled'}
+          style="width: 100%;"
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">IVA (%)</label>
+        <input
+          type="number"
+          class="form-input"
+          data-field="vatPercentage"
+          value="${sanitizeNumber(item.vatPercentage, 21)}"
+          step="0.1"
+          min="0"
+          max="100"
+          ${editable ? '' : 'disabled'}
+          style="width: 100%;"
+        />
+      </div>
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: transparent;">-</label>
+        ${editable && showDelete ? `
+          <button type="button" class="btn-icon btn-icon--danger" data-action="delete-item" title="Eliminar línea" style="padding: 0.6rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; cursor: pointer; color: #ef4444;">🗑️</button>
+        ` : ''}
+      </div>
+    </div>
+    <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-primary); border-radius: 8px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; font-size: 0.875rem;">
+      <div>
+        <span style="color: var(--text-secondary);">Subtotal:</span>
+        <strong style="color: var(--text-primary); margin-left: 0.5rem;">${currencyFormatter.format(calculateLineSubtotal(item))}</strong>
+      </div>
+      <div>
+        <span style="color: var(--text-secondary);">IVA:</span>
+        <strong style="color: var(--text-primary); margin-left: 0.5rem;">${currencyFormatter.format(calculateLineVat(item))}</strong>
+      </div>
+      <div>
+        <span style="color: var(--text-secondary);">Total línea:</span>
+        <strong style="color: #3b82f6; margin-left: 0.5rem;">${currencyFormatter.format(calculateLineTotal(item))}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function calculateLineSubtotal(item) {
+  const qty = sanitizeNumber(item.quantity, 1);
+  const price = sanitizeNumber(item.unitPrice, 0);
+  return qty * price;
+}
+
+function calculateLineVat(item) {
+  const subtotal = calculateLineSubtotal(item);
+  const vatPct = sanitizeNumber(item.vatPercentage, 21);
+  return subtotal * (vatPct / 100);
+}
+
+function calculateLineTotal(item) {
+  return calculateLineSubtotal(item) + calculateLineVat(item);
+}
+
+function updateTabNavigation(editorKey) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  const prevBtn = document.getElementById(state.prevButtonId);
+  const nextBtn = document.getElementById(state.nextButtonId);
+
+  if (prevBtn) {
+    prevBtn.disabled = state.currentTabIndex === 0;
+    prevBtn.style.opacity = state.currentTabIndex === 0 ? '0.5' : '1';
+    prevBtn.style.cursor = state.currentTabIndex === 0 ? 'not-allowed' : 'pointer';
+  }
+
+  if (nextBtn) {
+    nextBtn.disabled = state.currentTabIndex >= state.items.length - 1;
+    nextBtn.style.opacity = state.currentTabIndex >= state.items.length - 1 ? '0.5' : '1';
+    nextBtn.style.cursor = state.currentTabIndex >= state.items.length - 1 ? 'not-allowed' : 'pointer';
+  }
+}
+
+function attachItemsEditorTabsEvents(editorKey) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state || state.eventsAttached) return;
+
+  // Eventos del contenedor principal
+  const container = document.getElementById(state.containerId);
+  if (container) {
+    container.dataset.editorKey = editorKey;
+    container.addEventListener('input', handleItemEditorTabInput);
+    container.addEventListener('change', handleItemEditorTabInput);
+    container.addEventListener('click', handleItemEditorTabClick);
+  }
+
+  // Eventos de pestañas
+  const tabsContainer = document.getElementById(state.tabsContainerId);
+  if (tabsContainer) {
+    tabsContainer.addEventListener('click', (e) => {
+      const tab = e.target.closest('[data-tab-index]');
+      if (tab) {
+        const tabIndex = parseInt(tab.dataset.tabIndex, 10);
+        if (!isNaN(tabIndex)) {
+          switchToTab(editorKey, tabIndex);
+        }
+      }
+    });
+  }
+
+  // Botón añadir línea
+  if (state.addButtonId) {
+    const addBtn = document.getElementById(state.addButtonId);
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        addNewItemTab(editorKey);
+      });
+    }
+  }
+
+  // Botones de navegación
+  if (state.prevButtonId) {
+    const prevBtn = document.getElementById(state.prevButtonId);
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (state.currentTabIndex > 0) {
+          switchToTab(editorKey, state.currentTabIndex - 1);
+        }
+      });
+    }
+  }
+
+  if (state.nextButtonId) {
+    const nextBtn = document.getElementById(state.nextButtonId);
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (state.currentTabIndex < state.items.length - 1) {
+          switchToTab(editorKey, state.currentTabIndex + 1);
+        }
+      });
+    }
+  }
+
+  // Eventos de totales
+  const totalsEl = document.getElementById(state.totalsId);
+  if (totalsEl) {
+    totalsEl.dataset.editorKey = editorKey;
+    totalsEl.addEventListener('input', handleTotalsInput);
+  }
+
+  state.eventsAttached = true;
+}
+
+function switchToTab(editorKey, tabIndex) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state || tabIndex < 0 || tabIndex >= state.items.length) return;
+
+  state.currentTabIndex = tabIndex;
+  renderItemsEditorWithTabs(editorKey);
+}
+
+function addNewItemTab(editorKey) {
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  const newItem = normalizeInvoiceItem({ unitType: state.defaultUnitType });
+  state.items.push(newItem);
+  state.currentTabIndex = state.items.length - 1;
+
+  state.latestTotals = calculateInvoiceTotals(state.items, state.irpfPercentage);
+  renderItemsEditorWithTabs(editorKey);
+}
+
+function handleItemEditorTabInput(e) {
+  const field = e.target.dataset.field;
+  if (!field) return;
+
+  const container = e.target.closest('[data-editor-key]');
+  if (!container) return;
+
+  const editorKey = container.dataset.editorKey;
+  const state = invoiceItemEditors[editorKey];
+  if (!state) return;
+
+  const index = state.currentTabIndex;
+  const item = state.items[index];
+  if (!item) return;
+
+  if (field === 'description') {
+    item.description = e.target.value;
+  } else if (field === 'unitType') {
+    item.unitType = e.target.value;
+  } else if (field === 'quantity') {
+    item.quantity = sanitizeNumber(e.target.value, 1);
+  } else if (field === 'unitPrice') {
+    item.unitPrice = sanitizeNumber(e.target.value, 0);
+  } else if (field === 'vatPercentage') {
+    item.vatPercentage = sanitizeNumber(e.target.value, 21);
+  }
+
+  state.items[index] = item;
+  state.latestTotals = calculateInvoiceTotals(state.items, state.irpfPercentage);
+
+  // Re-renderizar solo la línea actual para actualizar totales de línea
+  renderItemsEditorWithTabs(editorKey);
+}
+
+function handleItemEditorTabClick(e) {
+  const deleteBtn = e.target.closest('[data-action="delete-item"]');
+  if (!deleteBtn) return;
+
+  const container = e.target.closest('[data-editor-key]');
+  if (!container) return;
+
+  const editorKey = container.dataset.editorKey;
+  const state = invoiceItemEditors[editorKey];
+  if (!state || state.items.length <= 1) return;
+
+  const currentIndex = state.currentTabIndex;
+  state.items.splice(currentIndex, 1);
+
+  // Ajustar índice actual
+  if (state.currentTabIndex >= state.items.length) {
+    state.currentTabIndex = state.items.length - 1;
+  }
+
+  state.latestTotals = calculateInvoiceTotals(state.items, state.irpfPercentage);
+  renderItemsEditorWithTabs(editorKey);
+}
+
 function setupItemsEditor({
   editorKey,
   containerId,
@@ -991,114 +1342,70 @@ async function viewInvoice(invoiceId) {
   try {
     showNotification('Cargando detalles de la factura...', 'info');
 
-    // Obtener detalles completos de la factura con items
     const invoice = await window.api.getInvoice(invoiceId);
-
-    // Calcular subtotal de items
-    const itemsSubtotal = invoice.items ? invoice.items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0) : 0;
 
     const modalHTML = `
       <div class="modal is-open" id="view-invoice-modal">
         <div class="modal__backdrop" onclick="document.getElementById('view-invoice-modal').remove()"></div>
-        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
-          <header class="modal__head">
+        <div class="modal__panel" style="width: min(95vw, 1400px); max-width: 1400px; max-height: 92vh; display: flex; flex-direction: column;">
+          <header class="modal__head" style="flex-shrink: 0;">
             <div>
               <h2 class="modal__title">Factura ${invoice.invoice_number}</h2>
               <p class="modal__subtitle">Detalles completos de la factura</p>
             </div>
             <button type="button" class="modal__close" onclick="document.getElementById('view-invoice-modal').remove()">×</button>
           </header>
-          <div class="modal__body" style="overflow-y: auto; flex: 1;">
-            <!-- Información general -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
-              <div>
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Cliente</h3>
-                <p style="font-size: 1rem; color: var(--text-primary);">${invoice.client?.name || invoice.client_name || 'Sin cliente'}</p>
-                ${invoice.client?.email ? `<p style="font-size: 0.875rem; color: var(--text-secondary);">${invoice.client.email}</p>` : ''}
-              </div>
-              <div>
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Estado</h3>
-                <span class="status-pill status-pill--${statusMap[invoice.status]?.tone || 'draft'}">
-                  ${statusMap[invoice.status]?.label || invoice.status}
-                </span>
-              </div>
-              <div>
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Fecha emisión</h3>
-                <p style="font-size: 1rem; color: var(--text-primary);">${formatDate(invoice.issue_date)}</p>
-              </div>
-              <div>
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Fecha vencimiento</h3>
-                <p style="font-size: 1rem; color: var(--text-primary);">${formatDate(invoice.due_date)}</p>
-              </div>
-            </div>
-
-            <!-- Líneas de factura -->
-            ${invoice.items && invoice.items.length > 0 ? `
-              <div style="margin-bottom: 2rem;">
-                <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem;">Conceptos</h3>
-                <div style="overflow-x: auto;">
-                  <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                      <tr style="background-color: var(--bg-secondary); border-bottom: 2px solid var(--border-color);">
-                        <th style="padding: 0.75rem; text-align: left; font-size: 0.875rem; color: var(--text-secondary);">Descripción</th>
-                        <th style="padding: 0.75rem; text-align: center; font-size: 0.875rem; color: var(--text-secondary);">Cantidad</th>
-                        <th style="padding: 0.75rem; text-align: right; font-size: 0.875rem; color: var(--text-secondary);">P. Unitario</th>
-                        <th style="padding: 0.75rem; text-align: right; font-size: 0.875rem; color: var(--text-secondary);">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${invoice.items.map(item => `
-                        <tr style="border-bottom: 1px solid var(--border-color);">
-                          <td style="padding: 0.75rem; color: var(--text-primary);">${item.description}</td>
-                          <td style="padding: 0.75rem; text-align: center; color: var(--text-secondary);">${item.quantity} ${item.unit_type || ''}</td>
-                          <td style="padding: 0.75rem; text-align: right; color: var(--text-secondary);">${currencyFormatter.format(item.unit_price)}</td>
-                          <td style="padding: 0.75rem; text-align: right; font-weight: 600; color: var(--text-primary);">${currencyFormatter.format(item.amount)}</td>
-                        </tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
+          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 2rem;">
+            <div style="display: flex; flex-direction: column; gap: 1.25rem; height: 100%;">
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 1.25rem; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
+                <div>
+                  <h3 style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Cliente</h3>
+                  <p style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">${invoice.client?.name || invoice.client_name || 'Sin cliente'}</p>
+                  ${invoice.client?.email ? `<p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">${invoice.client.email}</p>` : ''}
+                </div>
+                <div>
+                  <h3 style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Estado</h3>
+                  <span class="status-pill status-pill--${statusMap[invoice.status]?.tone || 'draft'}">
+                    ${statusMap[invoice.status]?.label || invoice.status}
+                  </span>
+                </div>
+                <div>
+                  <h3 style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">F. Emisión</h3>
+                  <p style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">${formatDate(invoice.issue_date)}</p>
+                </div>
+                <div>
+                  <h3 style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">F. Vencimiento</h3>
+                  <p style="font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">${formatDate(invoice.due_date)}</p>
                 </div>
               </div>
-            ` : ''}
 
-            <!-- Totales -->
-            <div style="border-top: 2px solid var(--border-color); padding-top: 1.5rem;">
-              <div style="display: flex; justify-content: flex-end;">
-                <div style="width: 300px;">
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="color: var(--text-secondary);">Subtotal:</span>
-                    <span style="color: var(--text-primary); font-weight: 500;">${currencyFormatter.format(invoice.subtotal)}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="color: var(--text-secondary);">IVA (${invoice.vat_percentage}%):</span>
-                    <span style="color: var(--text-primary); font-weight: 500;">${currencyFormatter.format(invoice.vat_amount)}</span>
-                  </div>
-                  ${invoice.irpf_amount > 0 ? `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                      <span style="color: var(--text-secondary);">IRPF (${invoice.irpf_percentage}%):</span>
-                      <span style="color: #ef4444; font-weight: 500;">-${currencyFormatter.format(invoice.irpf_amount)}</span>
-                    </div>
-                  ` : ''}
-                  <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 2px solid var(--border-color); margin-top: 0.75rem;">
-                    <span style="color: var(--text-primary); font-weight: 700; font-size: 1.125rem;">Total:</span>
-                    <span style="color: var(--text-primary); font-weight: 700; font-size: 1.125rem;">${currencyFormatter.format(invoice.total)}</span>
-                  </div>
+              ${invoice.notes ? `
+                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                  <h3 style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Notas</h3>
+                  <p style="color: var(--text-primary); white-space: pre-wrap; font-size: 0.9rem;">${invoice.notes}</p>
                 </div>
+              ` : ''}
+
+              <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
+                  <button type="button" class="invoice-tab-nav" id="view-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
+                  <div id="view-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
+                  <button type="button" class="invoice-tab-nav" id="view-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
+                </div>
+
+                <div id="view-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
+
+                <div id="view-invoice-totals" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); flex-shrink: 0;"></div>
               </div>
             </div>
-
-            ${invoice.notes ? `
-              <div style="margin-top: 1.5rem; padding: 1rem; background-color: var(--bg-secondary); border-radius: 0.5rem; border: 1px solid var(--border-color);">
-                <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">Notas</h3>
-                <p style="color: var(--text-secondary); white-space: pre-wrap;">${invoice.notes}</p>
-              </div>
-            ` : ''}
           </div>
-          <footer class="modal__footer">
-            <button class="btn-secondary" onclick="document.getElementById('view-invoice-modal').remove()">Cerrar</button>
-            <button class="btn-primary" onclick="downloadInvoicePDF('${invoice.id}')">
-              Descargar PDF
-            </button>
+          <footer class="modal__footer" style="display: flex; justify-content: space-between; padding: 1.5rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary); flex-shrink: 0;">
+            <button class="btn-secondary" onclick="document.getElementById('view-invoice-modal').remove()" style="padding: 0.75rem 2.5rem; background: #14b8a6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Cerrar</button>
+            <button class="btn-primary" onclick="downloadInvoicePDF('${invoice.id}')" style="padding: 0.75rem 2.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Descargar PDF</button>
           </footer>
         </div>
       </div>
@@ -1106,7 +1413,22 @@ async function viewInvoice(invoiceId) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Remover notificación de carga
+    // Configurar editor de pestañas en modo solo lectura
+    setupItemsEditorWithTabs({
+      editorKey: 'view',
+      containerId: 'view-invoice-items',
+      tabsContainerId: 'view-invoice-tabs',
+      totalsId: 'view-invoice-totals',
+      addButtonId: null,
+      prevButtonId: 'view-invoice-tab-prev',
+      nextButtonId: 'view-invoice-tab-next',
+      initialItems: invoice.items || [],
+      editable: false,
+      allowIrpfEdit: false,
+      defaultUnitType: 'unidad',
+      irpfPercentage: invoice.irpf_percentage || 0
+    });
+
     const notifications = document.querySelectorAll('.notification--info');
     notifications.forEach(n => n.remove());
 
@@ -1130,27 +1452,30 @@ async function editInvoice(invoiceId) {
     const modalHTML = `
       <div class="modal is-open" id="edit-invoice-modal">
         <div class="modal__backdrop" onclick="closeEditInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
-          <header class="modal__head">
+        <div class="modal__panel" style="width: min(95vw, 1400px); max-width: 1400px; max-height: 92vh; display: flex; flex-direction: column;">
+          <header class="modal__head" style="flex-shrink: 0;">
             <div>
               <h2 class="modal__title">Editar factura ${invoice.invoice_number}</h2>
               <p class="modal__subtitle">Actualiza datos y conceptos</p>
             </div>
             <button type="button" class="modal__close" onclick="closeEditInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body" style="overflow-y: auto; flex: 1;">
-            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 2rem;">
+            <form id="edit-invoice-form" style="display: flex; flex-direction: column; gap: 1.25rem; height: 100%;">
               ${invoice.verifactu_status === 'registered' ? `
-                <div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
-                  <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
-                    Esta factura esta registrada en Verifactu. Los cambios no afectan al registro enviado.
-                  </p>
+                <div style="padding: 0.75rem 1rem; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; background: rgba(59, 130, 246, 0.1); font-size: 0.875rem; color: var(--text-primary);">
+                  ℹ️ Esta factura está registrada en Verifactu. Los cambios no afectan al registro enviado.
                 </div>
               ` : ''}
-              <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
+
+              <div id="edit-lock-message" style="display: ${invoice.status === 'draft' ? 'none' : 'flex'}; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(234, 179, 8, 0.3); background: rgba(234, 179, 8, 0.1); font-size: 0.875rem; color: var(--text-primary);">
+                ⚠️ Para editar conceptos e importes cambia el estado a Borrador.
+              </div>
+
+              <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr 1fr;">
                 <div>
-                  <label for="edit-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Estado</label>
-                  <select id="edit-status" name="status" class="form-input">
+                  <label for="edit-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Estado</label>
+                  <select id="edit-status" name="status" class="form-input" style="width: 100%;">
                     <option value="draft" ${invoice.status === 'draft' ? 'selected' : ''}>Borrador</option>
                     <option value="pending" ${invoice.status === 'pending' ? 'selected' : ''}>Pendiente</option>
                     <option value="sent" ${invoice.status === 'sent' ? 'selected' : ''}>Enviada</option>
@@ -1158,39 +1483,46 @@ async function editInvoice(invoiceId) {
                     <option value="overdue" ${invoice.status === 'overdue' ? 'selected' : ''}>Vencida</option>
                   </select>
                 </div>
-                <div>
-                  <label for="edit-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de emision</label>
-                  <input type="date" id="edit-issue-date" name="issue_date" class="form-input" value="${issueDateValue || ''}" />
+                <div style="min-width: 160px;">
+                  <label for="edit-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Emisión</label>
+                  <input type="date" id="edit-issue-date" name="issue_date" class="form-input" value="${issueDateValue || ''}" style="width: 100%;" />
                 </div>
-                <div>
-                  <label for="edit-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de vencimiento</label>
-                  <input type="date" id="edit-due-date" name="due_date" class="form-input" value="${dueDateValue || ''}" />
+                <div style="min-width: 160px;">
+                  <label for="edit-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Vencimiento</label>
+                  <input type="date" id="edit-due-date" name="due_date" class="form-input" value="${dueDateValue || ''}" style="width: 100%;" />
                 </div>
-                <div id="payment-date-container" style="display: ${invoice.status === 'paid' ? 'block' : 'none'};">
-                  <label for="edit-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de pago</label>
-                  <input type="date" id="edit-payment-date" name="payment_date" class="form-input" value="${paymentDateValue || ''}" />
+                <div id="payment-date-container" style="display: ${invoice.status === 'paid' ? 'block' : 'none'}; min-width: 160px;">
+                  <label for="edit-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Pago</label>
+                  <input type="date" id="edit-payment-date" name="payment_date" class="form-input" value="${paymentDateValue || ''}" style="width: 100%;" />
                 </div>
               </div>
+
               <div>
-                <label for="edit-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Notas</label>
-                <textarea id="edit-notes" name="notes" rows="4" class="form-input" style="resize: vertical;">${invoice.notes || ''}</textarea>
+                <label for="edit-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Notas</label>
+                <textarea id="edit-notes" name="notes" rows="2" class="form-input" style="resize: none; width: 100%;">${invoice.notes || ''}</textarea>
               </div>
-              <div id="edit-lock-message" style="display: ${invoice.status === 'draft' ? 'none' : 'flex'}; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); font-size: 0.9rem; color: var(--text-secondary);">
-                Para editar conceptos e importes cambia el estado a Borrador.
-              </div>
-              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: var(--bg-secondary);">
+
+              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Conceptos facturados</h3>
-                  <button type="button" class="btn-secondary" id="add-edit-invoice-item">Anadir linea</button>
+                  <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
+                  <button type="button" class="btn-secondary" id="add-edit-invoice-item" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Añadir línea</button>
                 </div>
-                <div id="edit-invoice-items"></div>
-                <div id="edit-invoice-totals" style="margin-top: 1.5rem;"></div>
+
+                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
+                  <button type="button" class="invoice-tab-nav" id="edit-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
+                  <div id="edit-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
+                  <button type="button" class="invoice-tab-nav" id="edit-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
+                </div>
+
+                <div id="edit-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
+
+                <div id="edit-invoice-totals" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); flex-shrink: 0;"></div>
               </section>
             </form>
           </div>
-          <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
-            <button class="btn-secondary" style="flex: 1;" onclick="closeEditInvoiceModal()">Cancelar</button>
-            <button type="button" class="btn-primary" style="flex: 1;" onclick="saveInvoiceChanges('${invoice.id}')">Guardar cambios</button>
+          <footer class="modal__footer" style="display: flex; justify-content: space-between; padding: 1.5rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary); flex-shrink: 0;">
+            <button class="btn-secondary" onclick="closeEditInvoiceModal()" style="padding: 0.75rem 2.5rem; background: #14b8a6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="saveInvoiceChanges('${invoice.id}')" style="padding: 0.75rem 2.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Guardar cambios</button>
           </footer>
         </div>
       </div>
@@ -1211,11 +1543,14 @@ async function editInvoice(invoiceId) {
 function setupInvoiceEditForm(invoice) {
   invoiceEditState = { invoiceId: invoice.id };
 
-  setupItemsEditor({
+  setupItemsEditorWithTabs({
     editorKey: 'edit',
     containerId: 'edit-invoice-items',
+    tabsContainerId: 'edit-invoice-tabs',
     totalsId: 'edit-invoice-totals',
     addButtonId: 'add-edit-invoice-item',
+    prevButtonId: 'edit-invoice-tab-prev',
+    nextButtonId: 'edit-invoice-tab-next',
     initialItems: invoice.items || [],
     editable: invoice.status === 'draft',
     allowIrpfEdit: true,
@@ -1272,24 +1607,24 @@ async function openNewInvoiceModal() {
     const modalHTML = `
       <div class="modal is-open" id="new-invoice-modal">
         <div class="modal__backdrop" onclick="closeNewInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 1200px); max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
-          <header class="modal__head">
+        <div class="modal__panel" style="width: min(95vw, 1400px); max-width: 1400px; max-height: 92vh; display: flex; flex-direction: column;">
+          <header class="modal__head" style="flex-shrink: 0;">
             <div>
               <h2 class="modal__title">Nueva factura</h2>
               <p class="modal__subtitle">Completa los datos y conceptos para generar la factura</p>
             </div>
             <button type="button" class="modal__close" onclick="closeNewInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body" style="overflow-y: auto; flex: 1;">
-            <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.5rem;">
-              <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
-                <div>
-                  <label for="new-invoice-number" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Numero de factura</label>
-                  <input type="text" id="new-invoice-number" name="invoice_number" class="form-input" placeholder="EJ: 2024-001" required />
+          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 2rem;">
+            <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.25rem; height: 100%;">
+              <div style="display: grid; gap: 1rem; grid-template-columns: auto 1fr 1fr 1fr;">
+                <div style="min-width: 150px;">
+                  <label for="new-invoice-number" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Nº Factura *</label>
+                  <input type="text" id="new-invoice-number" name="invoice_number" class="form-input" placeholder="2024-001" required style="width: 100%;" />
                 </div>
                 <div>
-                  <label for="new-invoice-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Estado</label>
-                  <select id="new-invoice-status" name="status" class="form-input">
+                  <label for="new-invoice-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Estado</label>
+                  <select id="new-invoice-status" name="status" class="form-input" style="width: 100%;">
                     <option value="draft" selected>Borrador</option>
                     <option value="pending">Pendiente</option>
                     <option value="sent">Enviada</option>
@@ -1297,43 +1632,54 @@ async function openNewInvoiceModal() {
                     <option value="overdue">Vencida</option>
                   </select>
                 </div>
-                <div>
-                  <label for="new-invoice-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de emision</label>
-                  <input type="date" id="new-invoice-issue-date" name="issue_date" class="form-input" value="${today}" required />
+                <div style="min-width: 160px;">
+                  <label for="new-invoice-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Emisión</label>
+                  <input type="date" id="new-invoice-issue-date" name="issue_date" class="form-input" value="${today}" required style="width: 100%;" />
                 </div>
-                <div>
-                  <label for="new-invoice-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de vencimiento</label>
-                  <input type="date" id="new-invoice-due-date" name="due_date" class="form-input" value="${dueDefaultDate}" required />
+                <div style="min-width: 160px;">
+                  <label for="new-invoice-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Vencimiento</label>
+                  <input type="date" id="new-invoice-due-date" name="due_date" class="form-input" value="${dueDefaultDate}" required style="width: 100%;" />
                 </div>
-                <div id="new-payment-date-container" style="display: none;">
-                  <label for="new-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Fecha de pago</label>
-                  <input type="date" id="new-payment-date" name="payment_date" class="form-input" />
-                </div>
+              </div>
+              <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 2fr;">
                 <div>
-                  <label for="new-invoice-client" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Cliente</label>
-                  <select id="new-invoice-client" name="client_id" class="form-input">
+                  <label for="new-invoice-client" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Cliente</label>
+                  <select id="new-invoice-client" name="client_id" class="form-input" style="width: 100%;">
                     <option value="">Sin cliente asignado</option>
                     ${clients.map(client => `<option value="${client.id}">${client.name || client.business_name || 'Cliente sin nombre'}</option>`).join('')}
                   </select>
                 </div>
-              </div>
-              <div>
-                <label for="new-invoice-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Notas</label>
-                <textarea id="new-invoice-notes" name="notes" rows="4" class="form-input" style="resize: vertical;" placeholder="Observaciones internas o para el cliente"></textarea>
-              </div>
-              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: var(--bg-secondary);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Conceptos facturados</h3>
-                  <button type="button" class="btn-secondary" id="add-new-invoice-item">Anadir linea</button>
+                <div>
+                  <label for="new-invoice-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Notas</label>
+                  <textarea id="new-invoice-notes" name="notes" rows="2" class="form-input" style="resize: none; width: 100%;" placeholder="Observaciones internas o para el cliente"></textarea>
                 </div>
-                <div id="new-invoice-items"></div>
-                <div id="new-invoice-totals" style="margin-top: 1.5rem;"></div>
+                <div id="new-payment-date-container" style="display: none;">
+                  <label for="new-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Fecha de pago</label>
+                  <input type="date" id="new-payment-date" name="payment_date" class="form-input" style="width: 100%;" />
+                </div>
+              </div>
+
+              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
+                  <button type="button" class="btn-secondary" id="add-new-invoice-item" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Añadir línea</button>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
+                  <button type="button" class="invoice-tab-nav" id="new-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
+                  <div id="new-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
+                  <button type="button" class="invoice-tab-nav" id="new-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
+                </div>
+
+                <div id="new-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
+
+                <div id="new-invoice-totals" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); flex-shrink: 0;"></div>
               </section>
             </form>
           </div>
-          <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
-            <button class="btn-secondary" style="flex: 1;" onclick="closeNewInvoiceModal()">Cancelar</button>
-            <button type="button" class="btn-primary" style="flex: 1;" onclick="submitNewInvoice()">Crear factura</button>
+          <footer class="modal__footer" style="display: flex; justify-content: space-between; padding: 1.5rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary); flex-shrink: 0;">
+            <button class="btn-secondary" onclick="closeNewInvoiceModal()" style="padding: 0.75rem 2.5rem; background: #14b8a6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="submitNewInvoice()" style="padding: 0.75rem 2.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Crear factura</button>
           </footer>
         </div>
       </div>
@@ -1341,11 +1687,14 @@ async function openNewInvoiceModal() {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    setupItemsEditor({
+    setupItemsEditorWithTabs({
       editorKey: 'create',
       containerId: 'new-invoice-items',
+      tabsContainerId: 'new-invoice-tabs',
       totalsId: 'new-invoice-totals',
       addButtonId: 'add-new-invoice-item',
+      prevButtonId: 'new-invoice-tab-prev',
+      nextButtonId: 'new-invoice-tab-next',
       initialItems: [],
       editable: true,
       allowIrpfEdit: true,
