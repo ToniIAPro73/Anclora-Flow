@@ -1,9 +1,3 @@
-const sidebarViews = {
-  DETAIL: "detail",
-  FORM: "form",
-  EMPTY: "empty",
-};
-
 const subscriptionState = {
   subscriptions: [],
   summary: {
@@ -24,9 +18,6 @@ const subscriptionState = {
     billingCycle: "all",
     autoInvoice: "all",
   },
-  selectedId: null,
-  sidebarView: sidebarViews.DETAIL,
-  editingId: null,
   loading: false,
   error: null,
 };
@@ -109,30 +100,6 @@ function showToast(message, type = "info") {
     .addEventListener("click", () => toast.remove());
   document.body.appendChild(toast);
   window.setTimeout(() => toast.remove(), 3200);
-}
-
-function ensureSelection() {
-  if (subscriptionState.subscriptions.length) {
-    if (
-      !subscriptionState.selectedId ||
-      !subscriptionState.subscriptions.some(
-        (item) => item.id === subscriptionState.selectedId
-      )
-    ) {
-      subscriptionState.selectedId = subscriptionState.subscriptions[0].id;
-    }
-    if (subscriptionState.sidebarView === sidebarViews.EMPTY) {
-      subscriptionState.sidebarView = sidebarViews.DETAIL;
-    }
-  } else {
-    subscriptionState.selectedId = null;
-    if (
-      subscriptionState.sidebarView === sidebarViews.DETAIL ||
-      subscriptionState.sidebarView === sidebarViews.FORM
-    ) {
-      subscriptionState.sidebarView = sidebarViews.EMPTY;
-    }
-  }
 }
 
 async function loadSubscriptions() {
@@ -283,17 +250,23 @@ function renderSubscriptionsTable() {
 
   tbody.innerHTML = subscriptionState.subscriptions
     .map((sub) => {
-      const isSelected = sub.id === subscriptionState.selectedId;
       const statusBadge =
         sub.status === "active"
           ? "success"
           : sub.status === "paused"
           ? "warning"
           : "danger";
+      const cycleLabel =
+        sub.billingCycle === "monthly"
+          ? "Mensual"
+          : sub.billingCycle === "quarterly"
+          ? "Trimestral"
+          : sub.billingCycle === "yearly"
+          ? "Anual"
+          : "Personalizado";
+
       return `
-        <tr data-subscription-row="${sub.id}" class="subscriptions-table__row${
-        isSelected ? " is-selected" : ""
-      }">
+        <tr data-subscription-row="${sub.id}">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(sub.name)}</strong>
@@ -302,17 +275,7 @@ function renderSubscriptionsTable() {
           </td>
           <td>${escapeHtml(sub.clientName || "Sin cliente")}</td>
           <td>
-            <span class="badge badge--info">
-              ${
-                sub.billingCycle === "monthly"
-                  ? "Mensual"
-                  : sub.billingCycle === "quarterly"
-                  ? "Trimestral"
-                  : sub.billingCycle === "yearly"
-                  ? "Anual"
-                  : "Personalizado"
-              }
-            </span>
+            <span class="badge badge--info">${cycleLabel}</span>
           </td>
           <td>
             <span>${formatDate(sub.nextBillingDate)}</span>
@@ -325,9 +288,7 @@ function renderSubscriptionsTable() {
           <td>
             <span class="badge badge--${
               sub.autoInvoice ? "success" : "neutral"
-            }">
-              ${sub.autoInvoice ? "Automática" : "Manual"}
-            </span>
+            }">${sub.autoInvoice ? "Automática" : "Manual"}</span>
           </td>
           <td>
             <span class="badge badge--${statusBadge}">
@@ -341,13 +302,10 @@ function renderSubscriptionsTable() {
             </span>
           </td>
           <td>
-            <div class="table-actions">
-              <button type="button" class="btn-icon" data-subscription-edit="${
-                sub.id
-              }" aria-label="Editar">✏️</button>
-              <button type="button" class="btn-icon btn-icon--danger" data-subscription-delete="${
-                sub.id
-              }" aria-label="Eliminar">🗑️</button>
+            <div class="table-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+              <button type="button" class="btn-link" data-subscription-view="${sub.id}">Ver</button>
+              <button type="button" class="btn-link" data-subscription-edit="${sub.id}">Editar</button>
+              <button type="button" class="btn-link" data-subscription-delete="${sub.id}" style="color: var(--danger, #ef4444);">Eliminar</button>
             </div>
           </td>
         </tr>
@@ -420,226 +378,298 @@ function renderInsights() {
   }
 }
 
-function buildSubscriptionFormHTML(subscription = {}) {
+function getSubscriptionById(id) {
+  if (!id) return null;
+  return subscriptionState.subscriptions.find((item) => item.id === id) || null;
+}
+
+function buildSubscriptionFormFields(subscription = {}) {
   const clientOptions = [
     '<option value="">Sin cliente</option>',
     ...subscriptionState.clients.map(
       (client) =>
         `<option value="${client.id}" ${
-          subscription.clientId === client.id ? "selected" : ""
-        }>${escapeHtml(client.name)}</option>`
+          subscription.clientId === String(client.id) ? "selected" : ""
+        }>${escapeHtml(client.name || "Cliente sin nombre")}</option>`
     ),
   ].join("");
 
   return `
-    <form class="sidebar-form" data-form-type="subscription" style="display: flex; flex-direction: column; max-height: 95vh; overflow: hidden;">
-      <header class="sidebar-form__header" style="flex-shrink: 0;">
-        <h3>${subscription.id ? "Editar suscripción" : "Nueva suscripción"}</h3>
-        <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
-      </header>
-      <div class="form-grid" style="flex: 1; overflow-y: auto; padding: 1rem;">
-      <div class="form-grid" style="flex: 1; overflow-y: auto; padding: 1rem;">
-        <label>
-          <span>Nombre *</span>
-          <input type="text" name="name" value="${escapeHtml(
-            subscription.name || ""
-          )}" required />
-        </label>
-        <label>
-          <span>Cliente</span>
-          <select name="clientId">
-            ${clientOptions}
-          </select>
-        </label>
-        <label>
-          <span>Importe (€)</span>
-          <input type="number" min="0" step="0.01" name="amount" value="${
-            subscription.amount != null ? subscription.amount : ""
-          }" required />
-        </label>
-        <label>
-          <span>Moneda</span>
-          <input type="text" name="currency" value="${escapeHtml(
-            subscription.currency || "EUR"
-          )}" maxlength="5" />
-        </label>
-        <label>
-          <span>Ciclo</span>
-          <select name="billingCycle">
-            <option value="monthly" ${
-              subscription.billingCycle === "monthly" ? "selected" : ""
-            }>Mensual</option>
-            <option value="quarterly" ${
-              subscription.billingCycle === "quarterly" ? "selected" : ""
-            }>Trimestral</option>
-            <option value="yearly" ${
-              subscription.billingCycle === "yearly" ? "selected" : ""
-            }>Anual</option>
-            <option value="custom" ${
-              subscription.billingCycle === "custom" ? "selected" : ""
-            }>Personalizado</option>
-          </select>
-        </label>
-        <label>
-          <span>Inicio</span>
-          <input type="date" name="startDate" value="${
-            subscription.startDate ? subscription.startDate.split("T")[0] : ""
-          }" required />
-        </label>
-        <label>
-          <span>Próximo cobro</span>
-          <input type="date" name="nextBillingDate" value="${
-            subscription.nextBillingDate
-              ? subscription.nextBillingDate.split("T")[0]
-              : ""
-          }" required />
-        </label>
-        <label>
-          <span>Estado</span>
-          <select name="status">
-            <option value="active" ${
-              subscription.status === "active" ? "selected" : ""
-            }>Activa</option>
-            <option value="paused" ${
-              subscription.status === "paused" ? "selected" : ""
-            }>Pausada</option>
-            <option value="cancelled" ${
-              subscription.status === "cancelled" ? "selected" : ""
-            }>Cancelada</option>
-          </select>
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" name="autoInvoice" ${
-            subscription.autoInvoice !== false ? "checked" : ""
-          } />
-          <span>Generar factura automáticamente</span>
-        </label>
-        <label class="wide">
-          <span>Descripción</span>
-          <textarea name="description" rows="3">${escapeHtml(
-            subscription.description || ""
-          )}</textarea>
-        </label>
-      </div>
-      <footer class="sidebar-form__footer" style="flex-shrink: 0; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0;">
-        <button type="submit" class="btn btn-primary">${
-          subscription.id ? "Guardar cambios" : "Crear suscripción"
-        }</button>
-      </footer>
-    </form>
+    <div class="modal-form__grid">
+      <label class="form-field">
+        <span>Nombre *</span>
+        <input type="text" name="name" value="${escapeHtml(
+          subscription.name || ""
+        )}" required />
+      </label>
+      <label class="form-field">
+        <span>Cliente</span>
+        <select name="clientId">
+          ${clientOptions}
+        </select>
+      </label>
+      <label class="form-field">
+        <span>Importe (€) *</span>
+        <input type="number" step="0.01" min="0" name="amount" value="${
+          subscription.amount ?? ""
+        }" required />
+      </label>
+      <label class="form-field">
+        <span>Moneda</span>
+        <input type="text" name="currency" value="${escapeHtml(
+          subscription.currency || "EUR"
+        )}" maxlength="5" />
+      </label>
+      <label class="form-field">
+        <span>Ciclo</span>
+        <select name="billingCycle">
+          <option value="monthly" ${
+            subscription.billingCycle === "monthly" ? "selected" : ""
+          }>Mensual</option>
+          <option value="quarterly" ${
+            subscription.billingCycle === "quarterly" ? "selected" : ""
+          }>Trimestral</option>
+          <option value="yearly" ${
+            subscription.billingCycle === "yearly" ? "selected" : ""
+          }>Anual</option>
+          <option value="custom" ${
+            subscription.billingCycle === "custom" ? "selected" : ""
+          }>Personalizado</option>
+        </select>
+      </label>
+      <label class="form-field">
+        <span>Inicio *</span>
+        <input type="date" name="startDate" value="${
+          subscription.startDate
+            ? subscription.startDate.split("T")[0]
+            : ""
+        }" required />
+      </label>
+      <label class="form-field">
+        <span>Próximo cobro *</span>
+        <input type="date" name="nextBillingDate" value="${
+          subscription.nextBillingDate
+            ? subscription.nextBillingDate.split("T")[0]
+            : ""
+        }" required />
+      </label>
+      <label class="form-field">
+        <span>Estado</span>
+        <select name="status">
+          <option value="active" ${
+            subscription.status === "active" ? "selected" : ""
+          }>Activa</option>
+          <option value="paused" ${
+            subscription.status === "paused" ? "selected" : ""
+          }>Pausada</option>
+          <option value="cancelled" ${
+            subscription.status === "cancelled" ? "selected" : ""
+          }>Cancelada</option>
+        </select>
+      </label>
+      <label class="checkbox">
+        <input type="checkbox" name="autoInvoice" ${
+          subscription.autoInvoice !== false ? "checked" : ""
+        } />
+        <span>Generar factura automáticamente</span>
+      </label>
+      <label class="form-field form-field--wide">
+        <span>Descripción</span>
+        <textarea name="description" rows="3">${escapeHtml(
+          subscription.description || ""
+        )}</textarea>
+      </label>
+    </div>
   `;
 }
 
-function buildSubscriptionDetailHTML(subscription) {
+function buildSubscriptionDetail(subscription) {
   if (!subscription) {
     return `
-      <div class="sidebar-empty">
-        <span class="sidebar-empty__icon">🔁</span>
-        <p>Selecciona una suscripción para revisar sus detalles.</p>
+      <div style="display: grid; gap: 1rem;">
+        <p style="margin: 0; font-size: 0.95rem; color: var(--text-secondary);">
+          No se encontró la suscripción seleccionada.
+        </p>
       </div>
     `;
   }
 
-  const statusBadge =
-    subscription.status === "active"
-      ? "success"
-      : subscription.status === "paused"
-      ? "warning"
-      : "danger";
+  const cycleLabel =
+    subscription.billingCycle === "monthly"
+      ? "Mensual"
+      : subscription.billingCycle === "quarterly"
+      ? "Trimestral"
+      : subscription.billingCycle === "yearly"
+      ? "Anual"
+      : "Personalizado";
 
   return `
-    <article class="sidebar-card">
-      <header class="sidebar-card__header">
+    <div style="display: grid; gap: 1.25rem;">
+      <section style="display: grid; gap: 0.75rem;">
         <div>
-          <h3>${escapeHtml(subscription.name)}</h3>
-          <p>${escapeHtml(
-            subscription.clientName || "Sin cliente asociado"
-          )}</p>
+          <h3 style="margin: 0; font-size: 1.1rem;">${escapeHtml(
+            subscription.name
+          )}</h3>
+          <p style="margin: 0; color: var(--text-secondary);">
+            ${escapeHtml(subscription.clientName || "Sin cliente asociado")}
+          </p>
         </div>
-        <span class="badge badge--${statusBadge}">
-          ${
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <span class="badge badge--${
             subscription.status === "active"
+              ? "success"
+              : subscription.status === "paused"
+              ? "warning"
+              : "danger"
+          }">
+            ${subscription.status === "active"
               ? "Activa"
               : subscription.status === "paused"
               ? "Pausada"
-              : "Cancelada"
-          }
-        </span>
-      </header>
-      <dl class="detail-grid">
-        <div>
-          <dt>Importe</dt>
-          <dd>${formatCurrency(subscription.amount ?? 0)}</dd>
+              : "Cancelada"}
+          </span>
+          <span class="badge badge--info">${cycleLabel}</span>
+          <span class="badge badge--${
+            subscription.autoInvoice ? "success" : "neutral"
+          }">${subscription.autoInvoice ? "Auto facturación" : "Manual"}</span>
         </div>
-        <div>
-          <dt>Moneda</dt>
-          <dd>${escapeHtml(subscription.currency || "EUR")}</dd>
+      </section>
+      <section style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Importe</span>
+          <span style="font-size: 0.95rem; font-weight: 600;">${formatCurrency(
+            subscription.amount ?? 0
+          )}</span>
         </div>
-        <div>
-          <dt>Ciclo</dt>
-          <dd>${
-            subscription.billingCycle === "monthly"
-              ? "Mensual"
-              : subscription.billingCycle === "quarterly"
-              ? "Trimestral"
-              : subscription.billingCycle === "yearly"
-              ? "Anual"
-              : "Personalizado"
-          }</dd>
+        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Moneda</span>
+          <span style="font-size: 0.95rem; font-weight: 600;">${escapeHtml(
+            subscription.currency || "EUR"
+          )}</span>
         </div>
-        <div>
-          <dt>Próximo cobro</dt>
-          <dd>${formatDate(subscription.nextBillingDate)}</dd>
+        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Próximo cobro</span>
+          <span style="font-size: 0.95rem; font-weight: 600;">${formatDate(
+            subscription.nextBillingDate
+          )}</span>
         </div>
-        <div>
-          <dt>Inicio</dt>
-          <dd>${formatDate(subscription.startDate)}</dd>
+        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Inicio</span>
+          <span style="font-size: 0.95rem; font-weight: 600;">${formatDate(
+            subscription.startDate
+          )}</span>
         </div>
-        <div>
-          <dt>Auto facturación</dt>
-          <dd>${subscription.autoInvoice ? "Automática" : "Manual"}</dd>
-        </div>
-      </dl>
-      <footer class="sidebar-card__footer">
-        <button type="button" class="btn btn-secondary" data-subscription-edit="${
-          subscription.id
-        }">
-          Editar suscripción
-        </button>
-      </footer>
-    </article>
+      </section>
+      <section style="display: grid; gap: 0.5rem;">
+        <h3 style="margin: 0; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+          Descripción
+        </h3>
+        <p style="margin: 0; color: var(--text-primary); white-space: pre-wrap;">
+          ${escapeHtml(subscription.description || "Sin descripción añadida")}
+        </p>
+      </section>
+    </div>
   `;
 }
 
-function renderSidebar() {
-  const container = document.querySelector("[data-subscriptions-sidebar]");
-  if (!container) return;
+function closeSubscriptionModal() {
+  const modal = document.getElementById("subscription-modal");
+  if (modal) modal.remove();
+}
 
-  let html = "";
+function openSubscriptionModal(mode, subscriptionId = null) {
+  closeSubscriptionModal();
+  const subscription = subscriptionId
+    ? getSubscriptionById(String(subscriptionId))
+    : null;
 
-  if (subscriptionState.sidebarView === sidebarViews.EMPTY) {
-    html = `
-      <div class="sidebar-empty">
-        <span class="sidebar-empty__icon">🔁</span>
-        <p>No hay suscripciones registradas.</p>
-        <button type="button" class="btn btn-primary" data-open-subscription>Crear suscripción</button>
-      </div>
-    `;
-  } else if (subscriptionState.sidebarView === sidebarViews.FORM) {
-    const subscription =
-      subscriptionState.editingId &&
-      subscriptionState.subscriptions.find(
-        (item) => item.id === subscriptionState.editingId
-      );
-    html = buildSubscriptionFormHTML(subscription || {});
-  } else {
-    const subscription = subscriptionState.subscriptions.find(
-      (item) => item.id === subscriptionState.selectedId
-    );
-    html = buildSubscriptionDetailHTML(subscription);
+  if (mode !== "create" && !subscription && mode !== "create") {
+    showToast("No se encontró la suscripción seleccionada", "warning");
+    return;
   }
 
-  container.innerHTML = html;
+  if (mode === "view") {
+    const detailHtml = buildSubscriptionDetail(subscription);
+    const modalHtml = `
+      <div class="modal is-open" id="subscription-modal">
+        <div class="modal__backdrop" data-modal-close></div>
+        <div class="modal__panel" style="width: min(95vw, 640px);">
+          <header class="modal__head">
+            <div>
+              <h2 class="modal__title">Detalle de la suscripción</h2>
+              <p class="modal__subtitle">${escapeHtml(
+                subscription?.name || ""
+              )}</p>
+            </div>
+            <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
+          </header>
+          <div class="modal__body" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            ${detailHtml}
+          </div>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
+            <button type="button" class="btn-primary" data-modal-edit="${subscription?.id}">Editar</button>
+          </footer>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+    const modal = document.getElementById("subscription-modal");
+    modal
+      ?.querySelector(".modal__backdrop")
+      ?.addEventListener("click", closeSubscriptionModal);
+    modal
+      ?.querySelectorAll("[data-modal-close]")
+      .forEach((btn) => btn.addEventListener("click", closeSubscriptionModal));
+    modal
+      ?.querySelector("[data-modal-edit]")
+      ?.addEventListener("click", (ev) => {
+        const id = ev.currentTarget.dataset.modalEdit;
+        closeSubscriptionModal();
+        openSubscriptionModal("edit", id);
+      });
+    return;
+  }
+
+  const title =
+    mode === "edit" ? "Editar suscripción" : "Nueva suscripción";
+  const formId = "subscription-form";
+  const formFields = buildSubscriptionFormFields(subscription || {});
+  const modalHtml = `
+    <div class="modal is-open" id="subscription-modal">
+      <div class="modal__backdrop" data-modal-close></div>
+      <div class="modal__panel" style="width: min(95vw, 720px);">
+        <header class="modal__head">
+          <div>
+            <h2 class="modal__title">${title}</h2>
+            <p class="modal__subtitle">Gestiona la facturación recurrente con toda la información clave.</p>
+          </div>
+          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
+        </header>
+        <form class="modal__body" id="${formId}" data-form-type="subscription" data-subscription-id="${subscription?.id || ""}" novalidate>
+          ${formFields}
+        </form>
+        <footer class="modal__footer modal-form__footer">
+          <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+          <button type="submit" form="${formId}" class="btn-primary">${
+            mode === "edit" ? "Guardar cambios" : "Crear suscripción"
+          }</button>
+        </footer>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+  const modal = document.getElementById("subscription-modal");
+  modal
+    ?.querySelector(".modal__backdrop")
+    ?.addEventListener("click", closeSubscriptionModal);
+  modal
+    ?.querySelectorAll("[data-modal-close]")
+    .forEach((btn) => btn.addEventListener("click", closeSubscriptionModal));
+  modal
+    ?.querySelector("form")
+    ?.addEventListener("submit", handleSubscriptionFormSubmit);
 }
 
 async function refreshSubscriptionsModule() {
@@ -664,11 +694,9 @@ async function refreshSubscriptionsModule() {
       loadClients(),
     ]);
     buildSuggestions();
-    ensureSelection();
     renderSummary();
     renderSubscriptionsTable();
     renderInsights();
-    renderSidebar();
   } catch (error) {
     console.error("Error loading subscriptions module", error);
     setError("Ocurrió un problema al obtener las suscripciones.");
@@ -688,28 +716,35 @@ function handleClick(event) {
 
   const newButton = event.target.closest("[data-open-subscription]");
   if (newButton) {
-    subscriptionState.editingId = null;
-    subscriptionState.sidebarView = sidebarViews.FORM;
-    renderSidebar();
+    openSubscriptionModal("create");
     return;
   }
 
-  const cancelBtn = event.target.closest('[data-action="cancel-form"]');
-  if (cancelBtn) {
-    subscriptionState.editingId = null;
-    subscriptionState.sidebarView = subscriptionState.subscriptions.length
-      ? sidebarViews.DETAIL
-      : sidebarViews.EMPTY;
-    renderSidebar();
+  if (event.target.closest("[data-modal-close]")) {
+    closeSubscriptionModal();
+    return;
+  }
+
+  const viewBtn = event.target.closest("[data-subscription-view]");
+  if (viewBtn) {
+    event.stopPropagation();
+    openSubscriptionModal("view", viewBtn.dataset.subscriptionView);
+    return;
+  }
+
+  const modalEditBtn = event.target.closest("[data-modal-edit]");
+  if (modalEditBtn) {
+    event.stopPropagation();
+    const id = modalEditBtn.dataset.modalEdit;
+    closeSubscriptionModal();
+    openSubscriptionModal("edit", id);
     return;
   }
 
   const editBtn = event.target.closest("[data-subscription-edit]");
   if (editBtn) {
     event.stopPropagation();
-    subscriptionState.editingId = String(editBtn.dataset.subscriptionEdit);
-    subscriptionState.sidebarView = sidebarViews.FORM;
-    renderSidebar();
+    openSubscriptionModal("edit", editBtn.dataset.subscriptionEdit);
     return;
   }
 
@@ -721,11 +756,8 @@ function handleClick(event) {
   }
 
   const row = event.target.closest("[data-subscription-row]");
-  if (row) {
-    subscriptionState.selectedId = String(row.dataset.subscriptionRow);
-    subscriptionState.sidebarView = sidebarViews.DETAIL;
-    renderSubscriptionsTable();
-    renderSidebar();
+  if (row && !event.target.closest("button")) {
+    openSubscriptionModal("view", row.dataset.subscriptionRow);
   }
 }
 
@@ -776,33 +808,24 @@ async function handleSubscriptionFormSubmit(event) {
     description: data.get("description")?.toString().trim() || undefined,
   };
 
-  const editingId = subscriptionState.editingId;
+  const editingId = form.dataset.subscriptionId
+    ? String(form.dataset.subscriptionId)
+    : null;
 
   try {
     let response;
     if (editingId) {
       response = await window.api.updateSubscription(editingId, payload);
-      subscriptionState.selectedId = String(editingId);
       showToast("Suscripción actualizada correctamente", "success");
     } else {
       response = await window.api.createSubscription(payload);
-      if (response?.id) {
-        subscriptionState.selectedId = String(response.id);
-      }
       showToast("Suscripción creada correctamente", "success");
     }
-    subscriptionState.editingId = null;
-    subscriptionState.sidebarView = sidebarViews.DETAIL;
+    closeSubscriptionModal();
     await refreshSubscriptionsModule();
   } catch (error) {
     console.error("Error saving subscription", error);
     showToast("No se pudo guardar la suscripción", "error");
-  }
-}
-
-function handleSubmit(event) {
-  if (event.target.matches('[data-form-type="subscription"]')) {
-    void handleSubscriptionFormSubmit(event);
   }
 }
 
@@ -811,9 +834,6 @@ async function handleSubscriptionDelete(id) {
   try {
     await window.api.deleteSubscription(id);
     showToast("Suscripción eliminada", "success");
-    if (subscriptionState.selectedId === id) {
-      subscriptionState.selectedId = null;
-    }
     await refreshSubscriptionsModule();
   } catch (error) {
     console.error("Error deleting subscription", error);
@@ -822,13 +842,12 @@ async function handleSubscriptionDelete(id) {
 }
 
 export function initSubscriptions() {
-  const module = document.querySelector(".subscriptions-module");
+  const module = document.querySelector(".subscriptions");
   if (!module) return;
 
   module.addEventListener("click", handleClick);
   module.addEventListener("input", handleInput);
   module.addEventListener("change", handleChange);
-  module.addEventListener("submit", handleSubmit);
 
   window.requestAnimationFrame(() => {
     void refreshSubscriptionsModule();
@@ -837,140 +856,144 @@ export function initSubscriptions() {
 
 export default function renderSubscriptions() {
   return `
-    <section class="module subscriptions-module">
-      <header class="module-header">
-        <div class="module-title-section">
-          <h1>Gestión de suscripciones</h1>
-          <p>Controla ingresos recurrentes, ciclos de facturación y cobros previstos.</p>
+    <section class="subscriptions" aria-labelledby="subscriptions-title">
+      <header class="expenses__hero">
+        <div class="expenses__hero-copy">
+          <h1 id="subscriptions-title">Ingresos recurrentes</h1>
+          <p>Controla las suscripciones, ciclos de facturación y cobros previstos sin salir de Flow.</p>
         </div>
-        <div class="module-actions">
-          <button type="button" class="btn btn-primary" data-open-subscription>＋ Nueva suscripción</button>
+        <div class="expenses__hero-actions">
+          <button type="button" class="btn-primary" data-open-subscription>Nueva suscripción</button>
         </div>
       </header>
-      <div class="summary-wrap">
-        <div class="summary-grid summary-grid--compact">
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-primary-light);">🔁</div>
-            <div class="card-content">
-              <span class="card-label">Suscripciones totales</span>
-              <span class="card-value" id="subscriptions-total">0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-success-light);">✅</div>
-            <div class="card-content">
-              <span class="card-label">Activas</span>
-              <span class="card-value" id="subscriptions-active">0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-warning-light);">⏸️</div>
-            <div class="card-content">
-              <span class="card-label">Pausadas</span>
-              <span class="card-value" id="subscriptions-paused">0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-danger-light);">🛑</div>
-            <div class="card-content">
-              <span class="card-label">Canceladas</span>
-              <span class="card-value" id="subscriptions-cancelled">0</span>
-            </div>
-          </article>
-        </div>
-        <div class="summary-grid summary-grid--compact">
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-tertiary-light);">💶</div>
-            <div class="card-content">
-              <span class="card-label">MRR estimado</span>
-              <span class="card-value" id="subscriptions-mrr">€0</span>
-            </div>
-          </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-info-light);">📅</div>
-            <div class="card-content">
-              <span class="card-label">Cobros próximos</span>
-              <span class="card-value" id="subscriptions-cashflow">€0</span>
-            </div>
-          </article>
-        </div>
+
+      <div class="summary-cards">
+        <article class="card stat-card">
+          <div class="card-icon" style="background: var(--color-primary-light);">🔁</div>
+          <div class="card-content">
+            <span class="card-label">Suscripciones totales</span>
+            <span class="card-value" id="subscriptions-total">0</span>
+          </div>
+        </article>
+        <article class="card stat-card">
+          <div class="card-icon" style="background: var(--color-success-light);">✅</div>
+          <div class="card-content">
+            <span class="card-label">Activas</span>
+            <span class="card-value" id="subscriptions-active">0</span>
+          </div>
+        </article>
+        <article class="card stat-card">
+          <div class="card-icon" style="background: var(--color-warning-light);">⏸️</div>
+          <div class="card-content">
+            <span class="card-label">Pausadas</span>
+            <span class="card-value" id="subscriptions-paused">0</span>
+          </div>
+        </article>
+        <article class="card stat-card">
+          <div class="card-icon" style="background: var(--color-danger-light);">🛑</div>
+          <div class="card-content">
+            <span class="card-label">Canceladas</span>
+            <span class="card-value" id="subscriptions-cancelled">0</span>
+          </div>
+        </article>
+        <article class="card stat-card">
+          <div class="card-icon" style="background: var(--color-tertiary-light);">💶</div>
+          <div class="card-content">
+            <span class="card-label">MRR estimado</span>
+            <span class="card-value" id="subscriptions-mrr">€0</span>
+            <span class="card-trend">Ingresos mensuales</span>
+          </div>
+        </article>
+        <article class="card stat-card">
+          <div class="card-icon" style="background: var(--color-info-light);">📅</div>
+          <div class="card-content">
+            <span class="card-label">Cobros próximos</span>
+            <span class="card-value" id="subscriptions-cashflow">€0</span>
+            <span class="card-trend">30 días</span>
+          </div>
+        </article>
       </div>
-      <div class="module-body module-body--split">
-        <div class="module-main">
-          <div class="module-toolbar">
-            <label class="input input--search">
-              <span class="input__icon">🔍</span>
-              <input type="search" data-subscriptions-search placeholder="Buscar por nombre o descripción..." autocomplete="off" />
-            </label>
-            <div class="toolbar-filters">
-              <label class="input input--select">
-                <span>Estado</span>
-                <select data-subscriptions-status>
-                  <option value="all">Todos</option>
-                  <option value="active">Activa</option>
-                  <option value="paused">Pausada</option>
-                  <option value="cancelled">Cancelada</option>
-                </select>
-              </label>
-              <label class="input input--select">
-                <span>Ciclo</span>
-                <select data-subscriptions-cycle>
-                  <option value="all">Todos</option>
-                  <option value="monthly">Mensual</option>
-                  <option value="quarterly">Trimestral</option>
-                  <option value="yearly">Anual</option>
-                  <option value="custom">Personalizado</option>
-                </select>
-              </label>
-              <label class="input input--select">
-                <span>Auto facturación</span>
-                <select data-subscriptions-autoinvoice>
-                  <option value="all">Todas</option>
-                  <option value="true">Automáticas</option>
-                  <option value="false">Manuales</option>
-                </select>
-              </label>
-            </div>
-          </div>
-          <div class="table-wrapper">
-            <table class="data-table data-table--compact">
-              <thead>
-                <tr>
-                  <th>Servicio</th>
-                  <th>Cliente</th>
-                  <th>Ciclo</th>
-                  <th>Próximo cobro</th>
-                  <th>Importe</th>
-                  <th>Auto-Fact.</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody data-subscriptions-table></tbody>
-            </table>
-          </div>
-          <div class="module-loading" data-subscriptions-loading hidden>
-            <span class="spinner"></span>
-            <p>Cargando suscripciones...</p>
-          </div>
-          <div class="module-error" data-subscriptions-error hidden></div>
+
+      <section class="expenses__filters" aria-label="Filtros de suscripciones">
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="subscription-search">Buscar suscripciones</label>
+          <input type="search" id="subscription-search" class="expenses__search" placeholder="Nombre, descripción o cliente..." autocomplete="off" data-subscriptions-search />
         </div>
-        <aside class="module-sidebar" data-subscriptions-sidebar></aside>
-      </div>
-      <footer class="module-footer">
-        <section>
-          <h4>Próximos cobros</h4>
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="subscription-status-filter">Estado</label>
+          <select id="subscription-status-filter" class="expenses__select" data-subscriptions-status>
+            <option value="all">Todos los estados</option>
+            <option value="active">Activa</option>
+            <option value="paused">Pausada</option>
+            <option value="cancelled">Cancelada</option>
+          </select>
+        </div>
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="subscription-cycle-filter">Ciclo</label>
+          <select id="subscription-cycle-filter" class="expenses__select" data-subscriptions-cycle>
+            <option value="all">Todos los ciclos</option>
+            <option value="monthly">Mensual</option>
+            <option value="quarterly">Trimestral</option>
+            <option value="yearly">Anual</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div class="expenses__filters-group">
+          <label class="visually-hidden" for="subscription-autoinvoice-filter">Auto facturación</label>
+          <select id="subscription-autoinvoice-filter" class="expenses__select" data-subscriptions-autoinvoice>
+            <option value="all">Todas</option>
+            <option value="true">Automáticas</option>
+            <option value="false">Manuales</option>
+          </select>
+        </div>
+        <div class="expenses__filters-group expenses__filters-group--pinned">
+          <button type="button" class="btn-ghost" data-action="retry-subscriptions">Recargar</button>
+        </div>
+      </section>
+
+      <section class="expenses-table" aria-label="Listado de suscripciones">
+        <div class="expenses-table__surface">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Servicio</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Ciclo</th>
+                <th scope="col">Próximo cobro</th>
+                <th scope="col">Importe</th>
+                <th scope="col">Auto-Fact.</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody data-subscriptions-table>
+              <tr>
+                <td colspan="8" class="empty-state">Cargando suscripciones...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="module-loading" data-subscriptions-loading hidden>
+          <span class="spinner"></span>
+          <p>Cargando suscripciones...</p>
+        </div>
+        <div class="module-error" data-subscriptions-error hidden></div>
+      </section>
+
+      <section class="subscriptions-insights" aria-label="Indicadores de suscripciones" style="display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+        <article class="card" style="padding: 1.5rem;">
+          <h3 style="margin-top: 0;">Próximos cobros</h3>
           <ul class="insight-list" data-upcoming-subscriptions></ul>
-        </section>
-        <section>
-          <h4>Distribución por estado</h4>
+        </article>
+        <article class="card" style="padding: 1.5rem;">
+          <h3 style="margin-top: 0;">Distribución por estado</h3>
           <ul class="insight-list" data-status-breakdown></ul>
-        </section>
-        <section>
-          <h4>Recomendaciones</h4>
+        </article>
+        <article class="card" style="padding: 1.5rem;">
+          <h3 style="margin-top: 0;">Recomendaciones</h3>
           <ul class="insight-list" data-subscription-suggestions></ul>
-        </section>
-      </footer>
+        </article>
+      </section>
     </section>
   `;
 }
