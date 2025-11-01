@@ -315,7 +315,7 @@ function renderSubscriptionsTable() {
             </span>
           </td>
           <td>
-            <div class="table-actions" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <div class="table-actions" class="table-actions">
               <button type="button" class="btn-icon" data-subscription-view="${
                 sub.id
               }" title="Ver">👁️</button>
@@ -680,7 +680,7 @@ function openSubscriptionModal(mode, subscriptionId = null) {
   const modalHtml = `
     <div class="modal is-open" id="subscription-modal">
       <div class="modal__backdrop" data-modal-close></div>
-      <div class="modal__panel" style="width: min(95vw, 720px); max-width: 720px; max-width: 720px;">
+      <div class="modal__panel" style="width: min(92vw, 600px); max-width: 600px; overflow-x: hidden; box-sizing: border-box; margin: 0 auto; padding: 1.5rem;">
         <header class="modal__head">
           <div>
             <h2 class="modal__title">${title}</h2>
@@ -691,7 +691,7 @@ function openSubscriptionModal(mode, subscriptionId = null) {
         <form class="modal-form" id="${formId}" data-form-type="subscription" data-subscription-id="${
     subscription?.id || ""
   }" novalidate>
-          <div class="modal__body modal-form__body">
+          <div class="modal__body modal-form__body" style="width: 100%; max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
             ${formFields}
           </div>
           <div class="modal-form__separator"></div>

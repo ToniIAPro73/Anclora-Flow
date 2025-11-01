@@ -1,3 +1,22 @@
+/* Global modal overflow prevention */
+.modal,
+.modal * {
+  overflow-x: hidden !important;
+}
+
+/* Force all modal content to stay within bounds */
+.modal__panel,
+.modal__panel *,
+.modal-form,
+.modal-form *,
+.modal-form__body,
+.modal-form__body *,
+.modal-form__grid,
+.modal-form__grid * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
 /* Sistema de paleta y gradientes - Anclora Flow */
 :root {
   /* === COLORES PRIMARIOS (Azules) === */
@@ -8,6 +27,73 @@
   --primary-400: #5c89ff;
   --primary-500: #3b82f6; /* Azul */
   --primary-600: #1d4ed8;
+  /* Modal form responsive grid fixes */
+  .modal-form__grid--two {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 1rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .modal-form__grid--three {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+    gap: 1rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  @media (max-width: 768px) {
+    .modal-form__grid--two {
+      grid-template-columns: 1fr !important;
+    }
+
+    .modal-form__grid--three {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .modal-form__grid--three {
+      grid-template-columns: 1fr !important;
+      /* Text overflow and word wrapping fixes */
+      .modal-form input,
+      .modal-form select,
+      .modal-form textarea {
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        text-overflow: ellipsis !important;
+        overflow: hidden !important;
+      }
+
+      .modal-form textarea {
+        resize: vertical !important;
+        min-height: 60px !important;
+      }
+
+      /* Ensure all form elements stay within bounds */
+      .form-field {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        word-break: break-word !important;
+      }
+
+      /* Prevent any element from causing horizontal scroll */
+      * {
+        max-width: 100% !important;
+      }
+
+      /* Modal specific constraints */
+      .modal-form__field--span-2,
+      .modal-form__field--span-3 {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+    }
+  }
   --primary-700: #1e40af;
   --primary-800: #1e3a8a;
   --primary-900: #1e3a70;
@@ -1743,6 +1829,9 @@ a:hover {
   background: rgba(51, 102, 255, 0.35);
   cursor: pointer;
   transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .table-action:hover,
@@ -2499,6 +2588,9 @@ table tr[hidden] {
   flex-direction: column;
   gap: 0;
   max-height: inherit;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-form__body {
@@ -2554,10 +2646,16 @@ table tr[hidden] {
 .modal-form__grid {
   display: grid;
   gap: 1rem;
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-form__grid--two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .modal-form__grid--three {
@@ -2570,6 +2668,35 @@ table tr[hidden] {
 
 .modal-form__field--span-2 {
   grid-column: span 2;
+}
+/* Modal form overflow fixes */
+.modal-form__body {
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-form__grid {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.modal-form__grid * {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  .modal-form__grid--two,
+  .modal-form__grid--three {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-form__field--span-2,
+  .modal-form__field--span-3 {
+    grid-column: span 1;
+  }
 }
 
 .modal-form__field--span-3 {
@@ -3153,6 +3280,7 @@ table tr[hidden] {
 .form-field input,
 .form-field select {
   width: 100%;
+  max-width: 100%;
   padding: 0.65rem 0.9rem;
   border-radius: 12px;
   border: 1px solid rgba(51, 102, 255, 0.22);
@@ -3161,6 +3289,9 @@ table tr[hidden] {
   font-size: 0.95rem;
   font-weight: 500;
   transition: border 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
 }
 
 [data-theme="dark"] .form-field input,
@@ -3983,6 +4114,15 @@ table tr[hidden] {
 
   .modal-form__field--span-3 {
     grid-column: span 2;
+  }
+
+  .modal-form__grid--two {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .modal-form__field--span-2 {
+    grid-column: span 1;
   }
 }
 
