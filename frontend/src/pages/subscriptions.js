@@ -133,6 +133,10 @@ async function loadSubscriptions() {
     autoInvoice: item.auto_invoice,
     startDate: item.start_date,
     relatedRevenue: item.related_revenue,
+    type:
+      item.type ||
+      item.subscription_type ||
+      (item.category === "income" ? "income" : "expense"),
   }));
 }
 
@@ -235,7 +239,7 @@ function renderSubscriptionsTable() {
   if (!subscriptionState.subscriptions.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8">
+        <td colspan="9">
           <div class="empty-state">
             <span class="empty-state__icon">🔁</span>
             <h3>No hay suscripciones registradas.</h3>
@@ -264,6 +268,8 @@ function renderSubscriptionsTable() {
           : sub.billingCycle === "yearly"
           ? "Anual"
           : "Personalizado";
+      const typeLabel =
+        sub.type === "income" ? "Ingreso recurrente" : "Gasto recurrente";
 
       return `
         <tr data-subscription-row="${sub.id}">
@@ -272,6 +278,9 @@ function renderSubscriptionsTable() {
               <strong>${escapeHtml(sub.name)}</strong>
               <span>${escapeHtml(sub.description || "Sin descripción")}</span>
             </div>
+          </td>
+          <td>
+            <span class="badge badge--neutral">${typeLabel}</span>
           </td>
           <td>${escapeHtml(sub.clientName || "Sin cliente")}</td>
           <td>
@@ -395,14 +404,13 @@ function buildSubscriptionFormFields(subscription = {}) {
   ].join("");
 
   return `
-    <div style="display: grid; gap: 1.5rem;">
-      <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
-        <label class="form-field" style="grid-column: span 2;">
-          <span>Nombre *</span>
-          <input type="text" name="name" value="${escapeHtml(
-            subscription.name || ""
-          )}" required />
-        </label>
+    <div class="modal-form__grid modal-form__grid--two">
+      <label class="form-field modal-form__field--span-2">
+        <span>Nombre *</span>
+        <input type="text" name="name" value="${escapeHtml(
+          subscription.name || ""
+        )}" required />
+      </label>
         <label class="form-field">
           <span>Cliente</span>
           <select name="clientId">
@@ -419,77 +427,82 @@ function buildSubscriptionFormFields(subscription = {}) {
               subscription.status === "paused" ? "selected" : ""
             }>Pausada</option>
             <option value="cancelled" ${
-              subscription.status === "cancelled" ? "selected" : ""
-            }>Cancelada</option>
-          </select>
-        </label>
-      </div>
-
-      <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
-        <label class="form-field">
-          <span>Importe (€) *</span>
-          <input type="number" step="0.01" min="0" name="amount" value="${
-            subscription.amount ?? ""
-          }" required />
-        </label>
-        <label class="form-field">
-          <span>Moneda</span>
-          <input type="text" name="currency" value="${escapeHtml(
-            subscription.currency || "EUR"
-          )}" maxlength="5" />
-        </label>
-        <label class="form-field">
-          <span>Ciclo de facturación</span>
-          <select name="billingCycle">
-            <option value="monthly" ${
-              subscription.billingCycle === "monthly" ? "selected" : ""
-            }>Mensual</option>
-            <option value="quarterly" ${
-              subscription.billingCycle === "quarterly" ? "selected" : ""
-            }>Trimestral</option>
-            <option value="yearly" ${
-              subscription.billingCycle === "yearly" ? "selected" : ""
-            }>Anual</option>
-            <option value="custom" ${
-              subscription.billingCycle === "custom" ? "selected" : ""
-            }>Personalizado</option>
-          </select>
-        </label>
-        <div class="form-field" style="display: flex; align-items: flex-end;">
-          <label class="checkbox" style="margin: 0;">
-            <input type="checkbox" name="autoInvoice" ${
-              subscription.autoInvoice !== false ? "checked" : ""
-            } />
-            <span>Generar factura automáticamente</span>
-          </label>
-        </div>
-      </div>
-
-      <div style="display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr));">
-        <label class="form-field">
-          <span>Inicio *</span>
-          <input type="date" name="startDate" value="${
-            subscription.startDate
-              ? subscription.startDate.split("T")[0]
-              : ""
-          }" required />
-        </label>
-        <label class="form-field">
-          <span>Próximo cobro *</span>
-          <input type="date" name="nextBillingDate" value="${
-            subscription.nextBillingDate
-              ? subscription.nextBillingDate.split("T")[0]
-              : ""
-          }" required />
-        </label>
-      </div>
-
-      <label class="form-field" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            subscription.status === "cancelled" ? "selected" : ""
+          }>Cancelada</option>
+        </select>
+      </label>
+    </div>
+    <div class="modal-form__grid modal-form__grid--two">
+      <label class="form-field">
+        <span>Tipo</span>
+        <select name="type">
+          <option value="expense" ${
+            (subscription.type || "expense") === "expense" ? "selected" : ""
+          }>Gasto recurrente</option>
+          <option value="income" ${
+            subscription.type === "income" ? "selected" : ""
+          }>Ingreso recurrente</option>
+        </select>
+      </label>
+      <label class="form-field">
+        <span>Importe (€) *</span>
+        <input type="number" step="0.01" min="0" name="amount" value="${
+          subscription.amount ?? ""
+        }" required />
+      </label>
+      <label class="form-field">
+        <span>Moneda</span>
+        <input type="text" name="currency" value="${escapeHtml(
+          subscription.currency || "EUR"
+        )}" maxlength="5" />
+      </label>
+      <label class="form-field">
+        <span>Ciclo de facturación</span>
+        <select name="billingCycle">
+          <option value="monthly" ${
+            subscription.billingCycle === "monthly" ? "selected" : ""
+          }>Mensual</option>
+          <option value="quarterly" ${
+            subscription.billingCycle === "quarterly" ? "selected" : ""
+          }>Trimestral</option>
+          <option value="yearly" ${
+            subscription.billingCycle === "yearly" ? "selected" : ""
+          }>Anual</option>
+          <option value="custom" ${
+            subscription.billingCycle === "custom" ? "selected" : ""
+          }>Personalizado</option>
+        </select>
+      </label>
+      <label class="form-field">
+        <span>Inicio *</span>
+        <input type="date" name="startDate" value="${
+          subscription.startDate
+            ? subscription.startDate.split("T")[0]
+            : ""
+        }" required />
+      </label>
+      <label class="form-field">
+        <span>Próximo cobro *</span>
+        <input type="date" name="nextBillingDate" value="${
+          subscription.nextBillingDate
+            ? subscription.nextBillingDate.split("T")[0]
+            : ""
+        }" required />
+      </label>
+      <label class="form-field modal-form__field--span-2">
         <span>Descripción</span>
         <textarea name="description" rows="3">${escapeHtml(
           subscription.description || ""
         )}</textarea>
       </label>
+      <div class="form-field modal-form__field--span-2">
+        <label class="checkbox">
+          <input type="checkbox" name="autoInvoice" ${
+            subscription.autoInvoice !== false ? "checked" : ""
+          } />
+          <span>Generar factura automáticamente</span>
+        </label>
+      </div>
     </div>
   `;
 }
@@ -513,6 +526,10 @@ function buildSubscriptionDetail(subscription) {
       : subscription.billingCycle === "yearly"
       ? "Anual"
       : "Personalizado";
+  const typeLabel =
+    subscription.type === "income"
+      ? "Ingreso recurrente"
+      : "Gasto recurrente";
 
   return `
     <div style="display: grid; gap: 1.25rem;">
@@ -543,6 +560,7 @@ function buildSubscriptionDetail(subscription) {
           <span class="badge badge--${
             subscription.autoInvoice ? "success" : "neutral"
           }">${subscription.autoInvoice ? "Auto facturación" : "Manual"}</span>
+          <span class="badge badge--neutral">${typeLabel}</span>
         </div>
       </section>
       <section style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
@@ -557,6 +575,10 @@ function buildSubscriptionDetail(subscription) {
           <span style="font-size: 0.95rem; font-weight: 600;">${escapeHtml(
             subscription.currency || "EUR"
           )}</span>
+        </div>
+        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Tipo</span>
+          <span style="font-size: 0.95rem; font-weight: 600;">${typeLabel}</span>
         </div>
         <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
           <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Próximo cobro</span>
@@ -614,7 +636,7 @@ function openSubscriptionModal(mode, subscriptionId = null) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
         </header>
-          <div class="modal__body" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="modal__body" style="display: grid; gap: 1.5rem;">
             ${detailHtml}
           </div>
         <footer class="modal__footer modal-form__footer">
@@ -657,8 +679,10 @@ function openSubscriptionModal(mode, subscriptionId = null) {
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
         </header>
-        <form class="modal__body" id="${formId}" data-form-type="subscription" data-subscription-id="${subscription?.id || ""}" novalidate style="display: flex; flex-direction: column; gap: 1.75rem;">
-          ${formFields}
+        <form class="modal-form" id="${formId}" data-form-type="subscription" data-subscription-id="${subscription?.id || ""}" novalidate>
+          <div class="modal__body modal-form__body">
+            ${formFields}
+          </div>
         </form>
         <footer class="modal__footer modal-form__footer">
           <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
@@ -817,6 +841,7 @@ async function handleSubscriptionFormSubmit(event) {
     status: data.get("status") || "active",
     autoInvoice: data.get("autoInvoice") === "on",
     description: data.get("description")?.toString().trim() || undefined,
+    type: data.get("type") || "expense",
   };
 
   const editingId = form.dataset.subscriptionId
@@ -871,7 +896,7 @@ export default function renderSubscriptions() {
       <header class="expenses__hero">
         <div class="expenses__hero-copy">
           <h1 id="subscriptions-title">Gestión de suscripciones</h1>
-          <p>Controla las suscripciones, ciclos de facturación y cobros previstos sin salir de Flow.</p>
+          <p>Controla gastos e ingresos recurrentes, ciclos de facturación y cobros previstos sin salir de Flow.</p>
         </div>
         <div class="expenses__hero-actions">
           <button type="button" class="btn-primary" data-open-subscription>Nueva suscripción</button>
@@ -981,6 +1006,7 @@ export default function renderSubscriptions() {
             <thead>
               <tr>
                 <th scope="col">Servicio</th>
+                <th scope="col">Tipo</th>
                 <th scope="col">Cliente</th>
                 <th scope="col">Ciclo</th>
                 <th scope="col">Próximo cobro</th>
@@ -992,7 +1018,7 @@ export default function renderSubscriptions() {
             </thead>
             <tbody data-subscriptions-table>
               <tr>
-                <td colspan="8" class="empty-state">Cargando suscripciones...</td>
+                <td colspan="9" class="empty-state">Cargando suscripciones...</td>
               </tr>
             </tbody>
           </table>
