@@ -315,7 +315,7 @@ function renderSubscriptionsTable() {
             </span>
           </td>
           <td>
-            <div class="table-actions" class="table-actions">
+            <div class="table-actions">
               <button type="button" class="btn-icon" data-subscription-view="${
                 sub.id
               }" title="Ver">👁️</button>
@@ -694,7 +694,6 @@ function openSubscriptionModal(mode, subscriptionId = null) {
           <div class="modal__body modal-form__body" style="width: 100%; max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
             ${formFields}
           </div>
-          <div class="modal-form__separator"></div>
         </form>
         <footer class="modal__footer modal-form__footer">
           <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
