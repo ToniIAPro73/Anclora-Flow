@@ -1403,9 +1403,9 @@ async function viewInvoice(invoiceId) {
               </div>
             </div>
           </div>
-          <footer class="modal__footer" style="display: flex; justify-content: space-between; padding: 1.5rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary); flex-shrink: 0;">
-            <button class="btn-secondary" onclick="document.getElementById('view-invoice-modal').remove()" style="padding: 0.75rem 2.5rem; background: #14b8a6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Cerrar</button>
-            <button class="btn-primary" onclick="downloadInvoicePDF('${invoice.id}')" style="padding: 0.75rem 2.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Descargar PDF</button>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('view-invoice-modal').remove()">Cerrar</button>
+            <button type="button" class="btn-primary" onclick="downloadInvoicePDF('${invoice.id}')">Descargar PDF</button>
           </footer>
         </div>
       </div>
@@ -1520,9 +1520,9 @@ async function editInvoice(invoiceId) {
               </section>
             </form>
           </div>
-          <footer class="modal__footer" style="display: flex; justify-content: space-between; padding: 1.5rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary); flex-shrink: 0;">
-            <button class="btn-secondary" onclick="closeEditInvoiceModal()" style="padding: 0.75rem 2.5rem; background: #14b8a6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="saveInvoiceChanges('${invoice.id}')" style="padding: 0.75rem 2.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Guardar cambios</button>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" onclick="closeEditInvoiceModal()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="saveInvoiceChanges('${invoice.id}')">Guardar cambios</button>
           </footer>
         </div>
       </div>
@@ -1677,9 +1677,9 @@ async function openNewInvoiceModal() {
               </section>
             </form>
           </div>
-          <footer class="modal__footer" style="display: flex; justify-content: space-between; padding: 1.5rem 2rem; border-top: 1px solid var(--border-color); background: var(--bg-secondary); flex-shrink: 0;">
-            <button class="btn-secondary" onclick="closeNewInvoiceModal()" style="padding: 0.75rem 2.5rem; background: #14b8a6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="submitNewInvoice()" style="padding: 0.75rem 2.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">Crear factura</button>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" onclick="closeNewInvoiceModal()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="submitNewInvoice()">Crear factura</button>
           </footer>
         </div>
       </div>
