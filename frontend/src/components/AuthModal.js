@@ -1,14 +1,14 @@
-﻿const VIEW_LOGIN = 'login';
-const VIEW_REGISTER = 'register';
-const VIEW_RECOVER = 'recover';
-const VIEW_RESET = 'reset';
+﻿const VIEW_LOGIN = "login";
+const VIEW_REGISTER = "register";
+const VIEW_RECOVER = "recover";
+const VIEW_RESET = "reset";
 
 function getAuthBaseUrl() {
   if (window?.api?.getBaseUrl) {
     const base = window.api.getBaseUrl();
-    return base.replace(/\/api$/, '/api/auth');
+    return base.replace(/\/api$/, "/api/auth");
   }
-  return 'http://localhost:8020/api/auth';
+  return "http://localhost:8020/api/auth";
 }
 
 export function renderAuthModal() {
@@ -16,7 +16,7 @@ export function renderAuthModal() {
     <div id="auth-modal" class="auth-modal" aria-hidden="true" aria-labelledby="auth-modal-title" role="dialog">
       <div class="auth-modal__backdrop" data-modal-dismiss></div>
       <section class="auth-modal__panel" role="document">
-        <button class="auth-modal__close" data-modal-dismiss aria-label="Cerrar">Ã—</button>
+        <button class="auth-modal__close" data-modal-dismiss aria-label="Cerrar">×</button>
         <aside class="auth-modal__hero">
           <div class="auth-modal__hero-gradient"></div>
           <div class="auth-modal__hero-content">
@@ -35,7 +35,7 @@ export function renderAuthModal() {
         <div class="auth-modal__content">
           <header class="auth-modal__tabs" data-auth-tabs role="tablist">
             <button type="button" class="auth-modal__tab is-active" data-auth-tab="${VIEW_LOGIN}" aria-selected="true" role="tab">
-              Iniciar sesiÃ³n
+              Iniciar sesión
             </button>
             <button type="button" class="auth-modal__tab" data-auth-tab="${VIEW_REGISTER}" aria-selected="false" role="tab">
               Crear cuenta
@@ -59,17 +59,17 @@ export function renderAuthModal() {
 
           <form id="auth-login-form" data-auth-view="${VIEW_LOGIN}" novalidate>
             <div class="auth-modal__field">
-              <label for="auth-login-email">Correo electrÃ³nico</label>
+              <label for="auth-login-email">Correo electrónico</label>
               <input id="auth-login-email" name="email" type="email" autocomplete="email" required placeholder="tu@email.com" />
             </div>
             <div class="auth-modal__field">
-              <label for="auth-login-password">ContraseÃ±a</label>
-              <input id="auth-login-password" name="password" type="password" autocomplete="current-password" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
+              <label for="auth-login-password">Contraseña</label>
+              <input id="auth-login-password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
             </div>
             <div class="auth-modal__form-actions">
               <button type="submit" class="auth-modal__submit">Entrar</button>
               <button type="button" class="auth-modal__link" data-auth-switch="${VIEW_RECOVER}">
-                Â¿Olvidaste tu contraseÃ±a?
+                ¿Olvidaste tu contraseña?
               </button>
             </div>
           </form>
@@ -91,22 +91,22 @@ export function renderAuthModal() {
             </div>
             <div class="auth-modal__row">
               <div class="auth-modal__field">
-                <label for="auth-register-email">Correo electrÃ³nico</label>
+                <label for="auth-register-email">Correo electrónico</label>
                 <input id="auth-register-email" name="email" type="email" autocomplete="email" required placeholder="empresa@correo.com" />
               </div>
               <div class="auth-modal__field">
-                <label for="auth-register-phone">TelÃ©fono</label>
+                <label for="auth-register-phone">Teléfono</label>
                 <input id="auth-register-phone" name="phone" type="tel" autocomplete="tel" required placeholder="+34 600 000 000" />
               </div>
             </div>
             <div class="auth-modal__row">
               <div class="auth-modal__field">
-                <label for="auth-register-password">ContraseÃ±a</label>
-                <input id="auth-register-password" name="password" type="password" autocomplete="new-password" required placeholder="MÃ­nimo 8 caracteres" minlength="8" />
+                <label for="auth-register-password">Contraseña</label>
+                <input id="auth-register-password" name="password" type="password" autocomplete="new-password" required placeholder="Mínimo 8 caracteres" minlength="8" />
               </div>
               <div class="auth-modal__field">
-                <label for="auth-register-confirm">Confirmar contraseÃ±a</label>
-                <input id="auth-register-confirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Repite la contraseÃ±a" minlength="8" />
+                <label for="auth-register-confirm">Confirmar contraseña</label>
+                <input id="auth-register-confirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Repite la contraseña" minlength="8" />
               </div>
             </div>
             <p class="auth-modal__legal">
@@ -117,16 +117,16 @@ export function renderAuthModal() {
 
           <form id="auth-recover-form" data-auth-view="${VIEW_RECOVER}" hidden novalidate>
             <div class="auth-modal__field">
-              <label for="auth-recover-email">Correo electrÃ³nico</label>
+              <label for="auth-recover-email">Correo electrónico</label>
               <input id="auth-recover-email" name="email" type="email" autocomplete="email" required placeholder="tu@email.com" />
             </div>
             <p class="auth-modal__hint">
-              Te enviaremos un enlace temporal para crear una nueva contraseÃ±a.
+              Te enviaremos un enlace temporal para crear una nueva contraseña.
             </p>
             <div class="auth-modal__form-actions">
               <button type="submit" class="auth-modal__submit">Enviar enlace</button>
               <button type="button" class="auth-modal__link" data-auth-switch="${VIEW_LOGIN}">
-                Volver a iniciar sesiÃ³n
+                Volver a iniciar sesión
               </button>
             </div>
           </form>
@@ -134,23 +134,31 @@ export function renderAuthModal() {
           <form id="auth-reset-form" data-auth-view="${VIEW_RESET}" hidden novalidate>
             <input type="hidden" data-reset-token />
             <div class="auth-modal__field">
-              <label for="auth-reset-password">Nueva contraseÃ±a</label>
-              <input id="auth-reset-password" name="password" type="password" autocomplete="new-password" required placeholder="MÃ­nimo 8 caracteres" minlength="8" />
+              <label for="auth-reset-password">Nueva contraseña</label>
+              <input id="auth-reset-password" name="password" type="password" autocomplete="new-password" required placeholder="Mínimo 8 caracteres" minlength="8" />
             </div>
             <div class="auth-modal__field">
-              <label for="auth-reset-confirm">Confirmar contraseÃ±a</label>
-              <input id="auth-reset-confirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Repite la contraseÃ±a" minlength="8" />
+              <label for="auth-reset-confirm">Confirmar contraseña</label>
+              <input id="auth-reset-confirm" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Repite la contraseña" minlength="8" />
             </div>
             <p class="auth-modal__hint">
-              El enlace expira en unos minutos. Usa una contraseÃ±a segura que no hayas empleado antes.
+              El enlace expira en unos minutos. Usa una contraseña segura que no hayas empleado antes.
             </p>
             <div class="auth-modal__form-actions">
-              <button type="submit" class="auth-modal__submit">Actualizar contraseÃ±a</button>
+              <button type="submit" class="auth-modal__submit">Actualizar contraseña</button>
               <button type="button" class="auth-modal__link" data-auth-switch="${VIEW_LOGIN}">
-                Volver al inicio de sesiÃ³n
+                Volver al inicio de sesión
               </button>
             </div>
           </form>
+
+          <div class="auth-modal__divider"><span>o modo demo</span></div>
+          
+          <div class="auth-modal__demo">
+            <button type="button" class="auth-modal__demo-btn" data-auth-demo>
+              🎭 Entrar como usuario demo
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -272,7 +280,7 @@ export function renderAuthModal() {
       }
 
       .auth-modal__highlights li::before {
-        content: 'â€¢';
+        content: '•';
         margin-right: 0.4rem;
       }
 
@@ -295,25 +303,25 @@ export function renderAuthModal() {
       .auth-modal__tab {
         border: none;
         background: transparent;
-      padding: 0.65rem 1.25rem;
-      border-radius: 999px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: background 0.2s ease, color 0.2s ease;
-    }
+        padding: 0.65rem 1.25rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
 
-    .auth-modal__tab.is-active {
-      background: var(--gradient-button);
-      color: #fff;
-      box-shadow: 0 8px 16px rgba(51, 102, 255, 0.25);
-    }
+      .auth-modal__tab.is-active {
+        background: var(--gradient-button);
+        color: #fff;
+        box-shadow: 0 8px 16px rgba(51, 102, 255, 0.25);
+      }
 
-    .auth-modal__tabs.is-disabled {
-      opacity: 0.65;
-      pointer-events: none;
-    }
+      .auth-modal__tabs.is-disabled {
+        opacity: 0.65;
+        pointer-events: none;
+      }
 
       .auth-modal__alert {
         border-radius: 14px;
@@ -407,6 +415,28 @@ export function renderAuthModal() {
         flex: 1;
         height: 1px;
         background: var(--border-color);
+      }
+
+      .auth-modal__demo {
+        margin-top: 0.5rem;
+      }
+
+      .auth-modal__demo-btn {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        background: rgba(245, 158, 11, 0.08);
+        color: var(--warning);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .auth-modal__demo-btn:hover {
+        transform: translateY(-1px);
+        background: rgba(245, 158, 11, 0.15);
+        box-shadow: 0 8px 16px rgba(245, 158, 11, 0.25);
       }
 
       form[data-auth-view] {
@@ -599,7 +629,8 @@ function toggleLoading(button, loading, text) {
   }
 
   if (loading) {
-    button.dataset.originalText = button.dataset.originalText || button.innerHTML;
+    button.dataset.originalText =
+      button.dataset.originalText || button.innerHTML;
     button.disabled = true;
     button.innerHTML = `<span class="auth-modal__spinner"></span>${text}`;
   } else {
@@ -612,33 +643,37 @@ function toggleLoading(button, loading, text) {
 }
 
 export function initAuthModal() {
-  const modal = document.getElementById('auth-modal');
-  if (!modal || modal.dataset.initialized === 'true') {
+  const modal = document.getElementById("auth-modal");
+  if (!modal || modal.dataset.initialized === "true") {
     return;
   }
 
-  const tabs = Array.from(modal.querySelectorAll('[data-auth-tab]'));
+  const tabs = Array.from(modal.querySelectorAll("[data-auth-tab]"));
   const forms = {
     [VIEW_LOGIN]: modal.querySelector(`#auth-${VIEW_LOGIN}-form`),
     [VIEW_REGISTER]: modal.querySelector(`#auth-${VIEW_REGISTER}-form`),
     [VIEW_RECOVER]: modal.querySelector(`#auth-${VIEW_RECOVER}-form`),
     [VIEW_RESET]: modal.querySelector(`#auth-${VIEW_RESET}-form`),
   };
-  const alertBox = modal.querySelector('[data-auth-alert]');
-  const subtitle = modal.querySelector('[data-auth-subtitle]');
-  const closeButtons = modal.querySelectorAll('[data-modal-dismiss]');
-  const socialButtons = modal.querySelectorAll('[data-auth-provider]');
-  const tabContainer = modal.querySelector('[data-auth-tabs]');
+  const alertBox = modal.querySelector("[data-auth-alert]");
+  const subtitle = modal.querySelector("[data-auth-subtitle]");
+  const closeButtons = modal.querySelectorAll("[data-modal-dismiss]");
+  const socialButtons = modal.querySelectorAll("[data-auth-provider]");
+  const tabContainer = modal.querySelector("[data-auth-tabs]");
+  const demoButton = modal.querySelector("[data-auth-demo]");
 
   let activeView = VIEW_LOGIN;
-  let lastLoginEmail = '';
+  let lastLoginEmail = "";
   let resetToken = null;
 
   const subtitles = {
-    [VIEW_LOGIN]: 'Gestiona tus ingresos y gastos con nuestra suite colaborativa.',
-    [VIEW_REGISTER]: 'Activa tu espacio profesional e invita a tu equipo cuando quieras.',
-    [VIEW_RECOVER]: 'Recupera el acceso a tu cuenta con un enlace seguro.',
-    [VIEW_RESET]: 'Define una nueva contraseÃ±a para continuar trabajando sin interrupciones.',
+    [VIEW_LOGIN]:
+      "Gestiona tus ingresos y gastos con nuestra suite colaborativa.",
+    [VIEW_REGISTER]:
+      "Activa tu espacio profesional e invita a tu equipo cuando quieras.",
+    [VIEW_RECOVER]: "Recupera el acceso a tu cuenta con un enlace seguro.",
+    [VIEW_RESET]:
+      "Define una nueva contraseña para continuar trabajando sin interrupciones.",
   };
 
   function clearAlert() {
@@ -646,8 +681,8 @@ export function initAuthModal() {
       return;
     }
     alertBox.hidden = true;
-    alertBox.removeAttribute('data-variant');
-    alertBox.innerHTML = '';
+    alertBox.removeAttribute("data-variant");
+    alertBox.innerHTML = "";
   }
 
   function showAlert(variant, message) {
@@ -672,22 +707,22 @@ export function initAuthModal() {
         return;
       }
       if (key === view) {
-        form.removeAttribute('hidden');
+        form.removeAttribute("hidden");
       } else {
-        form.setAttribute('hidden', 'true');
+        form.setAttribute("hidden", "true");
       }
     });
 
     tabs.forEach((tab) => {
       const isActive = tab.dataset.authTab === view;
-      tab.classList.toggle('is-active', isActive);
-      tab.setAttribute('aria-selected', String(isActive));
-      tab.setAttribute('tabindex', isActive ? '0' : '-1');
+      tab.classList.toggle("is-active", isActive);
+      tab.setAttribute("aria-selected", String(isActive));
+      tab.setAttribute("tabindex", isActive ? "0" : "-1");
     });
 
     if (tabContainer) {
       const disableTabs = view === VIEW_RECOVER || view === VIEW_RESET;
-      tabContainer.classList.toggle('is-disabled', disableTabs);
+      tabContainer.classList.toggle("is-disabled", disableTabs);
     }
 
     if (subtitle) {
@@ -695,25 +730,25 @@ export function initAuthModal() {
     }
 
     if (view === VIEW_REGISTER) {
-      modal.classList.add('auth-modal--register');
+      modal.classList.add("auth-modal--register");
     } else {
-      modal.classList.remove('auth-modal--register');
-      if (window.location.hash === '#/register') {
-        const fallbackHash = window.__lastRouteBeforeRegister || '#/dashboard';
-        window.history.replaceState({}, '', fallbackHash);
+      modal.classList.remove("auth-modal--register");
+      if (window.location.hash === "#/register") {
+        const fallbackHash = window.__lastRouteBeforeRegister || "#/dashboard";
+        window.history.replaceState({}, "", fallbackHash);
       }
     }
   }
 
   function closeModal() {
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('is-lock-scroll');
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("is-lock-scroll");
     clearAlert();
     setView(VIEW_LOGIN);
-    if (window.location.hash === '#/register') {
-      const fallbackHash = window.__lastRouteBeforeRegister || '#/dashboard';
-      window.history.replaceState({}, '', fallbackHash);
+    if (window.location.hash === "#/register") {
+      const fallbackHash = window.__lastRouteBeforeRegister || "#/dashboard";
+      window.history.replaceState({}, "", fallbackHash);
     }
   }
 
@@ -723,8 +758,49 @@ export function initAuthModal() {
     window.location.href = url;
   }
 
+  async function handleDemoLogin() {
+    clearAlert();
+
+    if (!window.api || !window.api.devLogin) {
+      showAlert(
+        "error",
+        "Demo no disponible. El servicio no está configurado."
+      );
+      return;
+    }
+
+    const submitBtn = demoButton;
+    toggleLoading(submitBtn, true, "Entrando como demo...");
+
+    try {
+      const response = await window.api.devLogin();
+      showAlert(
+        "success",
+        response.message || "Sesión demo iniciada correctamente."
+      );
+      window.dispatchEvent(
+        new CustomEvent("auth:changed", { detail: { user: response.user } })
+      );
+      setTimeout(() => {
+        closeModal();
+      }, 400);
+    } catch (error) {
+      let message = "No se pudo iniciar la sesión demo.";
+      if (error instanceof window.APIError) {
+        if (error.status === 0) {
+          message = "No podemos conectar con el servidor. Inténtalo más tarde.";
+        } else if (error.data?.error) {
+          message = error.data.error;
+        }
+      }
+      showAlert("error", message);
+    } finally {
+      toggleLoading(submitBtn, false);
+    }
+  }
+
   tabs.forEach((tab) => {
-    tab.addEventListener('click', (event) => {
+    tab.addEventListener("click", (event) => {
       const view = tab.dataset.authTab;
       if (!view || view === activeView) {
         return;
@@ -733,8 +809,8 @@ export function initAuthModal() {
       if (view === VIEW_REGISTER) {
         event.preventDefault();
         setView(view);
-        if (window.location.hash !== '#/register') {
-          window.location.hash = '#/register';
+        if (window.location.hash !== "#/register") {
+          window.location.hash = "#/register";
         }
         return;
       }
@@ -743,7 +819,7 @@ export function initAuthModal() {
     });
   });
 
-  modal.addEventListener('click', (event) => {
+  modal.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -756,14 +832,14 @@ export function initAuthModal() {
   });
 
   closeButtons.forEach((button) => {
-    button.addEventListener('click', (event) => {
+    button.addEventListener("click", (event) => {
       event.preventDefault();
       closeModal();
     });
   });
 
   socialButtons.forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener("click", () => {
       const provider = button.dataset.authProvider;
       if (provider) {
         handleSocialLogin(provider);
@@ -771,58 +847,68 @@ export function initAuthModal() {
     });
   });
 
+  if (demoButton) {
+    demoButton.addEventListener("click", handleDemoLogin);
+  }
+
   const loginForm = forms[VIEW_LOGIN];
   if (loginForm) {
-    loginForm.addEventListener('submit', async (event) => {
+    loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearAlert();
 
-      const submitBtn = loginForm.querySelector('.auth-modal__submit');
+      const submitBtn = loginForm.querySelector(".auth-modal__submit");
       const emailInput = loginForm.querySelector('input[name="email"]');
       const passwordInput = loginForm.querySelector('input[name="password"]');
 
       const email = emailInput?.value.trim();
-      const password = passwordInput?.value || '';
-      lastLoginEmail = email || '';
+      const password = passwordInput?.value || "";
+      lastLoginEmail = email || "";
 
       if (!email || !password) {
-        showAlert('error', 'Introduce tu correo y contraseÃ±a.');
+        showAlert("error", "Introduce tu correo y contraseña.");
         return;
       }
 
-      toggleLoading(submitBtn, true, 'Entrando...');
+      toggleLoading(submitBtn, true, "Entrando...");
 
       try {
         const response = await window.api.login(email, password);
-        showAlert('success', response.message || 'SesiÃ³n iniciada correctamente.');
-        window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: response.user } }));
+        showAlert(
+          "success",
+          response.message || "Sesión iniciada correctamente."
+        );
+        window.dispatchEvent(
+          new CustomEvent("auth:changed", { detail: { user: response.user } })
+        );
         setTimeout(() => {
           closeModal();
         }, 400);
       } catch (error) {
-        let message = 'No se pudo iniciar sesiÃ³n.';
+        let message = "No se pudo iniciar sesión.";
 
         if (error instanceof window.APIError) {
           if (error.status === 401) {
-            message = 'Correo o contraseÃ±a incorrectos.';
+            message = "Correo o contraseña incorrectos.";
           } else if (error.status === 0) {
-            message = 'No podemos conectar con el servidor. IntÃ©ntalo mÃ¡s tarde.';
+            message =
+              "No podemos conectar con el servidor. Inténtalo más tarde.";
           } else if (error.data?.error) {
             message = error.data.error;
           }
           if (error.data?.requiresVerification && lastLoginEmail) {
-            message += ` <button type="button" class="auth-modal__link" data-auth-resend="${lastLoginEmail}">Reenviar verificaciÃ³n</button>`;
+            message += ` <button type="button" class="auth-modal__link" data-auth-resend="${lastLoginEmail}">Reenviar verificación</button>`;
           }
         }
 
-        showAlert('error', message);
+        showAlert("error", message);
       } finally {
         toggleLoading(submitBtn, false);
       }
     });
   }
 
-  modal.addEventListener('click', async (event) => {
+  modal.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -832,62 +918,77 @@ export function initAuthModal() {
       event.preventDefault();
       try {
         const response = await window.api.resendVerification(resendEmail);
-        showAlert('info', response.message || 'Hemos reenviado el correo de verificaciÃ³n.');
+        showAlert(
+          "info",
+          response.message || "Hemos reenviado el correo de verificación."
+        );
       } catch (error) {
-        showAlert('error', 'No pudimos reenviar el correo. IntÃ©ntalo mÃ¡s tarde.');
+        showAlert(
+          "error",
+          "No pudimos reenviar el correo. Inténtalo más tarde."
+        );
       }
     }
   });
 
   const registerForm = forms[VIEW_REGISTER];
   if (registerForm) {
-    registerForm.addEventListener('submit', async (event) => {
+    registerForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearAlert();
 
-      const submitBtn = registerForm.querySelector('.auth-modal__submit');
+      const submitBtn = registerForm.querySelector(".auth-modal__submit");
 
       const formData = new FormData(registerForm);
       const payload = {
-        firstName: (formData.get('firstName') || '').toString().trim(),
-        lastName: (formData.get('lastName') || '').toString().trim(),
-        company: (formData.get('company') || '').toString().trim(),
-        email: (formData.get('email') || '').toString().trim(),
-        phone: (formData.get('phone') || '').toString().trim(),
-        password: (formData.get('password') || '').toString(),
-        confirmPassword: (formData.get('confirmPassword') || '').toString(),
+        firstName: (formData.get("firstName") || "").toString().trim(),
+        lastName: (formData.get("lastName") || "").toString().trim(),
+        company: (formData.get("company") || "").toString().trim(),
+        email: (formData.get("email") || "").toString().trim(),
+        phone: (formData.get("phone") || "").toString().trim(),
+        password: (formData.get("password") || "").toString(),
+        confirmPassword: (formData.get("confirmPassword") || "").toString(),
       };
 
-      if (!payload.firstName || !payload.lastName || !payload.company || !payload.email || !payload.phone) {
-        showAlert('error', 'Revisa los campos obligatorios.');
+      if (
+        !payload.firstName ||
+        !payload.lastName ||
+        !payload.company ||
+        !payload.email ||
+        !payload.phone
+      ) {
+        showAlert("error", "Revisa los campos obligatorios.");
         return;
       }
 
       if (payload.password.length < 8) {
-        showAlert('error', 'La contraseÃ±a debe tener al menos 8 caracteres.');
+        showAlert("error", "La contraseña debe tener al menos 8 caracteres.");
         return;
       }
 
       if (payload.password !== payload.confirmPassword) {
-        showAlert('error', 'Las contraseÃ±as no coinciden.');
+        showAlert("error", "Las contraseñas no coinciden.");
         return;
       }
 
-      toggleLoading(submitBtn, true, 'Creando cuenta...');
+      toggleLoading(submitBtn, true, "Creando cuenta...");
 
       try {
         const response = await window.api.register(payload);
-        showAlert('success', response.message || 'Revisa tu correo para confirmar la cuenta.');
+        showAlert(
+          "success",
+          response.message || "Revisa tu correo para confirmar la cuenta."
+        );
         registerForm.reset();
         setTimeout(() => {
           setView(VIEW_LOGIN);
         }, 600);
       } catch (error) {
-        let message = 'No se pudo crear la cuenta.';
+        let message = "No se pudo crear la cuenta.";
         if (error instanceof window.APIError && error.data?.error) {
           message = error.data.error;
         }
-        showAlert('error', message);
+        showAlert("error", message);
       } finally {
         toggleLoading(submitBtn, false);
       }
@@ -896,26 +997,30 @@ export function initAuthModal() {
 
   const recoverForm = forms[VIEW_RECOVER];
   if (recoverForm) {
-    recoverForm.addEventListener('submit', async (event) => {
+    recoverForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearAlert();
 
-      const submitBtn = recoverForm.querySelector('.auth-modal__submit');
+      const submitBtn = recoverForm.querySelector(".auth-modal__submit");
       const emailInput = recoverForm.querySelector('input[name="email"]');
       const email = emailInput?.value.trim();
 
       if (!email) {
-        showAlert('error', 'Introduce tu correo electrÃ³nico.');
+        showAlert("error", "Introduce tu correo electrónico.");
         return;
       }
 
-      toggleLoading(submitBtn, true, 'Enviando enlace...');
+      toggleLoading(submitBtn, true, "Enviando enlace...");
 
       try {
         const response = await window.api.requestPasswordReset(email);
-        showAlert('success', response.message || 'Si el correo existe, enviaremos un enlace en minutos.');
+        showAlert(
+          "success",
+          response.message ||
+            "Si el correo existe, enviaremos un enlace en minutos."
+        );
       } catch (_error) {
-        showAlert('error', 'No pudimos enviar el enlace. IntÃ©ntalo mÃ¡s tarde.');
+        showAlert("error", "No pudimos enviar el enlace. Inténtalo más tarde.");
       } finally {
         toggleLoading(submitBtn, false);
       }
@@ -924,76 +1029,87 @@ export function initAuthModal() {
 
   const resetForm = forms[VIEW_RESET];
   if (resetForm) {
-    resetForm.addEventListener('submit', async (event) => {
+    resetForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearAlert();
 
       if (!resetToken) {
-        showAlert('error', 'El enlace de restablecimiento no es vÃ¡lido o ha caducado.');
+        showAlert(
+          "error",
+          "El enlace de restablecimiento no es válido o ha caducado."
+        );
         return;
       }
 
-      const submitBtn = resetForm.querySelector('.auth-modal__submit');
+      const submitBtn = resetForm.querySelector(".auth-modal__submit");
       const passwordInput = resetForm.querySelector('input[name="password"]');
-      const confirmInput = resetForm.querySelector('input[name="confirmPassword"]');
+      const confirmInput = resetForm.querySelector(
+        'input[name="confirmPassword"]'
+      );
 
-      const password = passwordInput?.value || '';
-      const confirmPassword = confirmInput?.value || '';
+      const password = passwordInput?.value || "";
+      const confirmPassword = confirmInput?.value || "";
 
       if (password.length < 8) {
-        showAlert('error', 'La contraseÃ±a debe tener al menos 8 caracteres.');
+        showAlert("error", "La contraseña debe tener al menos 8 caracteres.");
         return;
       }
 
       if (password !== confirmPassword) {
-        showAlert('error', 'Las contraseÃ±as no coinciden.');
+        showAlert("error", "Las contraseñas no coinciden.");
         return;
       }
 
-      toggleLoading(submitBtn, true, 'Actualizando...');
+      toggleLoading(submitBtn, true, "Actualizando...");
 
       try {
         const response = await window.api.resetPassword(resetToken, password);
         resetToken = null;
-        showAlert('success', response.message || 'ContraseÃ±a actualizada correctamente. Estamos iniciando tu sesiÃ³n.');
-        window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: response.user } }));
+        showAlert(
+          "success",
+          response.message ||
+            "Contraseña actualizada correctamente. Estamos iniciando tu sesión."
+        );
+        window.dispatchEvent(
+          new CustomEvent("auth:changed", { detail: { user: response.user } })
+        );
         setTimeout(() => {
           closeModal();
           window.location.hash = "#/dashboard";
         }, 500);
       } catch (error) {
-        let message = 'No se pudo actualizar la contraseÃ±a.';
+        let message = "No se pudo actualizar la contraseña.";
         if (error instanceof window.APIError && error.data?.error) {
           message = error.data.error;
         }
-        showAlert('error', message);
+        showAlert("error", message);
       } finally {
         toggleLoading(submitBtn, false);
       }
     });
   }
 
-  modal.addEventListener('auth:set-view', (event) => {
+  modal.addEventListener("auth:set-view", (event) => {
     const view = event.detail;
     if (view && forms[view]) {
       setView(view);
     }
   });
 
-  modal.addEventListener('auth:set-reset-token', (event) => {
-    const token = typeof event.detail === 'string' ? event.detail : null;
+  modal.addEventListener("auth:set-reset-token", (event) => {
+    const token = typeof event.detail === "string" ? event.detail : null;
     resetToken = token;
-    const tokenInput = forms[VIEW_RESET]?.querySelector('[data-reset-token]');
+    const tokenInput = forms[VIEW_RESET]?.querySelector("[data-reset-token]");
     if (tokenInput) {
-      tokenInput.value = token || '';
+      tokenInput.value = token || "";
     }
   });
 
-  modal.dataset.initialized = 'true';
+  modal.dataset.initialized = "true";
 }
 
 export function openAuthModal(initialView = VIEW_LOGIN, options = {}) {
-  const modal = document.getElementById('auth-modal');
+  const modal = document.getElementById("auth-modal");
   if (!modal) {
     return;
   }
@@ -1001,41 +1117,47 @@ export function openAuthModal(initialView = VIEW_LOGIN, options = {}) {
   initAuthModal();
 
   if (initialView === VIEW_REGISTER) {
-    const currentHash = window.location.hash || '#/dashboard';
-    if (currentHash !== '#/register') {
+    const currentHash = window.location.hash || "#/dashboard";
+    if (currentHash !== "#/register") {
       window.__lastRouteBeforeRegister = currentHash;
     }
   }
 
-  modal.classList.add('is-open');
-  modal.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('is-lock-scroll');
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("is-lock-scroll");
 
-  modal.dispatchEvent(new CustomEvent('auth:set-view', { detail: initialView }));
+  modal.dispatchEvent(
+    new CustomEvent("auth:set-view", { detail: initialView })
+  );
 
-  if (initialView === VIEW_REGISTER && window.location.hash !== '#/register') {
-    window.location.hash = '#/register';
+  if (initialView === VIEW_REGISTER && window.location.hash !== "#/register") {
+    window.location.hash = "#/register";
   }
 
   if (options.resetToken) {
-    modal.dispatchEvent(new CustomEvent('auth:set-reset-token', { detail: options.resetToken }));
+    modal.dispatchEvent(
+      new CustomEvent("auth:set-reset-token", { detail: options.resetToken })
+    );
   }
 
-  const firstInput = modal.querySelector(`form[data-auth-view="${initialView}"] input`);
+  const firstInput = modal.querySelector(
+    `form[data-auth-view="${initialView}"] input`
+  );
   if (firstInput) {
     setTimeout(() => firstInput.focus(), 120);
   }
 }
 
 export function closeAuthModal() {
-  const modal = document.getElementById('auth-modal');
+  const modal = document.getElementById("auth-modal");
   if (!modal) {
     return;
   }
 
-  modal.classList.remove('is-open');
-  modal.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('is-lock-scroll');
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("is-lock-scroll");
 }
 
 export default {

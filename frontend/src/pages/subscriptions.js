@@ -315,16 +315,16 @@ function renderSubscriptionsTable() {
             </span>
           </td>
           <td>
-            <div class="table-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-              <button type="button" class="btn-link" data-subscription-view="${
+            <div class="table-actions" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button type="button" class="btn-icon" data-subscription-view="${
                 sub.id
-              }">Ver</button>
-              <button type="button" class="btn-link" data-subscription-edit="${
+              }" title="Ver">👁️</button>
+              <button type="button" class="btn-icon" data-subscription-edit="${
                 sub.id
-              }">Editar</button>
-              <button type="button" class="btn-link" data-subscription-delete="${
+              }" title="Editar">✏️</button>
+              <button type="button" class="btn-icon" data-subscription-delete="${
                 sub.id
-              }" style="color: var(--danger, #ef4444);">Eliminar</button>
+              }" title="Eliminar" style="color: var(--danger, #ef4444);">🗑️</button>
             </div>
           </td>
         </tr>
@@ -680,7 +680,7 @@ function openSubscriptionModal(mode, subscriptionId = null) {
   const modalHtml = `
     <div class="modal is-open" id="subscription-modal">
       <div class="modal__backdrop" data-modal-close></div>
-      <div class="modal__panel" style="width: min(95vw, 720px); max-width: 720px; overflow-x: hidden;">
+      <div class="modal__panel" style="width: min(95vw, 720px); max-width: 720px; max-width: 720px;">
         <header class="modal__head">
           <div>
             <h2 class="modal__title">${title}</h2>

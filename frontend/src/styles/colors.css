@@ -2359,6 +2359,7 @@ table tr[hidden] {
   position: relative;
   width: min(1000px, 96vw);
   max-height: min(96vh, 980px);
+  overflow-x: hidden;
   overflow-y: auto;
   border-radius: 28px;
   background: linear-gradient(
@@ -2374,19 +2375,23 @@ table tr[hidden] {
 
 .modal__panel--wide {
   width: min(1180px, 96vw);
+  overflow-x: hidden;
 }
 
 .modal__panel--xl {
   width: min(1280px, 96vw);
+  overflow-x: hidden;
 }
 
 .modal__panel--tall {
   max-height: min(94vh, 980px);
+  overflow-x: hidden;
 }
 
 .modal__panel--flex {
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .modal__body {
