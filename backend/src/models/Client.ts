@@ -1,20 +1,13 @@
 import { query } from '../database/config.js';
 import { IClient, IClientCreate, IClientUpdate, IClientSummary } from '../types/client.js';
+import { clientRepository } from '../repositories/client.repository.js';
 
 class Client {
   // Create a new client
   static async create(userId: string, clientData: IClientCreate): Promise<IClient> {
     const {
-      name,
-      email,
-      phone,
-      nifCif,
-      address,
-      city,
-      postalCode,
-      country = 'España',
-      notes,
-      isActive = true
+      name, email, phone, nifCif, address, city, postalCode,
+      country = 'España', notes, isActive = true
     } = clientData;
 
     const sql = `
@@ -24,17 +17,7 @@ class Client {
     `;
 
     const result = await query(sql, [
-      userId,
-      name,
-      email,
-      phone,
-      nifCif,
-      address,
-      city,
-      postalCode,
-      country,
-      notes,
-      isActive
+      userId, name, email, phone, nifCif, address, city, postalCode, country, notes, isActive
     ]);
 
     const row = result.rows[0];
@@ -46,176 +29,42 @@ class Client {
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at
-    };
+    } as IClient;
   }
 
   // Find client by ID
   static async findById(id: string, userId: string): Promise<IClient | null> {
-    const sql = 'SELECT * FROM clients WHERE id = $1 AND user_id = $2';
-    const result = await query(sql, [id, userId]);
-    if (result.rows.length === 0) return null;
-    
-    const row = result.rows[0];
-    return {
-      ...row,
-      userId: row.user_id,
-      nifCif: row.nif_cif,
-      postalCode: row.postal_code,
-      isActive: row.is_active,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
+    const row = await clientRepository.findById(id, userId);
+    return row as IClient | null;
   }
 
   // Get all clients for a user
   static async findAllByUser(userId: string, filters: any = {}): Promise<IClient[]> {
-    let sql = `
-      SELECT
-        c.*,
-        COALESCE(p.project_count, 0) AS projects_count,
-        COALESCE(s.subscription_count, 0) AS subscriptions_count,
-        COALESCE(inv.invoice_count, 0) AS invoice_count,
-        COALESCE(inv.total_invoiced, 0) AS total_invoiced,
-        COALESCE(inv.total_pending, 0) AS total_pending
-      FROM clients c
-      LEFT JOIN (
-        SELECT client_id, COUNT(*) AS project_count
-        FROM projects
-        GROUP BY client_id
-      ) p ON p.client_id = c.id
-      LEFT JOIN (
-        SELECT client_id, COUNT(*) AS subscription_count
-        FROM subscriptions
-        GROUP BY client_id
-      ) s ON s.client_id = c.id
-      LEFT JOIN (
-        SELECT
-          client_id,
-          COUNT(*) AS invoice_count,
-          COALESCE(SUM(total), 0) AS total_invoiced,
-          COALESCE(SUM(CASE WHEN status != 'paid' THEN total ELSE 0 END), 0) AS total_pending
-        FROM invoices
-        WHERE user_id = $1
-        GROUP BY client_id
-      ) inv ON inv.client_id = c.id
-      WHERE c.user_id = $1
-    `;
-
-    const params: any[] = [userId];
-    let paramIndex = 2;
-
-    if (filters.isActive !== undefined) {
-      sql += ` AND c.is_active = $${paramIndex}`;
-      params.push(filters.isActive);
-      paramIndex += 1;
-    }
-
-    if (filters.search) {
-      sql += ` AND (c.name ILIKE $${paramIndex} OR c.email ILIKE $${paramIndex} OR c.nif_cif ILIKE $${paramIndex})`;
-      params.push(`%${filters.search}%`);
-      paramIndex += 1;
-    }
-
-    sql += `
-      ORDER BY c.name ASC
-    `;
-
-    const result = await query(sql, params);
-    return result.rows.map(row => ({
-      ...row,
-      userId: row.user_id,
-      nifCif: row.nif_cif,
-      postalCode: row.postal_code,
-      isActive: row.is_active,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      projectsCount: parseInt(row.projects_count),
-      subscriptionsCount: parseInt(row.subscriptions_count),
-      invoiceCount: parseInt(row.invoice_count),
-      totalInvoiced: parseFloat(row.total_invoiced),
-      totalPending: parseFloat(row.total_pending)
-    }));
+    const rows = await clientRepository.findAllByUser(userId, filters);
+    return rows as IClient[];
   }
 
   // Update client
-  static async update(id: string, userId: string, updates: IClientUpdate): Promise<IClient> {
-    const allowedFields: Record<string, string> = {
-      name: 'name',
-      email: 'email',
-      phone: 'phone',
-      nifCif: 'nif_cif',
-      address: 'address',
-      city: 'city',
-      postalCode: 'postal_code',
-      country: 'country',
-      notes: 'notes',
-      isActive: 'is_active'
-    };
-
-    const fields: string[] = [];
-    const values: any[] = [];
-    let paramCount = 1;
-
-    Object.entries(updates).forEach(([key, value]) => {
-      const column = allowedFields[key];
-      if (column) {
-        fields.push(`${column} = $${paramCount}`);
-        values.push(value);
-        paramCount++;
-      }
-    });
-
-    if (fields.length === 0) {
-      throw new Error('No valid fields to update');
-    }
-
-    values.push(id, userId);
-    const sql = `
-      UPDATE clients
-      SET ${fields.join(', ')}
-      WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
-      RETURNING *
-    `;
-
-    const result = await query(sql, values);
-    const row = result.rows[0];
-    return {
-      ...row,
-      userId: row.user_id,
-      nifCif: row.nif_cif,
-      postalCode: row.postal_code,
-      isActive: row.is_active,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
+  static async update(id: string, userId: string, updates: IClientUpdate): Promise<IClient | null> {
+    const row = await clientRepository.update(id, userId, updates);
+    return row as IClient | null;
   }
 
   // Delete client
   static async delete(id: string, userId: string): Promise<{ id: string } | null> {
-    const sql = 'DELETE FROM clients WHERE id = $1 AND user_id = $2 RETURNING id';
-    const result = await query(sql, [id, userId]);
-    return result.rows[0];
+    const success = await clientRepository.delete(id, userId);
+    return success ? { id } : null;
   }
 
   // Get client statistics
   static async getStatistics(userId: string, clientId: string): Promise<any> {
-    const sql = `
-      SELECT
-        COUNT(i.id) as total_invoices,
-        COALESCE(SUM(i.total), 0) as total_billed,
-        COALESCE(SUM(CASE WHEN i.status = 'paid' THEN i.total ELSE 0 END), 0) as total_paid,
-        COALESCE(SUM(CASE WHEN i.status != 'paid' THEN i.total ELSE 0 END), 0) as total_pending
-      FROM invoices i
-      WHERE i.user_id = $1 AND i.client_id = $2
-    `;
-
-    const result = await query(sql, [userId, clientId]);
-    const row = result.rows[0];
+    const row = await clientRepository.getStatistics(userId, clientId);
+    if (!row) return null;
     return {
-      totalInvoices: parseInt(row.total_invoices),
-      totalBilled: parseFloat(row.total_billed),
-      totalPaid: parseFloat(row.total_paid),
-      totalPending: parseFloat(row.total_pending)
+      totalInvoices: parseInt(row.totalInvoices || 0),
+      totalBilled: parseFloat(row.totalBilled || 0),
+      totalPaid: parseFloat(row.totalPaid || 0),
+      totalPending: parseFloat(row.totalPending || 0)
     };
   }
 
@@ -223,9 +72,7 @@ class Client {
   static async getTopClients(userId: string, limit: number = 5): Promise<any[]> {
     const sql = `
       SELECT
-        c.id,
-        c.name,
-        c.email,
+        c.id, c.name, c.email,
         COUNT(i.id) as invoice_count,
         COALESCE(SUM(i.total), 0) as total_billed
       FROM clients c
@@ -247,9 +94,7 @@ class Client {
   static async getSummary(userId: string): Promise<IClientSummary | null> {
     const sql = `
       WITH base AS (
-        SELECT *
-        FROM clients
-        WHERE user_id = $1
+        SELECT * FROM clients WHERE user_id = $1
       )
       SELECT
         COUNT(*) AS total_clients,

@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
+import bcrypt from 'bcrypt';
 // @ts-ignore
 import pkg from 'express-validator';
 const { validationResult } = pkg as any;
 import passport from 'passport';
+import { userRepository } from '../../repositories/user.repository.js';
 import User from '../../models/User.js';
 import { generateToken } from '../../middleware/auth.js';
 import {
@@ -45,15 +47,15 @@ export const register = async (req: Request, res: Response) => {
       theme,
     } = req.body;
 
-    const existing = await User.findByEmail(email);
-    if (existing && existing.email_verified_at) {
+    const existing = await userRepository.findByEmail(email);
+    if (existing && existing.emailVerifiedAt) {
       return res.status(400).json({ error: 'El email ya está registrado' });
     }
 
-    if (existing && !existing.email_verified_at) {
+    if (existing && !existing.emailVerifiedAt) {
       const newToken = generateUuid();
-      await User.setVerificationToken(existing.id, newToken);
-      await dispatchVerificationEmail(User.shapeRow(existing)!, newToken);
+      await userRepository.setVerificationToken(existing.id, newToken);
+      await dispatchVerificationEmail(existing, newToken);
       return res.status(200).json({
         message: 'Ya habíamos recibido tu registro. Hemos reenviado el correo de verificación.',
       });
@@ -91,30 +93,30 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findByEmail(email);
+    const user = await userRepository.findByEmail(email, true);
     if (!user) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    if (!user.password_hash) {
+    if (!user.passwordHash) {
       return res.status(403).json({
         error: 'Esta cuenta se creó con inicio de sesión social. Accede con Google o GitHub.',
       });
     }
 
-    if (!user.email_verified_at) {
+    if (!user.emailVerifiedAt) {
       return res.status(403).json({
         error: 'Tu correo todavía no ha sido verificado. Revisa tu bandeja de entrada.',
         requiresVerification: true,
       });
     }
 
-    const isValidPassword = await User.verifyPassword(password, user.password_hash);
+    const isValidPassword = await User.verifyPassword(password, user.passwordHash);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    await User.updateLastLogin(user.id);
+    await userRepository.updateLastLogin(user.id);
 
     const token = generateToken(user.id);
     return res.json({
@@ -131,14 +133,14 @@ export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
 
   try {
-    const user = await User.findByEmail(email);
+    const user = await userRepository.findByEmail(email, true);
     if (!user) {
       return res.json({
         message: 'Si el correo existe en nuestro sistema, recibirás instrucciones en unos minutos.',
       });
     }
 
-    if (!user.password_hash) {
+    if (!user.passwordHash) {
       return res.status(400).json({
         error: 'Esta cuenta utiliza autenticación social. Restablece tu acceso desde tu proveedor.',
       });
@@ -147,8 +149,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const resetToken = generateUuid();
     const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
 
-    await User.setPasswordResetToken(user.id, resetToken, expiresAt);
-    await dispatchPasswordResetEmail(User.shapeRow(user)!, resetToken);
+    await userRepository.setPasswordResetToken(user.id, resetToken, expiresAt);
+    await dispatchPasswordResetEmail(user, resetToken);
 
     return res.json({
       message: 'Te hemos enviado un enlace para crear una nueva contraseña.',
@@ -163,20 +165,21 @@ export const resetPassword = async (req: Request, res: Response) => {
   const { token, password } = req.body;
 
   try {
-    const user = await User.findByPasswordResetToken(token);
+    const user = await userRepository.findByPasswordResetToken(token);
     if (!user) {
       return res.status(400).json({ error: 'Token inválido o expirado' });
     }
 
-    if (!user.password_reset_expires_at || new Date(user.password_reset_expires_at) < new Date()) {
+    if (!user.passwordResetExpiresAt || new Date(user.passwordResetExpiresAt) < new Date()) {
       return res.status(400).json({ error: 'El token ha expirado' });
     }
 
-    await User.updatePassword(user.id, password);
-    await User.updateLastLogin(user.id);
+    const passwordHash = await bcrypt.hash(password, 10);
+    await userRepository.updatePassword(user.id, passwordHash);
+    await userRepository.updateLastLogin(user.id);
 
     const jwt = generateToken(user.id);
-    const freshUser = await User.findById(user.id, { raw: true });
+    const freshUser = await userRepository.findById(user.id);
 
     return res.json({
       message: 'Contraseña actualizada correctamente',
@@ -192,22 +195,22 @@ export const resendVerification = async (req: Request, res: Response) => {
   const { email } = req.body;
 
   try {
-    const user = await User.findByEmail(email);
+    const user = await userRepository.findByEmail(email);
     if (!user) {
       return res.json({
         message: 'Si el correo existe en nuestro sistema, recibirás de nuevo el enlace de verificación.',
       });
     }
 
-    if (user.email_verified_at) {
+    if (user.emailVerifiedAt) {
       return res.json({
         message: 'Tu correo ya está verificado. Puedes iniciar sesión.',
       });
     }
 
     const token = generateUuid();
-    await User.setVerificationToken(user.id, token);
-    await dispatchVerificationEmail(User.shapeRow(user)!, token);
+    await userRepository.setVerificationToken(user.id, token);
+    await dispatchVerificationEmail(user, token);
 
     return res.json({
       message: 'Hemos reenviado un enlace de verificación a tu correo.',
@@ -219,27 +222,27 @@ export const resendVerification = async (req: Request, res: Response) => {
 };
 
 export const resolveEmailVerification = async (token: string) => {
-  const user = await User.findByVerificationToken(token);
+  const user = await userRepository.findByVerificationToken(token);
 
   if (!user) {
     return { status: 400, payload: { error: 'Token de verificación inválido' } };
   }
 
-  if (!user.verification_sent_at) {
+  if (!user.verificationSentAt) {
     return { status: 400, payload: { error: 'El token de verificación no es válido' } };
   }
 
-  const expiresAt = new Date(user.verification_sent_at);
+  const expiresAt = new Date(user.verificationSentAt);
   expiresAt.setHours(expiresAt.getHours() + VERIFICATION_TOKEN_TTL_HOURS);
 
   if (expiresAt < new Date()) {
     return { status: 410, payload: { error: 'El enlace de verificación ha expirado' } };
   }
 
-  await User.markEmailVerified(user.id);
-  await User.updateLastLogin(user.id);
+  await userRepository.markEmailVerified(user.id);
+  await userRepository.updateLastLogin(user.id);
 
-  const freshUser = await User.findById(user.id, { raw: true });
+  const freshUser = await userRepository.findById(user.id);
   const tokenJwt = generateToken(user.id);
 
   return {
@@ -285,7 +288,7 @@ export const verifyEmailGet = async (req: Request, res: Response) => {
 export const getMe = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id;
-    const user = await User.findById(userId, { raw: true });
+    const user = await userRepository.findById(userId);
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -301,7 +304,7 @@ export const getMe = async (req: Request, res: Response) => {
 export const updateMe = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id;
-    const current = await User.findById(userId, { raw: true });
+    const current = await userRepository.findById(userId);
 
     if (!current) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -321,15 +324,15 @@ export const updateMe = async (req: Request, res: Response) => {
 
     const displayName = User.mapDisplayName({
       name: current.name,
-      firstName: updates.firstName || current.first_name,
-      lastName: updates.lastName || current.last_name,
+      firstName: updates.firstName || current.firstName,
+      lastName: updates.lastName || current.lastName,
       email: current.email,
     });
 
     updates.name = displayName;
 
-    await User.update(userId, updates);
-    const refreshed = await User.findById(userId, { raw: true });
+    await userRepository.update(userId, updates);
+    const refreshed = await userRepository.findById(userId);
 
     return res.json({
       message: 'Perfil actualizado correctamente',
@@ -351,8 +354,8 @@ export const oauthHandler = (provider: string) => (req: Request, res: Response, 
     }
 
     try {
-      await User.markEmailVerified(user.id);
-      await User.updateLastLogin(user.id);
+      await userRepository.markEmailVerified(user.id);
+      await userRepository.updateLastLogin(user.id);
       const token = generateToken(user.id);
       const successUrl = new URL(`${FRONTEND_URL}/#/auth/callback`);
       successUrl.searchParams.set('token', token);
@@ -376,7 +379,7 @@ export const devLogin = async (_req: Request, res: Response) => {
   try {
     const user = await ensureDevUser();
     if (user) {
-      await User.updateLastLogin(user.id);
+      await userRepository.updateLastLogin(user.id);
       const token = generateToken(user.id);
       return res.json({
         message: 'Sesión de desarrollo iniciada',
