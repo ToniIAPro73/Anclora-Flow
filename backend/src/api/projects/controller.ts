@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 // @ts-ignore
 import pkg from 'express-validator';
 const { validationResult } = pkg as any;
+import { projectRepository } from '../../repositories/project.repository.js';
 import Project from '../../models/Project.js';
 
 export const validate = (req: Request, res: Response, next: NextFunction) => {
@@ -21,7 +22,7 @@ export const getProjects = async (req: Request, res: Response) => {
       search: req.query.search as string | undefined
     };
 
-    const projects = await Project.findAllByUser(userId, filters);
+    const projects = await projectRepository.findAllByUser(userId, filters);
     res.json(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -32,7 +33,7 @@ export const getProjects = async (req: Request, res: Response) => {
 export const getProjectById = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const project = await Project.findById(req.params.id as string, userId);
+    const project = await projectRepository.findById(req.params.id as string, userId);
 
     if (!project) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -48,7 +49,7 @@ export const getProjectById = async (req: Request, res: Response) => {
 export const createProject = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const project = await Project.create(userId, req.body);
+    const project = await projectRepository.create(userId, req.body);
     res.status(201).json(project);
   } catch (error) {
     console.error('Error creating project:', error);
@@ -59,7 +60,7 @@ export const createProject = async (req: Request, res: Response) => {
 export const updateProject = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const project = await Project.update(req.params.id as string, userId, req.body);
+    const project = await projectRepository.update(req.params.id as string, userId, req.body);
 
     if (!project) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
@@ -75,13 +76,13 @@ export const updateProject = async (req: Request, res: Response) => {
 export const deleteProject = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const deleted = await Project.delete(req.params.id as string, userId);
+    const success = await projectRepository.delete(req.params.id as string, userId);
 
-    if (!deleted) {
+    if (!success) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    res.json({ message: 'Proyecto eliminado correctamente', id: deleted.id });
+    res.json({ message: 'Proyecto eliminado correctamente', id: req.params.id });
   } catch (error) {
     console.error('Error deleting project:', error);
     res.status(500).json({ error: 'Error al eliminar el proyecto' });
@@ -91,7 +92,7 @@ export const deleteProject = async (req: Request, res: Response) => {
 export const getStatistics = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const stats = await Project.getStatistics(userId, req.params.id as string);
+    const stats = await projectRepository.getStatistics(userId, req.params.id as string);
     res.json(stats);
   } catch (error) {
     console.error('Error fetching project statistics:', error);
@@ -102,7 +103,7 @@ export const getStatistics = async (req: Request, res: Response) => {
 export const getSummary = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const summary = await Project.getSummary(userId);
+    const summary = await projectRepository.getSummary(userId);
     res.json(summary);
   } catch (error) {
     console.error('Error fetching project summary:', error);
@@ -113,7 +114,7 @@ export const getSummary = async (req: Request, res: Response) => {
 export const getStatusMetrics = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const metrics = await Project.getStatusMetrics(userId);
+    const metrics = await projectRepository.getStatusMetrics(userId);
     res.json(metrics);
   } catch (error) {
     console.error('Error fetching project status metrics:', error);
@@ -125,7 +126,7 @@ export const getUpcomingDeadlines = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
-    const deadlines = await Project.getUpcomingDeadlines(userId, limit);
+    const deadlines = await projectRepository.getUpcomingDeadlines(userId, limit);
     res.json(deadlines);
   } catch (error) {
     console.error('Error fetching upcoming deadlines:', error);
@@ -136,7 +137,7 @@ export const getUpcomingDeadlines = async (req: Request, res: Response) => {
 export const getSubscriptions = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const subs = await Project.getSubscriptions(userId, req.params.id as string);
+    const subs = await projectRepository.getSubscriptions(userId, req.params.id as string);
     res.json(subs);
   } catch (error) {
     console.error('Error fetching project subscriptions:', error);

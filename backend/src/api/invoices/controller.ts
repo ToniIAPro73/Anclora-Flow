@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 // @ts-ignore
 import pkg from 'express-validator';
 const { validationResult } = pkg as any;
+import { invoiceRepository } from '../../repositories/invoice.repository.js';
 import Invoice from '../../models/Invoice.js';
 
 export const validate = (req: Request, res: Response, next: NextFunction) => {
@@ -24,7 +25,7 @@ export const getInvoices = async (req: Request, res: Response) => {
     };
 
     const userId = (req.user as any).id as string;
-    const invoices = await Invoice.findAllByUser(userId, filters);
+    const invoices = await invoiceRepository.findAllByUser(userId, filters);
     res.json({ invoices, count: invoices.length });
   } catch (error) {
     console.error('Error fetching invoices:', error);
@@ -40,7 +41,7 @@ export const getStatistics = async (req: Request, res: Response) => {
     };
 
     const userId = (req.user as any).id as string;
-    const statistics = await Invoice.getStatistics(userId, filters);
+    const statistics = await invoiceRepository.getStatistics(userId, filters);
     res.json(statistics);
   } catch (error) {
     console.error('Error fetching statistics:', error);
@@ -52,7 +53,7 @@ export const getMonthlyIncome = async (req: Request, res: Response) => {
   try {
     const months = req.query.months ? parseInt(req.query.months as string) : 12;
     const userId = (req.user as any).id as string;
-    const monthlyData = await Invoice.getMonthlyIncome(userId, months);
+    const monthlyData = await invoiceRepository.getMonthlyIncome(userId, months);
     res.json(monthlyData);
   } catch (error) {
     console.error('Error fetching monthly data:', error);
@@ -63,7 +64,7 @@ export const getMonthlyIncome = async (req: Request, res: Response) => {
 export const getInvoiceById = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const invoice = await Invoice.findById(req.params.id as string, userId);
+    const invoice = await invoiceRepository.findById(req.params.id as string, userId);
 
     if (!invoice) {
       return res.status(404).json({ error: 'Factura no encontrada' });
@@ -79,7 +80,7 @@ export const getInvoiceById = async (req: Request, res: Response) => {
 export const createInvoice = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const invoice = await Invoice.create(userId, req.body);
+    const invoice = await invoiceRepository.create(userId, req.body);
     res.status(201).json(invoice);
   } catch (error: any) {
     console.error('Error creating invoice:', error);
@@ -93,7 +94,7 @@ export const createInvoice = async (req: Request, res: Response) => {
 export const updateInvoice = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const invoice = await Invoice.update(req.params.id as string, userId, req.body);
+    const invoice = await invoiceRepository.update(req.params.id as string, userId, req.body);
 
     if (!invoice) {
       return res.status(404).json({ error: 'Factura no encontrada' });
@@ -109,7 +110,7 @@ export const updateInvoice = async (req: Request, res: Response) => {
 export const markAsPaid = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const invoice = await Invoice.markAsPaid(req.params.id as string, userId, req.body);
+    const invoice = await invoiceRepository.markAsPaid(req.params.id as string, userId, req.body);
 
     if (!invoice) {
       return res.status(404).json({ error: 'Factura no encontrada' });
@@ -125,13 +126,13 @@ export const markAsPaid = async (req: Request, res: Response) => {
 export const deleteInvoice = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const deleted = await Invoice.delete(req.params.id as string, userId);
+    const success = await invoiceRepository.delete(req.params.id as string, userId);
 
-    if (!deleted) {
+    if (!success) {
       return res.status(404).json({ error: 'Factura no encontrada' });
     }
 
-    res.json({ message: 'Factura eliminada correctamente', id: deleted.id });
+    res.json({ message: 'Factura eliminada correctamente', id: req.params.id });
   } catch (error) {
     console.error('Error deleting invoice:', error);
     res.status(500).json({ error: 'Error al eliminar la factura' });
@@ -141,7 +142,7 @@ export const deleteInvoice = async (req: Request, res: Response) => {
 export const updateOverdueStatus = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const updated = await Invoice.updateOverdueStatus(userId);
+    const updated = await invoiceRepository.updateOverdueStatus(userId);
     res.json({ message: 'Facturas vencidas actualizadas', count: updated.length, invoices: updated });
   } catch (error) {
     console.error('Error updating overdue invoices:', error);

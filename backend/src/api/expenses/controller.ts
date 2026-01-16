@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 // @ts-ignore
 import pkg from 'express-validator';
 const { validationResult } = pkg as any;
+import { expenseRepository } from '../../repositories/expense.repository.js';
 import Expense from '../../models/Expense.js';
 
 export const validate = (req: Request, res: Response, next: NextFunction) => {
@@ -27,7 +28,7 @@ export const getExpenses = async (req: Request, res: Response) => {
       limit: req.query.limit ? parseInt(req.query.limit as string) : undefined
     };
 
-    const expenses = await Expense.findAllByUser(userId, filters);
+    const expenses = await expenseRepository.findAllByUser(userId, filters);
     res.json(expenses);
   } catch (error) {
     console.error('Error fetching expenses:', error);
@@ -38,7 +39,7 @@ export const getExpenses = async (req: Request, res: Response) => {
 export const getExpenseById = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const expense = await Expense.findById(req.params.id as string, userId);
+    const expense = await expenseRepository.findById(req.params.id as string, userId);
 
     if (!expense) {
       return res.status(404).json({ error: 'Gasto no encontrado' });
@@ -54,7 +55,7 @@ export const getExpenseById = async (req: Request, res: Response) => {
 export const createExpense = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const expense = await Expense.create(userId, req.body);
+    const expense = await expenseRepository.create(userId, req.body);
     res.status(201).json(expense);
   } catch (error) {
     console.error('Error creating expense:', error);
@@ -65,7 +66,7 @@ export const createExpense = async (req: Request, res: Response) => {
 export const updateExpense = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const expense = await Expense.update(req.params.id as string, userId, req.body);
+    const expense = await expenseRepository.update(req.params.id as string, userId, req.body);
 
     if (!expense) {
       return res.status(404).json({ error: 'Gasto no encontrado' });
@@ -81,13 +82,13 @@ export const updateExpense = async (req: Request, res: Response) => {
 export const deleteExpense = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const deleted = await Expense.delete(req.params.id as string, userId);
+    const success = await expenseRepository.delete(req.params.id as string, userId);
 
-    if (!deleted) {
+    if (!success) {
       return res.status(404).json({ error: 'Gasto no encontrado' });
     }
 
-    res.json({ message: 'Gasto eliminado correctamente', id: deleted.id });
+    res.json({ message: 'Gasto eliminado correctamente', id: req.params.id });
   } catch (error) {
     console.error('Error deleting expense:', error);
     res.status(500).json({ error: 'Error al eliminar el gasto' });
@@ -101,7 +102,7 @@ export const getStatistics = async (req: Request, res: Response) => {
       dateFrom: req.query.dateFrom as string | undefined,
       dateTo: req.query.dateTo as string | undefined
     };
-    const stats = await Expense.getStatistics(userId, filters);
+    const stats = await expenseRepository.getStatistics(userId, filters);
     res.json(stats);
   } catch (error) {
     console.error('Error fetching expense statistics:', error);
@@ -116,7 +117,7 @@ export const getByCategory = async (req: Request, res: Response) => {
       dateFrom: req.query.dateFrom as string | undefined,
       dateTo: req.query.dateTo as string | undefined
     };
-    const byCategory = await Expense.getByCategory(userId, filters);
+    const byCategory = await expenseRepository.getByCategory(userId, filters);
     res.json(byCategory);
   } catch (error) {
     console.error('Error fetching expenses by category:', error);
@@ -129,7 +130,7 @@ export const getMonthlyExpenses = async (req: Request, res: Response) => {
     const userId = (req.user as any).id as string;
     const monthsParam = typeof req.query.months === 'string' ? req.query.months : undefined;
     const months = monthsParam ? parseInt(monthsParam) : 12;
-    const monthlyData = await Expense.getMonthlyExpenses(userId, months);
+    const monthlyData = await expenseRepository.getMonthlyExpenses(userId, months);
     res.json(monthlyData);
   } catch (error) {
     console.error('Error fetching monthly expenses:', error);
@@ -142,7 +143,7 @@ export const getTopVendors = async (req: Request, res: Response) => {
     const userId = (req.user as any).id as string;
     const limitParam = typeof req.query.limit === 'string' ? req.query.limit : undefined;
     const limit = limitParam ? parseInt(limitParam) : 10;
-    const vendors = await Expense.getTopVendors(userId, limit);
+    const vendors = await expenseRepository.getTopVendors(userId, limit);
     res.json(vendors);
   } catch (error) {
     console.error('Error fetching top vendors:', error);

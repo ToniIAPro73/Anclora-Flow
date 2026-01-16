@@ -1,10 +1,14 @@
-import { query } from '../database/config.js';
+import { query, transaction } from '../database/config.js';
 
 export abstract class BaseRepository<T> {
   protected abstract tableName: string;
 
   protected async executeQuery(sql: string, params: any[] = []): Promise<any> {
     return query(sql, params);
+  }
+
+  protected async withTransaction<TResult>(callback: (client: any) => Promise<TResult>): Promise<TResult> {
+    return transaction(callback);
   }
 
   async findById(id: string, ...args: any[]): Promise<T | null> {

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 // @ts-ignore
 import pkg from 'express-validator';
 const { validationResult } = pkg as any;
+import { budgetRepository } from '../../repositories/budget.repository.js';
 import Budget from '../../models/Budget.js';
 
 export const validate = (req: Request, res: Response, next: NextFunction) => {
@@ -16,7 +17,7 @@ export const getBudgets = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
     const month = req.query.month as string | undefined;
-    const budgets = await Budget.findByMonth(userId, month);
+    const budgets = await budgetRepository.findByMonth(userId, month);
     res.json(budgets);
   } catch (error) {
     console.error('Error fetching budgets:', error);
@@ -28,7 +29,7 @@ export const getSummary = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
     const month = req.query.month as string | undefined;
-    const summary = await Budget.getSummary(userId, month);
+    const summary = await budgetRepository.getSummary(userId, month);
     res.json(summary);
   } catch (error) {
     console.error('Error fetching budget summary:', error);
@@ -44,7 +45,7 @@ export const getSuggestions = async (req: Request, res: Response) => {
     const months = historyMonthsParam 
       ? parseInt(historyMonthsParam, 10) 
       : 3;
-    const suggestions = await Budget.getSuggestions(
+    const suggestions = await budgetRepository.getSuggestions(
       userId,
       month,
       months
@@ -59,7 +60,7 @@ export const getSuggestions = async (req: Request, res: Response) => {
 export const createOrUpdate = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const budget = await Budget.createOrUpdate(userId, req.body);
+    const budget = await budgetRepository.createOrUpdate(userId, req.body);
     res.status(201).json(budget);
   } catch (error) {
     console.error('Error creating budget:', error);
@@ -70,8 +71,7 @@ export const createOrUpdate = async (req: Request, res: Response) => {
 export const updateBudget = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const idParam = req.params.id as string;
-    const budget = await Budget.update(userId, req.params.id as string, req.body);
+    const budget = await budgetRepository.update(req.params.id as string, userId, req.body);
     if (!budget) {
       return res.status(404).json({ error: 'Presupuesto no encontrado' });
     }
@@ -85,12 +85,11 @@ export const updateBudget = async (req: Request, res: Response) => {
 export const deleteBudget = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const idParam = req.params.id as string;
-    const deleted = await Budget.delete(userId, req.params.id as string);
-    if (!deleted) {
+    const success = await budgetRepository.delete(req.params.id as string, userId);
+    if (!success) {
       return res.status(404).json({ error: 'Presupuesto no encontrado' });
     }
-    res.json({ id: deleted.id, message: 'Presupuesto eliminado correctamente' });
+    res.json({ id: req.params.id, message: 'Presupuesto eliminado correctamente' });
   } catch (error) {
     console.error('Error deleting budget:', error);
     res.status(500).json({ error: 'Error al eliminar el presupuesto' });
