@@ -89,8 +89,8 @@ async function loadBudgets() {
     month: `${budgetState.month}-01`,
     search: budgetState.filters.search || undefined,
   });
-  const rows = Array.isArray(response) ? response : [];
-  budgetState.budgets = rows.map((row) => ({
+  const { budgets = [] } = response || {};
+  budgetState.budgets = budgets.map((row) => ({
     id: String(row.id),
     category: row.category,
     month: row.month,

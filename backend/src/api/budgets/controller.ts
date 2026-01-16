@@ -18,7 +18,7 @@ export const getBudgets = async (req: Request, res: Response) => {
     const userId = (req.user as any).id as string;
     const month = req.query.month as string | undefined;
     const budgets = await budgetRepository.findByMonth(userId, month);
-    res.json(budgets);
+    res.json({ budgets, count: budgets.length });
   } catch (error) {
     console.error('Error fetching budgets:', error);
     res.status(500).json({ error: 'Error al obtener los presupuestos' });

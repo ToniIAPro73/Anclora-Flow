@@ -30,7 +30,7 @@ export const getSubscriptions = async (req: Request, res: Response) => {
     };
 
     const subscriptions = await subscriptionRepository.findAllByUser(userId, filters);
-    res.json(subscriptions);
+    res.json({ subscriptions, count: subscriptions.length });
   } catch (error) {
     console.error('Error fetching subscriptions:', error);
     res.status(500).json({ error: 'Error al obtener las suscripciones' });

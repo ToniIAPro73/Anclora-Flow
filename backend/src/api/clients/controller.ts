@@ -21,7 +21,7 @@ export const getClients = async (req: Request, res: Response) => {
     };
 
     const clients = await Client.findAllByUser(userId, filters);
-    res.json(clients);
+    res.json({ clients, count: clients.length });
   } catch (error) {
     console.error('Error fetching clients:', error);
     res.status(500).json({ error: 'Error al obtener los clientes' });

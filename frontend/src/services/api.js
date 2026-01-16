@@ -209,8 +209,8 @@ class APIService {
   async createBudget(data) { return this.post('/budgets', data); }
   async updateBudget(id, data) { return this.put(`/budgets/${id}`, data); }
   async deleteBudget(id) { return this.delete(`/budgets/${id}`); }
-  async getBudgetSummary(month, year) { 
-    const query = this._buildQuery({ month, year });
+  async getBudgetSummary(filters = {}) { 
+    const query = this._buildQuery(filters);
     return this.get(`/budgets/summary?${query}`); 
   }
   async getAutoBudgetRecommendations() { return this.get('/budgets/recommendations'); }

@@ -28,7 +28,7 @@ export const getProjects = async (req: Request, res: Response) => {
     const projects = await projectRepository.findAllByUser(userId, filters);
     console.log(`[DEBUG] Projects found: ${projects.length}`);
     
-    res.json(projects);
+    res.json({ projects, count: projects.length });
   } catch (error) {
     console.error('Error fetching projects:', error);
     res.status(500).json({ error: 'Error al obtener los proyectos' });
