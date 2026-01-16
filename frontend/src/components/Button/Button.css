@@ -1,0 +1,109 @@
+.ag-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
+  outline: none;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.ag-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Variants */
+.ag-button--primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.ag-button--primary:hover {
+  background-color: var(--color-primary-dark);
+  box-shadow: var(--shadow-md);
+}
+
+.ag-button--secondary {
+  background-color: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.ag-button--secondary:hover {
+  background-color: var(--color-background);
+  border-color: var(--color-text-muted);
+}
+
+.ag-button--tertiary, .ag-button--ghost {
+  background-color: transparent;
+  color: var(--color-primary);
+}
+
+.ag-button--tertiary:hover {
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+.ag-button--danger {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.ag-button--danger:hover {
+  background-color: #dc2626;
+}
+
+/* Sizes */
+.ag-button--sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.ag-button--md {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.ag-button--lg {
+  height: 48px;
+  padding: 0 24px;
+  font-size: 16px;
+}
+
+/* Focus state */
+.ag-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
+}
+
+/* Loading state */
+.ag-button.is-loading .ag-button__text {
+  opacity: 0;
+}
+
+.ag-button__spinner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: currentColor;
+  animation: ag-spin 0.8s linear infinite;
+}
+
+@keyframes ag-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ag-button__icon {
+  display: flex;
+  align-items: center;
+}

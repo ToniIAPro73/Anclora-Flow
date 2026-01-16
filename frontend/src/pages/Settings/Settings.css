@@ -1,0 +1,78 @@
+.ag-settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ag-settings-container {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.ag-settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ag-settings-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.ag-settings-tab-btn:hover {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+.ag-settings-tab-btn.is-active {
+  background-color: white;
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.ag-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ag-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.ag-form-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .ag-settings-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .ag-settings-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  
+  .ag-form-row {
+    grid-template-columns: 1fr;
+  }
+}

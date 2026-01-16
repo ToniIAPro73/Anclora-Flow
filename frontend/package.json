@@ -2,15 +2,30 @@
   "name": "anclora-flow-frontend",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "type-check": "tsc --noEmit",
     "start:win": "powershell -ExecutionPolicy Bypass -File ./start.ps1",
     "kill-port": "powershell -ExecutionPolicy Bypass -File ./kill-port.ps1 -Port 5173"
   },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.5",
+    "@tanstack/react-query": "^5.66.0",
+    "lucide-react": "^0.475.0",
+    "clsx": "^2.1.1"
+  },
   "devDependencies": {
-    "vite": "^7.1.9"
+    "vite": "^6.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@types/node": "^22.13.1"
   }
 }
