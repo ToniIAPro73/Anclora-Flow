@@ -4,9 +4,9 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/server.ts",
+    "dev": "npm run build && node --watch dist/server.js",
     "start": "node dist/server.js",
-    "build": "tsc",
+    "build": "tsc && powershell -Command \"Copy-Item -Path 'src/database/*.sql' -Destination 'dist/database/' -Force\"",
     "start:win": "powershell -ExecutionPolicy Bypass -File ./start.ps1",
     "kill-port": "powershell -ExecutionPolicy Bypass -File ./kill-port.ps1 -Port 8020"
   },
@@ -38,6 +38,7 @@
     "@types/pg": "^8.16.0",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }
