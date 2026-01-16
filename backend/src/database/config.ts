@@ -91,19 +91,37 @@ export const initializeDatabase = async () => {
 // Seed database with synthetic data
 export const seedDatabase = async () => {
   try {
+    console.log('\n========================================');
+    console.log('🌱 INICIANDO CARGA DE DATOS SINTÉTICOS');
+    console.log('========================================\n');
+    
     const sqlPath = path.join(__dirname, 'seed-data.sql');
     if (!fs.existsSync(sqlPath)) {
       console.warn('⚠️ No se encontró seed-data.sql, omitiendo carga de datos sintéticos.');
       return;
     }
+    
+    console.log(`📁 Archivo SQL encontrado: ${sqlPath}`);
     const sql = fs.readFileSync(sqlPath, 'utf8');
+    console.log(`📝 Script SQL leído (${sql.length} caracteres)`);
 
-    console.log('🌱 Cargando datos sintéticos...');
-    await query(sql);
-    console.log('✅ Datos sintéticos cargados correctamente');
+    console.log('🔄 Ejecutando script de seed...');
+    const result = await query(sql);
+    
+    console.log('\n========================================');
+    console.log('✅ DATOS SINTÉTICOS CARGADOS CORRECTAMENTE');
+    console.log('========================================\n');
+    
+    return result;
   } catch (error) {
-    console.error('❌ Error al cargar datos sintéticos:', error);
-    // Don't throw, just log
+    console.error('\n========================================');
+    console.error('❌ ERROR AL CARGAR DATOS SINTÉTICOS');
+    console.error('========================================');
+    console.error('Detalles del error:', error);
+    console.error('========================================\n');
+    
+    // Throw the error so we can see it in the server startup
+    throw error;
   }
 };
 
