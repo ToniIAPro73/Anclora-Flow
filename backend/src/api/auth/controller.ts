@@ -94,24 +94,35 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     const user = await userRepository.findByEmail(email, true);
+    console.log('🔍 Login attempt:', { email, userFound: !!user, hasPasswordHash: !!user?.passwordHash });
+    
     if (!user) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     if (!user.passwordHash) {
+      console.log('❌ No password hash found for user');
       return res.status(403).json({
         error: 'Esta cuenta se creó con inicio de sesión social. Accede con Google o GitHub.',
       });
     }
 
     if (!user.emailVerifiedAt) {
+      console.log('❌ Email not verified');
       return res.status(403).json({
         error: 'Tu correo todavía no ha sido verificado. Revisa tu bandeja de entrada.',
         requiresVerification: true,
       });
     }
 
+    console.log('🔐 Verifying password...');
+    console.log('🔐 Password from request:', password);
+    console.log('🔐 Password hash from DB:', user.passwordHash);
+    console.log('🔐 Hash length:', user.passwordHash?.length);
+    
     const isValidPassword = await User.verifyPassword(password, user.passwordHash);
+    console.log('🔐 Password valid:', isValidPassword);
+    
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }

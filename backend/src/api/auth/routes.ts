@@ -12,19 +12,17 @@ const VALID_THEMES = ['light', 'dark'];
 
 const registerValidators = [
   body('firstName').trim().notEmpty().withMessage('El nombre es obligatorio'),
-  body('lastName').trim().notEmpty().withMessage('Los apellidos son obligatorios'),
-  body('company').trim().notEmpty().withMessage('La empresa es obligatoria'),
+  body('lastName').optional().trim(),
+  body('company').optional().trim(),
   body('email').isEmail().withMessage('Correo electrónico inválido').normalizeEmail(),
-  body('phone')
-    .trim()
-    .matches(/^[\d\s+()\-]{6,}$/)
-    .withMessage('Introduce un teléfono válido'),
+  body('phone').optional().trim(),
   body('password')
-    .isLength({ min: 8 })
-    .withMessage('La contraseña debe tener al menos 8 caracteres'),
+    .isLength({ min: 6 })
+    .withMessage('La contraseña debe tener al menos 6 caracteres'),
   body('confirmPassword')
+    .optional()
     .custom((value: string, { req }: { req: any }) => {
-      if (value !== req.body.password) {
+      if (value && value !== req.body.password) {
         throw new Error('Las contraseñas no coinciden');
       }
       return true;

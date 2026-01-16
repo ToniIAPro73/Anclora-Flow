@@ -6,60 +6,100 @@
   <title>Registro - Anclora Flow</title>
   <link rel="stylesheet" href="/src/styles/main.css">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
     .login-container {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 2rem;
+      padding: 1rem;
     }
 
     .login-card {
       background: white;
       border-radius: 16px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      padding: 2rem 2.5rem;
+      padding: 1.5rem 2rem;
       width: 100%;
       max-width: 500px;
     }
 
     .login-header {
       text-align: center;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1rem;
     }
 
     .login-header h1 {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
       color: #1a202c;
       margin-bottom: 0.25rem;
     }
 
     .login-header p {
       color: #718096;
-      font-size: 0.875rem;
+      font-size: 0.8rem;
     }
 
     .form-group {
-      margin-bottom: 1.25rem;
+      margin-bottom: 0.875rem;
     }
 
     .form-group label {
       display: block;
       font-weight: 600;
       color: #2d3748;
-      margin-bottom: 0.5rem;
-      font-size: 0.9rem;
+      margin-bottom: 0.35rem;
+      font-size: 0.85rem;
     }
 
     .form-group input {
       width: 100%;
-      padding: 0.875rem 1rem;
+      padding: 0.65rem 0.875rem;
       border: 2px solid #e2e8f0;
       border-radius: 8px;
-      font-size: 1rem;
+      font-size: 0.95rem;
       transition: all 0.2s;
       box-sizing: border-box;
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-wrapper input {
+      padding-right: 3rem;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 0.875rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #718096;
+      font-size: 1.1rem;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-toggle:hover {
+      color: #2d3748;
     }
 
     .form-group input:focus {
@@ -85,12 +125,12 @@
 
     .btn-login {
       width: 100%;
-      padding: 0.875rem;
+      padding: 0.75rem;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       border: none;
       border-radius: 8px;
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s;
@@ -112,10 +152,10 @@
     }
 
     .login-footer {
-      margin-top: 1.25rem;
+      margin-top: 1rem;
       text-align: center;
       color: #718096;
-      font-size: 0.875rem;
+      font-size: 0.8rem;
     }
 
     .login-footer a {
@@ -129,9 +169,10 @@
     }
 
     .alert {
-      padding: 0.875rem;
+      padding: 0.75rem;
       border-radius: 8px;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
       display: none;
     }
 
@@ -262,29 +303,39 @@
 
         <div class="form-group">
           <label for="password">Contraseña</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            placeholder="Mínimo 6 caracteres"
-            required
-            autocomplete="new-password"
-            minlength="6"
-          >
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Mínimo 6 caracteres"
+              required
+              autocomplete="new-password"
+              minlength="6"
+            >
+            <button type="button" class="password-toggle" id="togglePassword">
+              👁️
+            </button>
+          </div>
           <div class="password-strength" id="passwordStrength"></div>
           <div class="error-message" id="passwordError"></div>
         </div>
 
         <div class="form-group">
           <label for="confirmPassword">Confirmar contraseña</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            name="confirmPassword"
-            placeholder="Repite la contraseña"
-            required
-            autocomplete="new-password"
-          >
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              placeholder="Repite la contraseña"
+              required
+              autocomplete="new-password"
+            >
+            <button type="button" class="password-toggle" id="toggleConfirmPassword">
+              👁️
+            </button>
+          </div>
           <div class="error-message" id="confirmPasswordError"></div>
         </div>
 
@@ -312,6 +363,21 @@
     const registerButton = document.getElementById('registerButton');
     const alert = document.getElementById('alert');
     const passwordStrength = document.getElementById('passwordStrength');
+    const togglePassword = document.getElementById('togglePassword');
+    const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+
+    // Toggle password visibility
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+
+    toggleConfirmPassword.addEventListener('click', () => {
+      const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      confirmPasswordInput.setAttribute('type', type);
+      toggleConfirmPassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
 
     // Si ya está autenticado, redirigir al dashboard
     if (api.isAuthenticated()) {
@@ -389,12 +455,13 @@
       try {
         // Preparar datos
         const userData = {
-          name,
+          firstName: name,
           email,
-          password
+          password,
+          confirmPassword
         };
 
-        if (lastName) userData.last_name = lastName;
+        if (lastName) userData.lastName = lastName;
         if (nif) userData.nif = nif;
 
         // Intentar registro

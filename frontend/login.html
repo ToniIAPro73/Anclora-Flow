@@ -6,6 +6,18 @@
   <title>Login - Anclora Flow</title>
   <link rel="stylesheet" href="/src/styles/main.css">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
     .login-container {
       min-height: 100vh;
       display: flex;
@@ -59,6 +71,34 @@
       border-radius: 8px;
       font-size: 1rem;
       transition: all 0.2s;
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-wrapper input {
+      padding-right: 3rem;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #718096;
+      font-size: 1.2rem;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-toggle:hover {
+      color: #2d3748;
     }
 
     .form-group input:focus {
@@ -212,14 +252,19 @@
 
         <div class="form-group">
           <label for="password">Contraseña</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            placeholder="••••••••"
-            required
-            autocomplete="current-password"
-          >
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="••••••••"
+              required
+              autocomplete="current-password"
+            >
+            <button type="button" class="password-toggle" id="togglePassword">
+              👁️
+            </button>
+          </div>
           <div class="error-message" id="passwordError"></div>
         </div>
 
@@ -247,6 +292,14 @@
     const passwordInput = document.getElementById('password');
     const loginButton = document.getElementById('loginButton');
     const alert = document.getElementById('alert');
+    const togglePassword = document.getElementById('togglePassword');
+
+    // Toggle password visibility
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
 
     // Si ya está autenticado, redirigir al dashboard
     if (api.isAuthenticated()) {
