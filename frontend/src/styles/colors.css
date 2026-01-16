@@ -3533,7 +3533,7 @@ table tr[hidden] {
 }
 .user-menu .dropdown {
   position: absolute;
-  top: calc(100% + 0.75rem);
+  top: calc(100% + 0.5rem);
   right: 0;
   min-width: 180px;
   background: var(--bg-secondary);

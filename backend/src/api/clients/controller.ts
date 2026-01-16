@@ -109,6 +109,18 @@ export const getSummary = async (req: Request, res: Response) => {
   }
 };
 
+export const getRecent = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as any).id as string;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+    const recent = await Client.getRecent(userId, limit);
+    res.json(recent);
+  } catch (error) {
+    console.error('Error fetching recent clients:', error);
+    res.status(500).json({ error: 'Error al obtener los clientes recientes' });
+  }
+};
+
 export const getProjects = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;

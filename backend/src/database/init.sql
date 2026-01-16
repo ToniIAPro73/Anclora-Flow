@@ -75,9 +75,18 @@ CREATE TABLE IF NOT EXISTS projects (
     start_date DATE,
     end_date DATE,
     color VARCHAR(7), -- Hex color for UI
+    category VARCHAR(50) DEFAULT 'general', -- 'desarrollo', 'marketing', 'consultoria', etc.
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Ensure category column exists in projects
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'projects' AND column_name = 'category') THEN
+        ALTER TABLE projects ADD COLUMN category VARCHAR(50) DEFAULT 'general';
+    END IF;
+END $$;
 
 -- Invoices Table
 CREATE TABLE IF NOT EXISTS invoices (
@@ -265,16 +274,17 @@ CREATE TRIGGER update_budgets_updated_at BEFORE UPDATE ON budgets FOR EACH ROW E
 -- Email: demo@ancloraflow.com
 -- Contraseña: demo123
 -- NIF: 12345678A
-INSERT INTO users (id, email, name, password_hash, nif, auth_provider, language, theme)
+INSERT INTO users (id, email, name, password_hash, nif, auth_provider, language, theme, email_verified_at)
 VALUES (
     '00000000-0000-0000-0000-000000000001',
-    'demo@ancloraflow.com',
+    'pmi140979@gmail.com',
     'Usuario Demo',
     '$2b$10$f84.n1jsCMZnFHRBU8uXXueQxu0TNT1Sm9HN8EyerXUQ2XQWY58ii',
     '12345678A',
     'local',
     'es',
-    'light'
+    'light',
+    NOW()
 )
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,

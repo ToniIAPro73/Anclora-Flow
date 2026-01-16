@@ -4,7 +4,7 @@ import cors from 'cors';
 import passport from 'passport';
 import { Server } from 'http';
 
-import { initializeDatabase, seedDatabase, closePool } from './database/config.js';
+import { initializeDatabase, seedDatabase, query, closePool } from './database/config.js';
 import { ensureDevUser } from './utils/devUser.js';
 
 // Import routes (assuming they will be converted or handled by esModuleInterop)
@@ -125,6 +125,7 @@ async function bootstrap(): Promise<Server | null> {
        await seedDatabase();
     }
 
+    // 5. Start server
     const server: Server = app.listen(PORT, () => {
       console.log(`🚀 Backend listo en http://localhost:${PORT}`);
     });

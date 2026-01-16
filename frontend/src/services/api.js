@@ -106,9 +106,20 @@ class APIService {
 
   // --- MÉTODOS DE NEGOCIO ---
 
+  // Helper para limpiar parámetros query
+  _buildQuery(filters) {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, value);
+      }
+    });
+    return params.toString();
+  }
+
   // Facturas
   async getInvoices(filters = {}) {
-    const query = new URLSearchParams(filters).toString();
+    const query = this._buildQuery(filters);
     return this.get(`/invoices?${query}`);
   }
 
@@ -139,7 +150,7 @@ class APIService {
 
   // Clientes
   async getClients(filters = {}) {
-    const query = new URLSearchParams(filters).toString();
+    const query = this._buildQuery(filters);
     return this.get(`/clients?${query}`);
   }
 
@@ -152,7 +163,7 @@ class APIService {
 
   // Proyectos
   async getProjects(filters = {}) {
-    const query = new URLSearchParams(filters).toString();
+    const query = this._buildQuery(filters);
     return this.get(`/projects?${query}`);
   }
   
@@ -166,7 +177,7 @@ class APIService {
 
   // Gastos
   async getExpenses(filters = {}) {
-    const query = new URLSearchParams(filters).toString();
+    const query = this._buildQuery(filters);
     return this.get(`/expenses?${query}`);
   }
   
@@ -178,7 +189,7 @@ class APIService {
 
   // Suscripciones
   async getSubscriptions(filters = {}) {
-    const query = new URLSearchParams(filters).toString();
+    const query = this._buildQuery(filters);
     return this.get(`/subscriptions?${query}`);
   }
   
@@ -188,18 +199,18 @@ class APIService {
   
   async getSubscriptionSummary() { return this.get('/subscriptions/summary'); }
   async getSubscriptionUpcoming(limit = 5) { return this.get(`/subscriptions/upcoming?limit=${limit}`); }
-  async getSubscriptionStatusBreakdown() { return this.get('/subscriptions/breakdown'); }
+  async getSubscriptionStatusBreakdown() { return this.get('/subscriptions/status-breakdown'); }
 
   // Presupuestos
   async getBudgets(filters = {}) { 
-    const query = new URLSearchParams(filters).toString();
+    const query = this._buildQuery(filters);
     return this.get(`/budgets?${query}`); 
   }
   async createBudget(data) { return this.post('/budgets', data); }
   async updateBudget(id, data) { return this.put(`/budgets/${id}`, data); }
   async deleteBudget(id) { return this.delete(`/budgets/${id}`); }
   async getBudgetSummary(month, year) { 
-    const query = new URLSearchParams({ month, year }).toString();
+    const query = this._buildQuery({ month, year });
     return this.get(`/budgets/summary?${query}`); 
   }
   async getAutoBudgetRecommendations() { return this.get('/budgets/recommendations'); }

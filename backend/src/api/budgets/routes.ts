@@ -26,11 +26,13 @@ router.get(
   '/suggestions',
   [
     query('month').optional().isISO8601(),
-    query('historyMonths').optional().isInt({ min: 1, max: 12 }),
+    query('monthsLookback').optional().isInt({ min: 1, max: 12 }),
   ],
   budgetController.validate,
   budgetController.getSuggestions
 );
+
+router.get('/recommendations', budgetController.getSuggestions);
 
 router.post(
   '/',

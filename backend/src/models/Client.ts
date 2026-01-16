@@ -93,19 +93,16 @@ class Client {
 
   static async getSummary(userId: string): Promise<IClientSummary | null> {
     const sql = `
-      WITH base AS (
-        SELECT * FROM clients WHERE user_id = $1
-      )
       SELECT
-        COUNT(*) AS total_clients,
-        COUNT(*) FILTER (WHERE is_active) AS active_clients,
-        COUNT(*) FILTER (WHERE NOT is_active) AS inactive_clients,
-        COUNT(*) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)) AS new_this_month,
-        COALESCE(SUM(i.total), 0) AS total_billed,
-        COALESCE(SUM(i.total) FILTER (WHERE i.status = 'paid'), 0) AS total_paid,
-        COALESCE(SUM(i.total) FILTER (WHERE i.status != 'paid'), 0) AS total_pending
-      FROM base c
-      LEFT JOIN invoices i ON c.id = i.client_id AND i.user_id = $1
+        (SELECT COUNT(*) FROM clients WHERE user_id = $1) AS total_clients,
+        (SELECT COUNT(*) FROM clients WHERE user_id = $1 AND is_active) AS active_clients,
+        (SELECT COUNT(*) FROM clients WHERE user_id = $1 AND NOT is_active) AS inactive_clients,
+        (SELECT COUNT(*) FROM clients WHERE user_id = $1 AND created_at >= DATE_TRUNC('month', CURRENT_DATE)) AS new_this_month,
+        COALESCE(SUM(total), 0) AS total_billed,
+        COALESCE(SUM(total) FILTER (WHERE status = 'paid'), 0) AS total_paid,
+        COALESCE(SUM(total) FILTER (WHERE status != 'paid'), 0) AS total_pending
+      FROM invoices
+      WHERE user_id = $1
     `;
 
     const result = await query(sql, [userId]);
@@ -113,13 +110,13 @@ class Client {
     if (!row) return null;
     
     return {
-      totalClients: parseInt(row.total_clients),
-      activeClients: parseInt(row.active_clients),
-      inactiveClients: parseInt(row.inactive_clients),
-      newThisMonth: parseInt(row.new_this_month),
-      totalBilled: parseFloat(row.total_billed),
-      totalPaid: parseFloat(row.total_paid),
-      totalPending: parseFloat(row.total_pending)
+      totalClients: parseInt(row.total_clients || 0),
+      activeClients: parseInt(row.active_clients || 0),
+      inactiveClients: parseInt(row.inactive_clients || 0),
+      newThisMonth: parseInt(row.new_this_month || 0),
+      totalBilled: parseFloat(row.total_billed || 0),
+      totalPaid: parseFloat(row.total_paid || 0),
+      totalPending: parseFloat(row.total_pending || 0)
     };
   }
 

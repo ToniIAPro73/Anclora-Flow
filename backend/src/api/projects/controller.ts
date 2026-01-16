@@ -16,13 +16,18 @@ export const validate = (req: Request, res: Response, next: NextFunction) => {
 export const getProjects = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
+    console.log(`[DEBUG] getProjects called by UserID: ${userId}`);
+    
     const filters = {
       status: req.query.status as string | undefined,
       clientId: req.query.clientId as string | undefined,
       search: req.query.search as string | undefined
     };
+    console.log(`[DEBUG] Filters:`, filters);
 
     const projects = await projectRepository.findAllByUser(userId, filters);
+    console.log(`[DEBUG] Projects found: ${projects.length}`);
+    
     res.json(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);

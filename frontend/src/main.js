@@ -134,17 +134,6 @@ function showResetPasswordModal(params) {
 
 async function handleLogout() {
   window.api.logout();
-  let user = null;
-
-  if (!isProduction) {
-    user = await attemptDevLogin();
-  }
-
-  if (user) {
-    window.dispatchEvent(new CustomEvent("auth:changed", { detail: { user } }));
-    return;
-  }
-
   window.dispatchEvent(new CustomEvent("auth:changed", { detail: { user: null } }));
 }
 

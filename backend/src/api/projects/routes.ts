@@ -19,7 +19,16 @@ router.get('/',
 );
 
 router.get('/summary', projectController.getSummary);
+// Match frontend api.js: /metrics
+router.get('/metrics', projectController.getStatusMetrics);
 router.get('/status-metrics', projectController.getStatusMetrics);
+
+// Match frontend api.js: /upcoming
+router.get('/upcoming',
+  [query('limit').optional().isInt({ min: 1, max: 20 })],
+  projectController.validate,
+  projectController.getUpcomingDeadlines
+);
 router.get('/deadlines',
   [query('limit').optional().isInt({ min: 1, max: 20 })],
   projectController.validate,

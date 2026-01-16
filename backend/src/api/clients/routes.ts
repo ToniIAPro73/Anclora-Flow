@@ -19,6 +19,12 @@ router.get('/',
 
 router.get('/summary', clientController.getSummary);
 
+router.get('/recent',
+  [query('limit').optional().isInt({ min: 1, max: 20 })],
+  clientController.validate,
+  clientController.getRecent
+);
+
 router.get('/:id',
   [param('id').isInt()],
   clientController.validate,

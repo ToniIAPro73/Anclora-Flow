@@ -155,15 +155,12 @@ export class ProjectRepository extends BaseRepository<IProject> {
   async getSummary(userId: string): Promise<IProjectSummary | null> {
     const sql = `
       SELECT
-        COUNT(*) AS total_projects,
-        COUNT(*) FILTER (WHERE status = 'active') AS active_projects,
-        COUNT(*) FILTER (WHERE status = 'on-hold') AS on_hold_projects,
-        COUNT(*) FILTER (WHERE status = 'completed') AS completed_projects,
-        COALESCE(SUM(budget), 0) AS total_budget,
-        COALESCE(SUM(i.total), 0) AS total_invoiced
-      FROM projects p
-      LEFT JOIN invoices i ON p.id = i.project_id AND i.user_id = $1
-      WHERE p.user_id = $1
+        (SELECT COUNT(*) FROM projects WHERE user_id = $1) AS total_projects,
+        (SELECT COUNT(*) FROM projects WHERE user_id = $1 AND status = 'active') AS active_projects,
+        (SELECT COUNT(*) FROM projects WHERE user_id = $1 AND status = 'on-hold') AS on_hold_projects,
+        (SELECT COUNT(*) FROM projects WHERE user_id = $1 AND status = 'completed') AS completed_projects,
+        COALESCE((SELECT SUM(budget) FROM projects WHERE user_id = $1), 0) AS total_budget,
+        COALESCE((SELECT SUM(total) FROM invoices WHERE user_id = $1 AND project_id IS NOT NULL), 0) AS total_invoiced
     `;
 
     const result = await this.executeQuery(sql, [userId]);
