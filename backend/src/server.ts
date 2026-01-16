@@ -4,7 +4,7 @@ import cors from 'cors';
 import passport from 'passport';
 import { Server } from 'http';
 
-import { initializeDatabase, closePool } from './database/config.js';
+import { initializeDatabase, seedDatabase, closePool } from './database/config.js';
 import { ensureDevUser } from './utils/devUser.js';
 
 // Import routes (assuming they will be converted or handled by esModuleInterop)
@@ -118,6 +118,11 @@ async function bootstrap(): Promise<Server | null> {
 
     if (process.env.SKIP_DEV_USER !== 'true') {
       await ensureDevUser();
+    }
+
+    // Always seed in this environment for the demo
+    if (process.env.SEED_DB === 'true' || process.env.NODE_ENV !== 'production') {
+       await seedDatabase();
     }
 
     const server: Server = app.listen(PORT, () => {

@@ -88,6 +88,25 @@ export const initializeDatabase = async () => {
   }
 };
 
+// Seed database with synthetic data
+export const seedDatabase = async () => {
+  try {
+    const sqlPath = path.join(__dirname, 'seed-data.sql');
+    if (!fs.existsSync(sqlPath)) {
+      console.warn('⚠️ No se encontró seed-data.sql, omitiendo carga de datos sintéticos.');
+      return;
+    }
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+
+    console.log('🌱 Cargando datos sintéticos...');
+    await query(sql);
+    console.log('✅ Datos sintéticos cargados correctamente');
+  } catch (error) {
+    console.error('❌ Error al cargar datos sintéticos:', error);
+    // Don't throw, just log
+  }
+};
+
 // Graceful shutdown
 export const closePool = async () => {
   try {
