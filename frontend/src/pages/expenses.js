@@ -635,136 +635,107 @@ function buildExpenseModalHtml(mode, expense) {
       : ""
     : "checked";
 
+  // Using 800px width and inline grids to ensure compact horizontal layout without scrolling
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel">
-        <header class="modal__head">
+      <div class="modal__panel" style="width: min(95vw, 800px); max-width: 800px; padding: 1.5rem;">
+        <header class="modal__head" style="margin-bottom: 1rem;">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
-            <p class="modal__subtitle">${
-              isEdit
-                ? "Actualiza los datos del gasto seleccionado"
-                : "Introduce la información fiscal del nuevo gasto"
-            }</p>
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
         <form id="expense-form" data-mode="${mode}" class="modal-form" novalidate>
-          <div class="modal__body modal-form__body">
-            <div class="modal-form__grid modal-form__grid--three">
+          <div class="modal__body modal-form__body" style="overflow-y: visible;">
+            
+            <!-- Row 1: Date, Category, Subcategory, Payment Method (4 Cols) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem;">
               <label class="form-field">
-                <span>Fecha del gasto *</span>
-                <input type="date" id="expense-date" name="expenseDate" value="${formatDateForInput(
-                  expense?.expense_date
-                )}" required />
+                <span>Fecha *</span>
+                <input type="date" id="expense-date" name="expenseDate" value="${formatDateForInput(expense?.expense_date)}" required />
               </label>
+              
               <label class="form-field">
                 <span>Categoría *</span>
-                <select id="expense-category" name="category" required>
-                  <option value="" disabled ${
-                    !expense ? "selected" : ""
-                  }>Selecciona una categoría</option>
+                <select id="expense-category" name="category" required style="font-size: 0.85rem;">
+                  <option value="" disabled ${!expense ? "selected" : ""}>Elegir...</option>
                   ${Object.entries(EXPENSE_CATEGORIES)
-                    .map(
-                      ([key, label]) => `
-                    <option value="${key}" ${
-                        selectedCategory === key ? "selected" : ""
-                      }>${label}</option>
-                  `
-                    )
+                    .map(([key, label]) => `<option value="${key}" ${selectedCategory === key ? "selected" : ""}>${label}</option>`)
                     .join("")}
                 </select>
               </label>
+
               <label class="form-field">
                 <span>Subcategoría</span>
-                <input type="text" id="expense-subcategory" name="subcategory" placeholder="Opcional" value="${escapeHtml(
-                  expense?.subcategory || ""
-                )}" />
+                <input type="text" id="expense-subcategory" name="subcategory" placeholder="Opcional" value="${escapeHtml(expense?.subcategory || "")}" />
               </label>
-              <label class="form-field modal-form__field--span-3">
-                <span>Descripción *</span>
-                <input type="text" id="expense-description" name="description" placeholder="Describe el gasto" value="${escapeHtml(
-                  expense?.description || ""
-                )}" required maxlength="200" />
-              </label>
-            </div>
 
-            <div class="modal-form__grid modal-form__grid--three">
-              <label class="form-field">
-                <span>Importe base (€) *</span>
-                <input type="number" step="0.01" min="0" id="expense-amount" name="amount" value="${amountValue}" required />
-              </label>
-              <label class="form-field">
-                <span>IVA (%)</span>
-                <input type="number" step="0.1" min="0" id="expense-vat-percentage" name="vatPercentage" value="${vatPercentageValue}" />
-              </label>
-              <label class="form-field">
-                <span>IVA calculado (€)</span>
-                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" value="${vatAmountValue}" />
-                <span class="form-hint">Calculado automáticamente al modificar importe o IVA</span>
-              </label>
-            </div>
-
-            <div class="modal-form__grid modal-form__grid--two">
-              <label class="form-field">
-                <span>Método de pago</span>
+               <label class="form-field">
+                <span>Método Pago</span>
                 <select id="expense-payment-method" name="paymentMethod">
-                  <option value="" disabled ${
-                    !paymentMethodValue ? "selected" : ""
-                  }>Selecciona un método</option>
+                  <option value="" disabled ${!paymentMethodValue ? "selected" : ""}>Elegir...</option>
                   ${Object.entries(PAYMENT_METHODS)
-                    .map(
-                      ([key, label]) => `
-                    <option value="${key}" ${
-                        paymentMethodValue === key ? "selected" : ""
-                      }>${label}</option>
-                  `
-                    )
+                    .map(([key, label]) => `<option value="${key}" ${paymentMethodValue === key ? "selected" : ""}>${label}</option>`)
                     .join("")}
                 </select>
               </label>
-              <label class="form-field">
+            </div>
+
+            <!-- Row 2: Description (3 Cols) & Vendor (1 Col) -->
+            <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
+               <label class="form-field">
+                <span>Descripción *</span>
+                <input type="text" id="expense-description" name="description" placeholder="Descripción del gasto" value="${escapeHtml(expense?.description || "")}" required maxlength="200" />
+              </label>
+               <label class="form-field">
                 <span>Proveedor</span>
-                <input type="text" id="expense-vendor" name="vendor" placeholder="Nombre del proveedor" value="${escapeHtml(
-                  expense?.vendor || ""
-                )}" />
+                <input type="text" id="expense-vendor" name="vendor" placeholder="Nombre" value="${escapeHtml(expense?.vendor || "")}" />
               </label>
             </div>
 
-            <div class="modal-form__grid modal-form__grid--two modal-form__grid--align-center">
-              <div class="form-field form-field--inline">
-                <span>Tratamiento fiscal</span>
-                <div class="toggle-group">
-                  <label class="toggle">
-                    <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} />
-                    <span class="toggle__slider"></span>
-                    <span class="toggle__label">Sí, es deducible</span>
-                  </label>
-                </div>
-              </div>
-              <label class="form-field" id="deductible-percentage-group">
-                <span>Porcentaje deducible (%)</span>
-                <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" value="${deductiblePercentageValue}" />
+            <!-- Row 3: Financials (Amount, VAT, Calculate, Deductible) (4 Cols) -->
+            <div style="display: grid; grid-template-columns: 1fr 0.8fr 1fr 1.2fr; gap: 0.75rem; margin-top: 0.75rem;">
+               <label class="form-field">
+                <span>Importe (€) *</span>
+                <input type="number" step="0.01" min="0" id="expense-amount" name="amount" value="${amountValue}" required />
               </label>
-            </div>
-
-            <div class="modal-form__grid modal-form__grid--three">
+              
               <label class="form-field">
-                <span>Enlace al justificante</span>
-                <input type="url" id="expense-receipt-url" name="receiptUrl" placeholder="https://..." value="${escapeHtml(
-                  expense?.receipt_url || expense?.receiptUrl || ""
-                )}" />
+                <span>IVA %</span>
+                <input type="number" step="0.1" min="0" id="expense-vat-percentage" name="vatPercentage" value="${vatPercentageValue}" />
               </label>
-              <label class="form-field modal-form__field--span-2">
-                <span>Notas</span>
-                <textarea id="expense-notes" name="notes" rows="3" placeholder="Información adicional">${escapeHtml(
-                  expense?.notes || ""
-                )}</textarea>
+              
+              <label class="form-field">
+                <span>IVA (€)</span>
+                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" value="${vatAmountValue}" />
               </label>
+
+              <div class="form-field form-field--inline" style="justify-content: flex-start; padding-top: 1.2rem; padding-left: 0.5rem;">
+                 <label class="toggle" style="outline: none;">
+                    <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} style="outline: none; box-shadow: none;" />
+                    <span class="toggle__slider"></span>
+                    <span class="toggle__label">Deducible</span>
+                  </label>
+              </div>
             </div>
+
+            <!-- Row 4: Notes & Receipt URL (Full Width / Grid) -->
+             <div id="row-notes" style="display: grid; grid-template-columns: ${isDeductibleChecked ? '1fr 3fr' : '1fr'}; gap: 0.75rem; margin-top: 0.75rem;">
+               <label class="form-field" id="deductible-percentage-group" style="${isDeductibleChecked ? '' : 'display: none;'}">
+                 <span>% Deducible</span>
+                 <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" value="${deductiblePercentageValue}" />
+              </label>
+
+              <label class="form-field">
+                <span>Notas / URL</span>
+                <textarea id="expense-notes" name="notes" rows="1" placeholder="Notas adicionales o URL del recibo" style="min-height: 2.2rem; height: 38px; resize: none;">${escapeHtml(expense?.notes || "")}</textarea>
+              </label>
+             </div>
+
+
           </div>
-          <footer class="modal__footer modal-form__footer" style="margin-top: 0.75rem;">
+          <footer class="modal__footer modal-form__footer" style="margin-top: 1.5rem;">
             <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
             <button type="submit" class="btn-primary">${actionLabel}</button>
           </footer>
@@ -774,12 +745,15 @@ function buildExpenseModalHtml(mode, expense) {
   `;
 }
 
+
+
 function setupExpenseForm(form, expense) {
   const amountInput = form.querySelector("#expense-amount");
   const vatPercentageInput = form.querySelector("#expense-vat-percentage");
   const vatAmountInput = form.querySelector("#expense-vat-amount");
   const deductibleToggle = form.querySelector("#expense-deductible");
   const deductibleGroup = form.querySelector("#deductible-percentage-group");
+  const rowNotes = form.querySelector("#row-notes");
 
   const syncVatAmount = () => {
     const amount = sanitizeNumber(amountInput.value, 0);
@@ -792,16 +766,18 @@ function setupExpenseForm(form, expense) {
 
   const toggleDeductibleFields = () => {
     const isChecked = deductibleToggle.checked;
-    deductibleGroup.style.display = isChecked ? "block" : "none";
-    if (!isChecked) {
-      form.querySelector("#expense-deductible-percentage").value = "0";
-    } else if (!expense) {
-      form.querySelector("#expense-deductible-percentage").value = "100";
+    if (isChecked) {
+        deductibleGroup.style.display = "flex";
+        rowNotes.style.gridTemplateColumns = "1fr 3fr";
+    } else {
+        deductibleGroup.style.display = "none";
+        rowNotes.style.gridTemplateColumns = "1fr";
     }
   };
 
   deductibleToggle?.addEventListener("change", toggleDeductibleFields);
-  toggleDeductibleFields();
+  // Initial call handled by HTML rendering logic, but good to ensure
+
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

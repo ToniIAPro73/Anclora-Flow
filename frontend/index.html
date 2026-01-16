@@ -2,17 +2,44 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anclora Flow | Dashboard</title>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <title>Anclora Flow | CRM Fiscal Inteligente</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
   <script>
-    // Redirect to login page
-    window.location.href = '/login.html';
+    // Auth Check
+    const token = localStorage.getItem('token');
+    const isLoginPage = window.location.pathname.includes('login.html');
+    const isRegisterPage = window.location.pathname.includes('register.html');
+    
+    if (!token && !isLoginPage && !isRegisterPage) {
+      window.location.href = '/login.html';
+    }
   </script>
 </head>
 <body>
-  <div id="app">Redirigiendo...</div>
+  <div id="app">
+    <!-- Sidebar and Main Content will be injected by JS -->
+    <div class="app-layout">
+      <!-- Sidebar placeholder -->
+      <aside id="sidebar" class="sidebar"></aside>
+      
+      <!-- Main Content -->
+      <main id="main-content" class="main-content">
+        <header id="top-bar" class="top-bar"></header>
+        <div id="page-content">
+          <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

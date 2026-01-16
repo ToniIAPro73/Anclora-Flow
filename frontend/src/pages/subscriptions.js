@@ -414,48 +414,40 @@ function buildSubscriptionFormFields(subscription = {}) {
   ].join("");
 
   return `
-    <div class="modal-form__grid modal-form__grid--two">
-      <label class="form-field modal-form__field--span-2">
+    <!-- Row 1: Name (2 col), Client (1 col), Status (1 col) -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.75rem;">
+      <label class="form-field">
         <span>Nombre *</span>
         <input type="text" name="name" value="${escapeHtml(
           subscription.name || ""
         )}" required />
       </label>
-        <label class="form-field">
-          <span>Cliente</span>
-          <select name="clientId">
-            ${clientOptions}
-          </select>
-        </label>
-        <label class="form-field">
-          <span>Estado</span>
-          <select name="status">
-            <option value="active" ${
-              subscription.status === "active" ? "selected" : ""
-            }>Activa</option>
-            <option value="paused" ${
-              subscription.status === "paused" ? "selected" : ""
-            }>Pausada</option>
-            <option value="cancelled" ${
-              subscription.status === "cancelled" ? "selected" : ""
-            }>Cancelada</option>
+      <label class="form-field">
+        <span>Cliente</span>
+        <select name="clientId" style="font-size: 0.85rem;">
+          ${clientOptions}
+        </select>
+      </label>
+      <label class="form-field">
+        <span>Estado</span>
+        <select name="status">
+          <option value="active" ${
+            subscription.status === "active" ? "selected" : ""
+          }>Activa</option>
+          <option value="paused" ${
+            subscription.status === "paused" ? "selected" : ""
+          }>Pausada</option>
+          <option value="cancelled" ${
+            subscription.status === "cancelled" ? "selected" : ""
+          }>Cancelada</option>
         </select>
       </label>
     </div>
-    <div class="modal-form__grid modal-form__grid--two">
+
+    <!-- Row 2: Amount, Currency, Type, Billing Cycle (4 cols) -->
+    <div style="display: grid; grid-template-columns: 1fr 0.7fr 1fr 1.3fr; gap: 0.75rem; margin-top: 0.75rem;">
       <label class="form-field">
-        <span>Tipo</span>
-        <select name="type">
-          <option value="expense" ${
-            (subscription.type || "expense") === "expense" ? "selected" : ""
-          }>Gasto recurrente</option>
-          <option value="income" ${
-            subscription.type === "income" ? "selected" : ""
-          }>Ingreso recurrente</option>
-        </select>
-      </label>
-      <label class="form-field">
-        <span>Importe (€) *</span>
+        <span>Importe *</span>
         <input type="number" step="0.01" min="0" name="amount" value="${
           subscription.amount ?? ""
         }" required />
@@ -467,7 +459,18 @@ function buildSubscriptionFormFields(subscription = {}) {
         )}" maxlength="5" />
       </label>
       <label class="form-field">
-        <span>Ciclo de facturación</span>
+        <span>Tipo</span>
+        <select name="type">
+          <option value="expense" ${
+            (subscription.type || "expense") === "expense" ? "selected" : ""
+          }>Gasto</option>
+          <option value="income" ${
+            subscription.type === "income" ? "selected" : ""
+          }>Ingreso</option>
+        </select>
+      </label>
+      <label class="form-field">
+        <span>Ciclo</span>
         <select name="billingCycle">
           <option value="monthly" ${
             subscription.billingCycle === "monthly" ? "selected" : ""
@@ -480,9 +483,13 @@ function buildSubscriptionFormFields(subscription = {}) {
           }>Anual</option>
           <option value="custom" ${
             subscription.billingCycle === "custom" ? "selected" : ""
-          }>Personalizado</option>
+          }>Personal</option>
         </select>
       </label>
+    </div>
+
+    <!-- Row 3: StartDate, NextBilling, AutoInvoice (Inline) -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 0.75rem; margin-top: 0.75rem;">
       <label class="form-field">
         <span>Inicio *</span>
         <input type="date" name="startDate" value="${
@@ -497,23 +504,130 @@ function buildSubscriptionFormFields(subscription = {}) {
             : ""
         }" required />
       </label>
-      <label class="form-field modal-form__field--span-2">
+      <div class="form-field form-field--inline" style="justify-content: flex-start; padding-top: 1.2rem; padding-left: 0.5rem;">
+         <label class="toggle">
+            <input type="checkbox" name="autoInvoice" ${
+              subscription.autoInvoice !== false ? "checked" : ""
+            } />
+            <span class="toggle__slider"></span>
+            <span class="toggle__label">Generar factura auto.</span>
+          </label>
+      </div>
+    </div>
+
+    <!-- Row 4: Description -->
+    <div style="margin-top: 0.75rem;">
+      <label class="form-field">
         <span>Descripción</span>
-        <textarea name="description" rows="3">${escapeHtml(
+        <textarea name="description" rows="1" placeholder="Descripción opcional" style="min-height: 2.2rem;">${escapeHtml(
           subscription.description || ""
         )}</textarea>
       </label>
-      <div class="form-field modal-form__field--span-2" style="margin-top: 1rem;">
-        <label class="checkbox">
-          <input type="checkbox" name="autoInvoice" ${
-            subscription.autoInvoice !== false ? "checked" : ""
-          } />
-          <span>Generar factura automáticamente</span>
-        </label>
-      </div>
     </div>
   `;
 }
+
+// ... existing code ...
+
+function openSubscriptionModal(mode, subscriptionId = null) {
+  closeSubscriptionModal();
+  const subscription = subscriptionId
+    ? getSubscriptionById(String(subscriptionId))
+    : null;
+
+  if (mode !== "create" && !subscription && mode !== "create") {
+    showToast("No se encontró la suscripción seleccionada", "warning");
+    return;
+  }
+
+  if (mode === "view") {
+    // ... view logic preserves standard width ...
+    const detailHtml = buildSubscriptionDetail(subscription);
+    const modalHtml = `
+    <div class="modal is-open" id="subscription-modal">
+      <div class="modal__backdrop" data-modal-close></div>
+      <div class="modal__panel" style="width: min(95vw, 640px);">
+        <header class="modal__head">
+          <div>
+            <h2 class="modal__title">Detalle de la suscripción</h2>
+            <p class="modal__subtitle">${escapeHtml(
+              subscription?.name || ""
+            )}</p>
+          </div>
+          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
+        </header>
+          <div class="modal__body modal-form__body" style="display: grid; gap: 1.5rem;">
+            ${detailHtml}
+          </div>
+        <footer class="modal__footer modal-form__footer">
+          <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
+          <button type="button" class="btn-primary" data-modal-edit="${
+            subscription?.id
+          }">Editar</button>
+          </footer>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+    // ... listener attachments ...
+    const modal = document.getElementById("subscription-modal");
+    modal?.querySelector(".modal__backdrop")?.addEventListener("click", closeSubscriptionModal);
+    modal?.querySelectorAll("[data-modal-close]").forEach((btn) => btn.addEventListener("click", closeSubscriptionModal));
+    modal?.querySelector("[data-modal-edit]")?.addEventListener("click", (ev) => {
+        const id = ev.currentTarget.dataset.modalEdit;
+        closeSubscriptionModal();
+        openSubscriptionModal("edit", id);
+      });
+    return;
+  }
+
+  const title = mode === "edit" ? "Editar suscripción" : "Nueva suscripción";
+  const formId = "subscription-form";
+  const formFields = buildSubscriptionFormFields(subscription || {});
+  
+  // UPDATED: Width increased to 800px to accommodate horizontal layout
+  const modalHtml = `
+    <div class="modal is-open" id="subscription-modal">
+      <div class="modal__backdrop" data-modal-close></div>
+      <div class="modal__panel" style="width: min(95vw, 800px); max-width: 800px; padding: 1.5rem;">
+        <header class="modal__head" style="margin-bottom: 1rem;">
+          <div>
+            <h2 class="modal__title">${title}</h2>
+            <p class="modal__subtitle">Gestiona la facturación recurrente con toda la información clave.</p>
+          </div>
+          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
+        </header>
+        <form class="modal-form" id="${formId}" data-form-type="subscription" data-subscription-id="${
+    subscription?.id || ""
+  }" novalidate>
+          <div class="modal__body modal-form__body" style="overflow-y: visible;">
+            ${formFields}
+          </div>
+          <footer class="modal__footer modal-form__footer" style="margin-top: 1.5rem;">
+            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+            <button type="submit" form="${formId}" class="btn-primary">${
+    mode === "edit" ? "Guardar cambios" : "Crear suscripción"
+  }</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+  const modal = document.getElementById("subscription-modal");
+  modal
+    ?.querySelector(".modal__backdrop")
+    ?.addEventListener("click", closeSubscriptionModal);
+  modal
+    ?.querySelectorAll("[data-modal-close]")
+    .forEach((btn) => btn.addEventListener("click", closeSubscriptionModal));
+  modal
+    ?.querySelector("form")
+    ?.addEventListener("submit", handleSubscriptionFormSubmit);
+}
+
+
 
 function buildSubscriptionDetail(subscription) {
   if (!subscription) {
@@ -618,106 +732,7 @@ function closeSubscriptionModal() {
   if (modal) modal.remove();
 }
 
-function openSubscriptionModal(mode, subscriptionId = null) {
-  closeSubscriptionModal();
-  const subscription = subscriptionId
-    ? getSubscriptionById(String(subscriptionId))
-    : null;
 
-  if (mode !== "create" && !subscription && mode !== "create") {
-    showToast("No se encontró la suscripción seleccionada", "warning");
-    return;
-  }
-
-  if (mode === "view") {
-    const detailHtml = buildSubscriptionDetail(subscription);
-    const modalHtml = `
-    <div class="modal is-open" id="subscription-modal">
-      <div class="modal__backdrop" data-modal-close></div>
-      <div class="modal__panel" style="width: min(95vw, 640px);">
-        <header class="modal__head">
-          <div>
-            <h2 class="modal__title">Detalle de la suscripción</h2>
-            <p class="modal__subtitle">${escapeHtml(
-              subscription?.name || ""
-            )}</p>
-          </div>
-          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
-        </header>
-          <div class="modal__body modal-form__body" style="display: grid; gap: 1.5rem;">
-            ${detailHtml}
-          </div>
-        <footer class="modal__footer modal-form__footer">
-          <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-          <button type="button" class="btn-primary" data-modal-edit="${
-            subscription?.id
-          }">Editar</button>
-          </footer>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML("beforeend", modalHtml);
-    const modal = document.getElementById("subscription-modal");
-    modal
-      ?.querySelector(".modal__backdrop")
-      ?.addEventListener("click", closeSubscriptionModal);
-    modal
-      ?.querySelectorAll("[data-modal-close]")
-      .forEach((btn) => btn.addEventListener("click", closeSubscriptionModal));
-    modal
-      ?.querySelector("[data-modal-edit]")
-      ?.addEventListener("click", (ev) => {
-        const id = ev.currentTarget.dataset.modalEdit;
-        closeSubscriptionModal();
-        openSubscriptionModal("edit", id);
-      });
-    return;
-  }
-
-  const title = mode === "edit" ? "Editar suscripción" : "Nueva suscripción";
-  const formId = "subscription-form";
-  const formFields = buildSubscriptionFormFields(subscription || {});
-  const modalHtml = `
-    <div class="modal is-open" id="subscription-modal">
-      <div class="modal__backdrop" data-modal-close></div>
-      <div class="modal__panel" style="width: min(92vw, 600px); max-width: 600px; overflow-x: hidden; box-sizing: border-box; margin: 0 auto; padding: 1.5rem;">
-        <header class="modal__head">
-          <div>
-            <h2 class="modal__title">${title}</h2>
-            <p class="modal__subtitle">Gestiona la facturación recurrente con toda la información clave.</p>
-          </div>
-          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
-        </header>
-        <form class="modal-form" id="${formId}" data-form-type="subscription" data-subscription-id="${
-    subscription?.id || ""
-  }" novalidate>
-          <div class="modal__body modal-form__body" style="width: 100%; max-width: 100%; overflow-x: hidden; box-sizing: border-box;">
-            ${formFields}
-            <div class="modal-form__separator"></div>
-          </div>
-          <footer class="modal__footer modal-form__footer">
-            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
-            <button type="submit" form="${formId}" class="btn-primary">${
-    mode === "edit" ? "Guardar cambios" : "Crear suscripción"
-  }</button>
-          </footer>
-        </form>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML("beforeend", modalHtml);
-  const modal = document.getElementById("subscription-modal");
-  modal
-    ?.querySelector(".modal__backdrop")
-    ?.addEventListener("click", closeSubscriptionModal);
-  modal
-    ?.querySelectorAll("[data-modal-close]")
-    .forEach((btn) => btn.addEventListener("click", closeSubscriptionModal));
-  modal
-    ?.querySelector("form")
-    ?.addEventListener("submit", handleSubscriptionFormSubmit);
-}
 
 async function refreshSubscriptionsModule() {
   if (typeof window.api === "undefined") {

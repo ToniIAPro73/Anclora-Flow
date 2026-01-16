@@ -1,8 +1,3 @@
-const sidebarViews = {
-  DETAIL: 'detail',
-  FORM: 'form',
-  EMPTY: 'empty',
-};
 
 const budgetState = {
   month: new Date().toISOString().slice(0, 7),
@@ -19,8 +14,6 @@ const budgetState = {
     search: '',
   },
   selectedId: null,
-  editingId: null,
-  sidebarView: sidebarViews.DETAIL,
   loading: false,
   error: null,
 };
@@ -91,28 +84,6 @@ function showToast(message, type = 'info') {
   window.setTimeout(() => toast.remove(), 3200);
 }
 
-function ensureSelection() {
-  if (budgetState.budgets.length) {
-    if (
-      !budgetState.selectedId ||
-      !budgetState.budgets.some((item) => item.id === budgetState.selectedId)
-    ) {
-      budgetState.selectedId = budgetState.budgets[0].id;
-    }
-    if (budgetState.sidebarView === sidebarViews.EMPTY) {
-      budgetState.sidebarView = sidebarViews.DETAIL;
-    }
-  } else {
-    budgetState.selectedId = null;
-    if (
-      budgetState.sidebarView === sidebarViews.DETAIL ||
-      budgetState.sidebarView === sidebarViews.FORM
-    ) {
-      budgetState.sidebarView = sidebarViews.EMPTY;
-    }
-  }
-}
-
 async function loadBudgets() {
   const response = await window.api.getBudgets({
     month: `${budgetState.month}-01`,
@@ -141,17 +112,15 @@ async function loadSummary() {
 
 async function loadSuggestions() {
   try {
-    const suggestions = await window.api.getBudgetSuggestions({
-      month: `${budgetState.month}-01`,
-      historyMonths: 3,
-    });
+    const suggestions = await window.api.getAutoBudgetRecommendations(); 
+    // Nota: Usamos getAutoBudgetRecommendations que añadimos a api.js
     budgetState.suggestions = Array.isArray(suggestions) ? suggestions : [];
   } catch (error) {
     budgetState.suggestions = [];
   }
 }
 
-function renderSummary() {
+function renderSummaryCards() {
   const planned = document.getElementById('budget-planned');
   const actual = document.getElementById('budget-actual');
   const remaining = document.getElementById('budget-remaining');
@@ -190,14 +159,14 @@ function renderBudgetTable() {
     .map((item) => {
       const isSelected = item.id === budgetState.selectedId;
       const ratio = item.spendingRatio ?? 0;
-      const progress = Math.min(Math.max(ratio, 0), 150);
+      const progress = Math.min(Math.max(ratio, 0), 100);
       const barClass = ratio < 80 ? 'progress--success' : ratio <= 100 ? 'progress--warning' : 'progress--danger';
       return `
         <tr data-budget-row="${item.id}" class="budgets-table__row${isSelected ? ' is-selected' : ''}">
           <td>
             <div class="table-cell--main">
               <strong>${escapeHtml(item.category)}</strong>
-              <span>${escapeHtml(item.notes || 'Sin notas adicionales')}</span>
+              ${item.notes ? `<span class="meta">${escapeHtml(item.notes)}</span>` : ''}
             </div>
           </td>
           <td>${formatCurrency(item.plannedAmount ?? 0)}</td>
@@ -205,14 +174,14 @@ function renderBudgetTable() {
           <td>${formatCurrency(item.remaining ?? 0)}</td>
           <td>
             <div class="progress ${barClass}">
-              <div class="progress__bar" style="width: ${progress > 100 ? 100 : progress}%"></div>
+              <div class="progress__bar" style="width: ${progress}%"></div>
               <span class="progress__label">${formatPercent(ratio)}</span>
             </div>
           </td>
           <td>
             <div class="table-actions">
-              <button type="button" class="btn-icon" data-budget-edit="${item.id}" aria-label="Editar">✏️</button>
-              <button type="button" class="btn-icon btn-icon--danger" data-budget-delete="${item.id}" aria-label="Eliminar">🗑️</button>
+              <button type="button" class="table-action" data-budget-edit="${item.id}" aria-label="Editar">✏️</button>
+              <button type="button" class="table-action" data-budget-delete="${item.id}" aria-label="Eliminar">🗑️</button>
             </div>
           </td>
         </tr>
@@ -236,20 +205,11 @@ function renderSuggestions() {
         <li>
           <span class="title">${escapeHtml(suggestion.category)}</span>
           <span class="meta">
-            Promedio: ${formatCurrency(suggestion.avg_monthly_spend ?? 0)} · Actual: ${formatCurrency(
-        suggestion.planned_amount ?? 0
-      )}
+            Promedio: ${formatCurrency(suggestion.avg_monthly_spend ?? 0)}
           </span>
           <span class="meta">
-            Recomendación: ${
-              suggestion.recommendation === 'incrementar'
-                ? 'Incrementar presupuesto'
-                : suggestion.recommendation === 'optimizar'
-                ? 'Optimizar gasto'
-                : suggestion.recommendation === 'nuevo'
-                ? 'Sin presupuesto actual'
-                : 'Mantener'
-            }
+             ${suggestion.recommendation === 'incrementar' ? '⬆️ Incrementar' : 
+               suggestion.recommendation === 'optimizar' ? '⬇️ Optimizar' : 'Mantener'}
           </span>
         </li>
       `
@@ -257,118 +217,105 @@ function renderSuggestions() {
     .join('');
 }
 
-function buildBudgetFormHTML(budget = {}) {
-  return `
-    <form class="sidebar-form" data-form-type="budget" style="display: flex; flex-direction: column; max-height: 95vh; overflow: hidden;">
-      <header class="sidebar-form__header" style="flex-shrink: 0;">
-        <h3>${budget.id ? 'Editar presupuesto' : 'Nuevo presupuesto'}</h3>
-        <button type="button" class="btn-ghost" data-action="cancel-form">Cancelar</button>
-      </header>
-      <div class="form-grid" style="flex: 1; overflow-y: auto; padding: 1rem;">
-        <label>
-          <span>Categoría *</span>
-          <input type="text" name="category" value="${escapeHtml(budget.category || '')}" required />
-        </label>
-        <label>
-          <span>Mes</span>
-          <input type="month" name="month" value="${budget.month ? budget.month.slice(0, 7) : budgetState.month}" required />
-        </label>
-        <label>
-          <span>Monto planificado (€)</span>
-          <input type="number" min="0" step="0.01" name="plannedAmount" value="${budget.plannedAmount != null ? budget.plannedAmount : ''}" required />
-        </label>
-        <label class="wide">
-          <span>Notas</span>
-          <textarea name="notes" rows="3">${escapeHtml(budget.notes || '')}</textarea>
-        </label>
+
+// --- MODAL LOGIC FOR BUDGET ---
+
+function closeBudgetModal() {
+  const modal = document.getElementById('budget-modal');
+  if (modal) modal.remove();
+  document.body.classList.remove('is-lock-scroll');
+}
+
+function getBudgetById(id) {
+  return budgetState.budgets.find(b => b.id === id) || null;
+}
+
+function openBudgetModal(mode, budgetId = null) {
+  closeBudgetModal();
+  const budget = budgetId ? getBudgetById(String(budgetId)) : null;
+  const title = mode === 'edit' ? 'Editar presupuesto' : 'Nuevo presupuesto';
+  const formId = 'budget-form';
+
+  const modalHtml = `
+    <div class="modal is-open" id="budget-modal">
+      <div class="modal__backdrop" data-modal-close></div>
+      <div class="modal__panel" style="width: min(92vw, 500px);">
+        <header class="modal__head">
+          <div>
+            <h2 class="modal__title">${title}</h2>
+            <p class="modal__subtitle">Define límites de gasto para tus categorías.</p>
+          </div>
+          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
+        </header>
+        <form class="modal-form" id="${formId}" style="overflow: visible;">
+          <div class="modal__body modal-form__body">
+             <div class="modal-form__grid">
+                <label class="form-field">
+                  <span>Categoría *</span>
+                  <input type="text" name="category" value="${escapeHtml(budget?.category || '')}" required placeholder="Ej. Marketing, Oficina..." />
+                </label>
+                
+                <div class="modal-form__grid modal-form__grid--two">
+                  <label class="form-field">
+                    <span>Mes *</span>
+                    <input type="month" name="month" value="${budget?.month ? budget.month.slice(0, 7) : budgetState.month}" required />
+                  </label>
+                  <label class="form-field">
+                    <span>Monto (€) *</span>
+                    <input type="number" min="0" step="0.01" name="plannedAmount" value="${budget?.plannedAmount ?? ''}" required />
+                  </label>
+                </div>
+
+                <label class="form-field">
+                  <span>Notas</span>
+                  <textarea name="notes" rows="2" placeholder="Opcional">${escapeHtml(budget?.notes || '')}</textarea>
+                </label>
+             </div>
+          </div>
+          <footer class="modal__footer modal-form__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+            <button type="submit" class="btn-primary">${mode === 'edit' ? 'Guardar cambios' : 'Crear presupuesto'}</button>
+          </footer>
+        </form>
       </div>
-      <footer class="sidebar-form__footer" style="flex-shrink: 0; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0;">
-        <button type="submit" class="btn btn-primary">${budget.id ? 'Guardar cambios' : 'Crear presupuesto'}</button>
-      </footer>
-    </form>
+    </div>
   `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  document.body.classList.add('is-lock-scroll');
+
+  const modal = document.getElementById('budget-modal');
+  modal.querySelector('.modal__backdrop').addEventListener('click', closeBudgetModal);
+  modal.querySelectorAll('[data-modal-close]').forEach(btn => btn.addEventListener('click', closeBudgetModal));
+  
+  const form = document.getElementById(formId);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    const payload = {
+      category: data.get('category').trim(),
+      month: `${data.get('month')}-01`,
+      plannedAmount: parseFloat(data.get('plannedAmount') || 0),
+      notes: data.get('notes').trim() || undefined
+    };
+
+    try {
+      if (mode === 'edit' && budgetId) {
+        await window.api.updateBudget(budgetId, payload);
+        showToast('Presupuesto actualizado', 'success');
+      } else {
+        await window.api.createBudget(payload);
+        showToast('Presupuesto creado', 'success');
+      }
+      closeBudgetModal();
+      await refreshBudgetModule();
+    } catch (err) {
+      console.error(err);
+      showToast('Error guardando presupuesto', 'error');
+    }
+  });
 }
 
-function buildBudgetDetailHTML(budget) {
-  if (!budget) {
-    return `
-      <div class="sidebar-empty">
-        <span class="sidebar-empty__icon">📊</span>
-        <p>Selecciona una categoría para ver su evolución.</p>
-      </div>
-    `;
-  }
-
-  const ratio = budget.spendingRatio ?? 0;
-  const status =
-    ratio <= 80 ? 'En buen camino' : ratio <= 100 ? 'Vigilando' : 'Sobrepasado';
-  const badge =
-    ratio <= 80 ? 'success' : ratio <= 100 ? 'warning' : 'danger';
-
-  return `
-    <article class="sidebar-card">
-      <header class="sidebar-card__header">
-        <div>
-          <h3>${escapeHtml(budget.category)}</h3>
-          <p>${escapeHtml(budget.notes || 'Sin notas adicionales')}</p>
-        </div>
-        <span class="badge badge--${badge}">${status}</span>
-      </header>
-      <dl class="detail-grid">
-        <div>
-          <dt>Planificado</dt>
-          <dd>${formatCurrency(budget.plannedAmount ?? 0)}</dd>
-        </div>
-        <div>
-          <dt>Gasto real</dt>
-          <dd>${formatCurrency(budget.actualSpent ?? 0)}</dd>
-        </div>
-        <div>
-          <dt>Disponible</dt>
-          <dd>${formatCurrency(budget.remaining ?? 0)}</dd>
-        </div>
-        <div>
-          <dt>Avance</dt>
-          <dd>${formatPercent(ratio)}</dd>
-        </div>
-        <div>
-          <dt>Ingresos vinculados</dt>
-          <dd>${formatCurrency(budget.relatedRevenue ?? 0)}</dd>
-        </div>
-      </dl>
-      <footer class="sidebar-card__footer">
-        <button type="button" class="btn btn-secondary" data-budget-edit="${budget.id}">Editar presupuesto</button>
-      </footer>
-    </article>
-  `;
-}
-
-function renderSidebar() {
-  const container = document.querySelector('[data-budget-sidebar]');
-  if (!container) return;
-
-  let html = '';
-
-  if (budgetState.sidebarView === sidebarViews.EMPTY) {
-    html = `
-      <div class="sidebar-empty">
-        <span class="sidebar-empty__icon">📊</span>
-        <p>No hay presupuestos definidos.</p>
-        <button type="button" class="btn btn-primary" data-open-budget>Crear presupuesto</button>
-      </div>
-    `;
-  } else if (budgetState.sidebarView === sidebarViews.FORM) {
-    const budget =
-      budgetState.editingId &&
-      budgetState.budgets.find((item) => item.id === budgetState.editingId);
-    html = buildBudgetFormHTML(budget || {});
-  } else {
-    const budget = budgetState.budgets.find((item) => item.id === budgetState.selectedId);
-    html = buildBudgetDetailHTML(budget);
-  }
-
-  container.innerHTML = html;
-}
 
 async function refreshBudgetModule() {
   if (typeof window.api === 'undefined') {
@@ -385,11 +332,9 @@ async function refreshBudgetModule() {
     setLoading(true);
     setError(null);
     await Promise.all([loadBudgets(), loadSummary(), loadSuggestions()]);
-    ensureSelection();
-    renderSummary();
+    renderSummaryCards();
     renderBudgetTable();
     renderSuggestions();
-    renderSidebar();
   } catch (error) {
     console.error('Error loading budgets', error);
     setError('Ocurrió un problema al cargar los presupuestos.');
@@ -398,62 +343,15 @@ async function refreshBudgetModule() {
   }
 }
 
-async function handleBudgetFormSubmit(event) {
-  event.preventDefault();
-  const form = event.target.closest('form');
-  if (!form) return;
-  const data = new FormData(form);
-  const monthInput = data.get('month')?.toString();
-
-  const payload = {
-    category: data.get('category')?.toString().trim(),
-    month: monthInput ? `${monthInput}-01` : `${budgetState.month}-01`,
-    plannedAmount: data.get('plannedAmount') ? Number.parseFloat(data.get('plannedAmount')) : 0,
-    notes: data.get('notes')?.toString().trim() || undefined,
-  };
-
-  const editingId = budgetState.editingId;
-
-  try {
-    let response;
-    if (editingId) {
-      response = await window.api.updateBudget(editingId, payload);
-      budgetState.selectedId = String(editingId);
-      showToast('Presupuesto actualizado correctamente', 'success');
-    } else {
-      response = await window.api.createBudget(payload);
-      if (response?.id) {
-        budgetState.selectedId = String(response.id);
-      }
-      showToast('Presupuesto creado correctamente', 'success');
-    }
-    budgetState.editingId = null;
-    budgetState.sidebarView = sidebarViews.DETAIL;
-    await refreshBudgetModule();
-  } catch (error) {
-    console.error('Error saving budget', error);
-    showToast('No se pudo guardar el presupuesto', 'error');
-  }
-}
-
 async function handleBudgetDelete(id) {
   if (!window.confirm('¿Seguro que deseas eliminar este presupuesto?')) return;
   try {
     await window.api.deleteBudget(id);
     showToast('Presupuesto eliminado', 'success');
-    if (budgetState.selectedId === id) {
-      budgetState.selectedId = null;
-    }
     await refreshBudgetModule();
   } catch (error) {
     console.error('Error deleting budget', error);
     showToast('No se pudo eliminar el presupuesto', 'error');
-  }
-}
-
-function handleSubmit(event) {
-  if (event.target.matches('[data-form-type="budget"]')) {
-    void handleBudgetFormSubmit(event);
   }
 }
 
@@ -479,49 +377,25 @@ function handleClick(event) {
     return;
   }
 
-  const newButton = event.target.closest('[data-open-budget]');
-  if (newButton) {
-    budgetState.editingId = null;
-    budgetState.sidebarView = sidebarViews.FORM;
-    renderSidebar();
-    return;
-  }
-
-  const cancelBtn = event.target.closest('[data-action="cancel-form"]');
-  if (cancelBtn) {
-    budgetState.editingId = null;
-    budgetState.sidebarView = budgetState.budgets.length ? sidebarViews.DETAIL : sidebarViews.EMPTY;
-    renderSidebar();
+  if (event.target.closest('[data-open-budget]')) {
+    openBudgetModal('create');
     return;
   }
 
   const editBtn = event.target.closest('[data-budget-edit]');
   if (editBtn) {
-    event.stopPropagation();
-    budgetState.editingId = String(editBtn.dataset.budgetEdit);
-    budgetState.sidebarView = sidebarViews.FORM;
-    renderSidebar();
+    openBudgetModal('edit', editBtn.dataset.budgetEdit);
     return;
   }
 
   const deleteBtn = event.target.closest('[data-budget-delete]');
   if (deleteBtn) {
-    event.stopPropagation();
-    void handleBudgetDelete(deleteBtn.dataset.budgetDelete);
+    handleBudgetDelete(deleteBtn.dataset.budgetDelete);
     return;
-  }
-
-  const row = event.target.closest('[data-budget-row]');
-  if (row) {
-    budgetState.selectedId = String(row.dataset.budgetRow);
-    budgetState.sidebarView = sidebarViews.DETAIL;
-    renderBudgetTable();
-    renderSidebar();
   }
 }
 
-
-
+// --- RENDERIZADO PRINCIPAL (Estructura idéntica a Suscripciones/Gastos) ---
 
 export function initBudget() {
   const module = document.querySelector('.budget-module');
@@ -530,8 +404,8 @@ export function initBudget() {
   module.addEventListener('click', handleClick);
   module.addEventListener('input', handleInput);
   module.addEventListener('change', handleChange);
-  module.addEventListener('submit', handleSubmit);
 
+  // Inicializar carga
   window.requestAnimationFrame(() => {
     void refreshBudgetModule();
   });
@@ -539,89 +413,130 @@ export function initBudget() {
 
 export default function renderBudget() {
   return `
-    <section class="module budget-module">
-      <header class="module-header">
-        <div class="module-title-section">
-          <h1>Presupuesto inteligente</h1>
-          <p>Compara tus previsiones con el gasto real y recibe recomendaciones.</p>
+    <section class="budget-module" aria-labelledby="budget-title">
+      
+      <!-- HERO BANNER (Idéntico a Suscripciones) -->
+      <header class="expenses__hero">
+        <div class="expenses__hero-copy">
+          <h1 id="budget-title">Presupuesto Inteligente</h1>
+          <p>Compara tus previsiones con el gasto real y recibe recomendaciones de ahorro.</p>
         </div>
-        <div class="module-actions">
-          <label class="input input--month">
-            <span>Mes</span>
-            <input type="month" data-budget-month value="${budgetState.month}" />
-          </label>
-          <button type="button" class="btn btn-primary" data-open-budget>＋ Nuevo presupuesto</button>
+        <div class="expenses__hero-actions">
+          <button type="button" class="btn-primary" data-open-budget>Nuevo presupuesto</button>
         </div>
       </header>
-      <div class="summary-wrap">
-        <div class="summary-grid summary-grid--compact">
-          <article class="card stat-card stat-card--compact">
+
+      <!-- TARJETAS DE RESUMEN -->
+      <section aria-labelledby="budget-overview" style="margin: 2rem 0 2.5rem;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.25rem;">
+          <h2 id="budget-overview" style="margin: 0; font-size: 1.1rem;">Visión general</h2>
+        </div>
+        
+        <div class="summary-cards">
+          <article class="card stat-card">
             <div class="card-icon" style="background: var(--color-primary-light);">📊</div>
             <div class="card-content">
               <span class="card-label">Planificado</span>
               <span class="card-value" id="budget-planned">€0</span>
             </div>
           </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-secondary-light);">💸</div>
+          <article class="card stat-card">
+            <div class="card-icon" style="background: var(--color-warning-light);">💸</div>
             <div class="card-content">
               <span class="card-label">Gastado</span>
               <span class="card-value" id="budget-actual">€0</span>
             </div>
           </article>
-          <article class="card stat-card stat-card--compact">
+          <article class="card stat-card">
             <div class="card-icon" style="background: var(--color-success-light);">✅</div>
             <div class="card-content">
               <span class="card-label">Disponible</span>
               <span class="card-value" id="budget-remaining">€0</span>
             </div>
           </article>
-          <article class="card stat-card stat-card--compact">
-            <div class="card-icon" style="background: var(--color-info-light);">🎯</div>
+          <article class="card stat-card">
+            <div class="card-icon" style="background: var(--color-tertiary-light);">🎯</div>
             <div class="card-content">
-              <span class="card-label">Categorías en control</span>
+              <span class="card-label">Categorías controladas</span>
               <span class="card-value" id="budget-ontrack">0</span>
             </div>
           </article>
         </div>
-      </div>
-      <div class="module-body module-body--split">
-        <div class="module-main">
-          <div class="module-toolbar">
-            <label class="input input--search">
-              <span class="input__icon">🔍</span>
-              <input type="search" data-budget-search placeholder="Filtrar por categoría..." autocomplete="off" />
-            </label>
+      </section>
+
+      <!-- BARRA DE FILTROS (Estilo consistente) -->
+      <section aria-labelledby="budget-filters" style="margin: 0 0 2.5rem;">
+        <h2 id="budget-filters" style="margin: 0 0 1.25rem; font-size: 1.1rem;">Filtrar presupuesto</h2>
+        <section class="expenses__filters" aria-label="Filtros de presupuesto">
+          
+          <!-- Selector de Mes -->
+          <div class="expenses__filters-group">
+            <label class="visually-hidden" for="budget-month-filter">Mes</label>
+            <input type="month" id="budget-month-filter" class="expenses__select" data-budget-month value="${budgetState.month}" style="padding-right: 1rem;" />
           </div>
-          <div class="table-wrapper">
-            <table class="data-table data-table--compact">
+
+          <!-- Buscador -->
+          <div class="expenses__filters-group" style="flex: 1;">
+            <label class="visually-hidden" for="budget-search">Buscar categoría</label>
+            <input type="search" id="budget-search" class="expenses__search" placeholder="Buscar categoría..." autocomplete="off" data-budget-search />
+          </div>
+
+          <!-- Botón Recargar -->
+          <div class="expenses__filters-group expenses__filters-group--pinned">
+            <button type="button" class="btn-ghost" data-action="retry-budgets">Recargar</button>
+          </div>
+        </section>
+      </section>
+
+      <!-- TABLA DE DATOS (Envuelta en Card/Surface) -->
+      <section aria-labelledby="budget-table-title" style="margin: 0 0 2.5rem;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1rem;">
+          <h2 id="budget-table-title" style="margin: 0; font-size: 1.1rem;">Desglose por categorías</h2>
+        </div>
+
+        <section class="expenses-table" aria-label="Tabla de presupuestos">
+          <div class="expenses-table__surface">
+            <table>
               <thead>
                 <tr>
-                  <th>Categoría</th>
-                  <th>Planificado</th>
-                  <th>Real</th>
-                  <th>Disponible</th>
-                  <th>Avance</th>
-                  <th></th>
+                  <th scope="col" style="width: 30%;">Categoría</th>
+                  <th scope="col">Planificado</th>
+                  <th scope="col">Real</th>
+                  <th scope="col">Disponible</th>
+                  <th scope="col" style="width: 20%;">Avance</th>
+                  <th scope="col">Acciones</th>
                 </tr>
               </thead>
-              <tbody data-budget-table></tbody>
+              <tbody data-budget-table>
+                <tr>
+                  <td colspan="6" class="empty-state">
+                    <div style="padding: 2rem; text-align: center; color: var(--color-text-muted);">
+                       Cargando presupuestos...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
+          
+          <!-- Estados de Carga y Error dentro del contexto de la tabla -->
           <div class="module-loading" data-budget-loading hidden>
             <span class="spinner"></span>
-            <p>Cargando presupuestos...</p>
+            <p>Actualizando datos...</p>
           </div>
-          <div class="module-error" data-budget-error hidden></div>
-        </div>
-        <aside class="module-sidebar" data-budget-sidebar></aside>
-      </div>
-      <footer class="module-footer">
-        <section>
-          <h4>Recomendaciones inteligentes</h4>
-          <ul class="insight-list" data-budget-suggestions></ul>
+          <div class="module-error" data-budget-error hidden style="margin-top: 1rem;"></div>
         </section>
-      </footer>
+      </section>
+
+      <!-- RECOMENDACIONES (Insights) -->
+      <section class="subscriptions-insights" aria-label="Recomendaciones" style="display: grid; gap: 1.5rem; grid-template-columns: 1fr; margin-bottom: 1.5rem;">
+        <article class="card" style="padding: 1.5rem;">
+          <h3 style="margin-top: 0; font-size: 1.1rem; margin-bottom: 1rem;">Recomendaciones inteligentes</h3>
+          <ul class="insight-list" data-budget-suggestions style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;"></ul>
+        </article>
+      </section>
+
     </section>
   `;
 }
+
