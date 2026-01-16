@@ -4,7 +4,7 @@ import cors from 'cors';
 import passport from 'passport';
 import { Server } from 'http';
 
-import { initializeDatabase, seedDatabase, query, closePool } from './database/config.js';
+import { initializeDatabase, seedDatabase, closePool } from './database/config.js';
 import { ensureDevUser } from './utils/devUser.js';
 
 // Import routes (assuming they will be converted or handled by esModuleInterop)
@@ -120,7 +120,7 @@ async function bootstrap(): Promise<Server | null> {
       await ensureDevUser();
     }
 
-    // Always seed in this environment for the demo
+    // Seed database with demo data
     if (process.env.SEED_DB === 'true' || process.env.NODE_ENV !== 'production') {
        await seedDatabase();
     }

@@ -4,7 +4,7 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "dev": "npm run build && node --watch dist/server.js",
+    "dev": "npm run build && node dist/server.js",
     "start": "node dist/server.js",
     "build": "tsc && powershell -Command \"Copy-Item -Path 'src/database/*.sql' -Destination 'dist/database/' -Force\"",
     "start:win": "powershell -ExecutionPolicy Bypass -File ./start.ps1",

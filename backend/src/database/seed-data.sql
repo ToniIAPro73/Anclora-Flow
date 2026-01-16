@@ -13,18 +13,18 @@ DECLARE
     inv1 UUID; inv2 UUID; inv3 UUID; inv4 UUID; inv5 UUID; inv6 UUID; inv7 UUID;
     
 BEGIN
-    -- 1. IDENTIFICAR EL USUARIO CORRECTO (Migrar si es necesario)
-    -- Si existe el usuario antiguo, actualizamos su email a pmi140979@gmail.com
-    UPDATE users SET email = 'pmi140979@gmail.com', email_verified_at = NOW() WHERE email = 'demo@ancloraflow.com' RETURNING id INTO demo_user_id;
-
-    -- Si no se actualizó nada (demo_user_id es NULL), buscamos el usuario nuevo
+    -- 1. IDENTIFICAR EL USUARIO CORRECTO
+    -- Asumimos que init.sql ya creó o actualizó el usuario correctamente.
+    SELECT id INTO demo_user_id FROM users WHERE email = 'pmi140979@gmail.com' LIMIT 1;
+    
     IF demo_user_id IS NULL THEN
-        SELECT id INTO demo_user_id FROM users WHERE email = 'pmi140979@gmail.com' LIMIT 1;
+        -- Fallback: intentar con el email antiguo solo por si acaso
+        SELECT id INTO demo_user_id FROM users WHERE email = 'demo@ancloraflow.com' LIMIT 1;
     END IF;
     
     IF demo_user_id IS NULL THEN
-        RAISE NOTICE 'Usuario demo (pmi140979@gmail.com) no encontrado, saltando seed.';
-        RETURN;
+         RAISE NOTICE 'Usuario demo no encontrado. Saltando seed.';
+         RETURN;
     END IF;
 
     -- 2. LIMPIEZA AGRESIVA Y SEGURA (En orden inverso a dependencias)

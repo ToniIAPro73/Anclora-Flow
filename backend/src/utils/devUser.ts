@@ -2,12 +2,12 @@ import User from '../models/User.js';
 import { IUser } from '../types/user.js';
 
 const DEFAULT_DEV_USER = {
-  email: 'demo@anclora.test',
-  firstName: 'Demo',
-  lastName: 'Anclora',
+  email: 'pmi140979@gmail.com',
+  firstName: 'Usuario',
+  lastName: 'Demo',
   company: 'Anclora Labs',
   phone: '+34 600 000 000',
-  password: 'Anclora123!',
+  password: 'demo123',
 };
 
 export async function ensureDevUser(): Promise<IUser | null> {

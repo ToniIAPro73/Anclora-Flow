@@ -274,18 +274,20 @@ CREATE TRIGGER update_budgets_updated_at BEFORE UPDATE ON budgets FOR EACH ROW E
 -- Email: demo@ancloraflow.com
 -- Contraseña: demo123
 -- NIF: 12345678A
-INSERT INTO users (id, email, name, password_hash, nif, auth_provider, language, theme, email_verified_at)
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    'pmi140979@gmail.com',
-    'Usuario Demo',
-    '$2b$10$f84.n1jsCMZnFHRBU8uXXueQxu0TNT1Sm9HN8EyerXUQ2XQWY58ii',
-    '12345678A',
-    'local',
-    'es',
-    'light',
-    NOW()
-)
-ON CONFLICT (email) DO UPDATE SET
-    password_hash = EXCLUDED.password_hash,
-    nif = EXCLUDED.nif;
+-- TEMPORALMENTE DESACTIVADO PARA DEBUG
+-- INSERT INTO users (id, email, name, password_hash, nif, auth_provider, language, theme, email_verified_at)
+-- VALUES (
+--     '00000000-0000-0000-0000-000000000001',
+--     'pmi140979@gmail.com',
+--     'Usuario Demo',
+--     '$2b$10$f84.n1jsCMZnFHRBU8uXXueQxu0TNT1Sm9HN8EyerXUQ2XQWY58ii',
+--     '12345678A',
+--     'local',
+--     'es',
+--     'light',
+--     NOW()
+-- )
+-- ON CONFLICT (email) DO UPDATE SET
+--     password_hash = EXCLUDED.password_hash,
+--     nif = EXCLUDED.nif;
+
