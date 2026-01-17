@@ -1017,7 +1017,7 @@ export default function renderSubscriptions() {
           </select>
         </div>
         <div class="expenses__filters-group expenses__filters-group--pinned">
-          <button type="button" class="btn-ghost" data-action="retry-subscriptions">Recargar</button>
+          <button type="button" class="btn-ghost" data-action="retry-subscriptions"><span>🔄</span> Recargar</button>
         </div>
       </section>
 

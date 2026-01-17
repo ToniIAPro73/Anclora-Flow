@@ -127,6 +127,7 @@ function calculateInvoiceTotals(items = [], irpfPercentage = 0) {
   };
 }
 
+
 function resolveVerifactuVerificationUrl(invoice = {}) {
   if (invoice.verifactuUrl) return invoice.verifactuUrl;
   if (invoice.verifactuHash) {
@@ -300,9 +301,9 @@ function renderItemsEditorWithTabs(editorKey) {
 
 function getSingleItemFormMarkup(item, index, editable, showDelete) {
   return `
-    <div class="invoice-item-form" data-index="${index}" style="display: grid; gap: 1rem; grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr auto; align-items: end;">
+    <div class="invoice-item-form" data-index="${index}" style="display: grid; gap: 0.65rem; grid-template-columns: 2.5fr 1fr 0.9fr 1.1fr 0.9fr auto; align-items: end;">
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Concepto *</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">Concepto *</label>
         <input
           type="text"
           class="form-input"
@@ -314,7 +315,7 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
         />
       </div>
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Unidad</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">Unidad</label>
         <input
           type="text"
           class="form-input"
@@ -326,7 +327,7 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
         />
       </div>
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Cantidad</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">Cantidad</label>
         <input
           type="number"
           class="form-input"
@@ -339,7 +340,7 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
         />
       </div>
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Precio unit.</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">Precio unit.</label>
         <input
           type="number"
           class="form-input"
@@ -352,7 +353,7 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
         />
       </div>
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">IVA (%)</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">IVA (%)</label>
         <input
           type="number"
           class="form-input"
@@ -372,18 +373,18 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
         ` : ''}
       </div>
     </div>
-    <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-primary); border-radius: 8px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; font-size: 0.875rem;">
-      <div>
-        <span style="color: var(--text-secondary);">Subtotal:</span>
-        <strong style="color: var(--text-primary); margin-left: 0.5rem;">${currencyFormatter.format(calculateLineSubtotal(item))}</strong>
+    <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-primary); border-radius: 6px; display: flex; gap: 1rem; font-size: 0.75rem; align-items: center; border-left: 3px solid #3b82f6;">
+      <div style="display: flex; align-items: center; gap: 0.4rem;">
+        <span style="color: var(--text-secondary); font-weight: 500;">Subtotal:</span>
+        <strong style="color: var(--text-primary);">${currencyFormatter.format(calculateLineSubtotal(item))}</strong>
       </div>
-      <div>
-        <span style="color: var(--text-secondary);">IVA:</span>
-        <strong style="color: var(--text-primary); margin-left: 0.5rem;">${currencyFormatter.format(calculateLineVat(item))}</strong>
+      <div style="display: flex; align-items: center; gap: 0.4rem;">
+        <span style="color: var(--text-secondary); font-weight: 500;">IVA:</span>
+        <strong style="color: var(--text-primary);">${currencyFormatter.format(calculateLineVat(item))}</strong>
       </div>
-      <div>
-        <span style="color: var(--text-secondary);">Total línea:</span>
-        <strong style="color: #3b82f6; margin-left: 0.5rem;">${currencyFormatter.format(calculateLineTotal(item))}</strong>
+      <div style="display: flex; align-items: center; gap: 0.35rem;">
+        <span style="color: var(--text-secondary); font-weight: 500;">Total:</span>
+        <strong style="color: #3b82f6;">${currencyFormatter.format(calculateLineTotal(item))}</strong>
       </div>
     </div>
   `;
@@ -1617,74 +1618,89 @@ async function openNewInvoiceModal() {
     const modalHTML = `
       <div class="modal is-open" id="new-invoice-modal">
         <div class="modal__backdrop" onclick="closeNewInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 1400px); max-width: 1400px; max-height: 92vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="flex-shrink: 0;">
+        <div class="modal__panel" style="width: min(98vw, 1800px); max-width: 1800px; max-height: 85vh; display: flex; flex-direction: column;">
+          <header class="modal__head" style="flex-shrink: 0; padding: 1rem 1.5rem;">
             <div>
-              <h2 class="modal__title">Nueva factura</h2>
-              <p class="modal__subtitle">Completa los datos y conceptos para generar la factura</p>
+              <h2 class="modal__title" style="margin: 0; font-size: 1.25rem;">Nueva factura</h2>
+              <p class="modal__subtitle" style="margin: 0.15rem 0 0 0; font-size: 0.75rem;">Completa los datos y conceptos</p>
             </div>
             <button type="button" class="modal__close" onclick="closeNewInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 2rem;">
-            <form id="new-invoice-form" style="display: flex; flex-direction: column; gap: 1.25rem; height: 100%;">
-              <div style="display: grid; gap: 1rem; grid-template-columns: auto 1fr 1fr 1fr;">
-                <div style="min-width: 150px;">
-                  <label for="new-invoice-number" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Nº Factura *</label>
-                  <input type="text" id="new-invoice-number" name="invoice_number" class="form-input" placeholder="2024-001" required style="width: 100%;" />
+          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 0.85rem 1.5rem;">
+            <form id="new-invoice-form" style="display: grid; grid-template-columns: 1fr 350px; gap: 1.25rem; height: 100%;">
+              
+              <!-- COLUMNA IZQUIERDA: Datos de factura y líneas -->
+              <div style="display: flex; flex-direction: column; gap: 0.5rem; min-height: 0;">
+                
+                <!-- Datos principales de la factura -->
+                <div style="display: grid; gap: 0.5rem; grid-template-columns: minmax(125px, auto) 1fr 1fr 1fr;">
+                  <div style="min-width: 125px;">
+                    <label for="new-invoice-number" style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.75rem; color: var(--text-secondary);">Nº Factura *</label>
+                    <input type="text" id="new-invoice-number" name="invoice_number" class="form-input" placeholder="2024-001" required style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.8rem; height: 34px;" />
+                  </div>
+                  <div>
+                    <label for="new-invoice-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Estado</label>
+                    <select id="new-invoice-status" name="status" class="form-input" style="width: 100%;">
+                      <option value="draft" selected>Borrador</option>
+                      <option value="pending">Pendiente</option>
+                      <option value="sent">Enviada</option>
+                      <option value="paid">Cobrada</option>
+                      <option value="overdue">Vencida</option>
+                    </select>
+                  </div>
+                  <div style="min-width: 160px;">
+                    <label for="new-invoice-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Emisión</label>
+                    <input type="date" id="new-invoice-issue-date" name="issue_date" class="form-input" value="${today}" required style="width: 100%;" />
+                  </div>
+                  <div style="min-width: 160px;">
+                    <label for="new-invoice-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Vencimiento</label>
+                    <input type="date" id="new-invoice-due-date" name="due_date" class="form-input" value="${dueDefaultDate}" required style="width: 100%;" />
+                  </div>
                 </div>
-                <div>
-                  <label for="new-invoice-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Estado</label>
-                  <select id="new-invoice-status" name="status" class="form-input" style="width: 100%;">
-                    <option value="draft" selected>Borrador</option>
-                    <option value="pending">Pendiente</option>
-                    <option value="sent">Enviada</option>
-                    <option value="paid">Cobrada</option>
-                    <option value="overdue">Vencida</option>
-                  </select>
+                
+                <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 2fr;">
+                  <div>
+                    <label for="new-invoice-client" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Cliente</label>
+                    <select id="new-invoice-client" name="client_id" class="form-input" style="width: 100%;">
+                      <option value="">Sin cliente asignado</option>
+                      ${clients.map(client => `<option value="${client.id}">${client.name || client.business_name || 'Cliente sin nombre'}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div>
+                    <label for="new-invoice-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Notas</label>
+                    <textarea id="new-invoice-notes" name="notes" rows="2" class="form-input" style="resize: none; width: 100%;" placeholder="Observaciones internas o para el cliente"></textarea>
+                  </div>
+                  <div id="new-payment-date-container" style="display: none;">
+                    <label for="new-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Fecha de pago</label>
+                    <input type="date" id="new-payment-date" name="payment_date" class="form-input" style="width: 100%;" />
+                  </div>
                 </div>
-                <div style="min-width: 160px;">
-                  <label for="new-invoice-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Emisión</label>
-                  <input type="date" id="new-invoice-issue-date" name="issue_date" class="form-input" value="${today}" required style="width: 100%;" />
-                </div>
-                <div style="min-width: 160px;">
-                  <label for="new-invoice-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Vencimiento</label>
-                  <input type="date" id="new-invoice-due-date" name="due_date" class="form-input" value="${dueDefaultDate}" required style="width: 100%;" />
-                </div>
+
+                <!-- Editor de líneas de factura -->
+                <section style="border: 1px solid var(--border-color); border-radius: 8px; padding: 0.65rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
+                    <button type="button" class="btn-secondary" id="add-new-invoice-item" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;">+ Añadir línea</button>
+                  </div>
+
+                  <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
+                    <button type="button" class="invoice-tab-nav" id="new-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
+                    <div id="new-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
+                    <button type="button" class="invoice-tab-nav" id="new-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
+                  </div>
+
+                  <div id="new-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto;"></div>
+                </section>
               </div>
-              <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 2fr;">
-                <div>
-                  <label for="new-invoice-client" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Cliente</label>
-                  <select id="new-invoice-client" name="client_id" class="form-input" style="width: 100%;">
-                    <option value="">Sin cliente asignado</option>
-                    ${clients.map(client => `<option value="${client.id}">${client.name || client.business_name || 'Cliente sin nombre'}</option>`).join('')}
-                  </select>
-                </div>
-                <div>
-                  <label for="new-invoice-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Notas</label>
-                  <textarea id="new-invoice-notes" name="notes" rows="2" class="form-input" style="resize: none; width: 100%;" placeholder="Observaciones internas o para el cliente"></textarea>
-                </div>
-                <div id="new-payment-date-container" style="display: none;">
-                  <label for="new-payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Fecha de pago</label>
-                  <input type="date" id="new-payment-date" name="payment_date" class="form-input" style="width: 100%;" />
-                </div>
-              </div>
 
-              <section style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h3 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
-                  <button type="button" class="btn-secondary" id="add-new-invoice-item" style="padding: 0.5rem 1rem; font-size: 0.875rem;">+ Añadir línea</button>
+              <!-- COLUMNA DERECHA: Resumen y totales -->
+              <aside style="display: flex; flex-direction: column;">
+                <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; background: var(--bg-secondary);">
+                  <h3 style="margin: 0 0 0.75rem 0; font-size: 0.9rem; font-weight: 700; color: var(--text-primary); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">📊 Resumen</h3>
+                  <div id="new-invoice-totals"></div>
                 </div>
+              </aside>
 
-                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
-                  <button type="button" class="invoice-tab-nav" id="new-invoice-tab-prev" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&larr;</button>
-                  <div id="new-invoice-tabs" style="display: flex; gap: 0.5rem; flex: 1; overflow-x: auto; scrollbar-width: thin;"></div>
-                  <button type="button" class="invoice-tab-nav" id="new-invoice-tab-next" style="padding: 0.4rem 0.6rem; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-primary); font-size: 0.875rem;" disabled>&rarr;</button>
-                </div>
-
-                <div id="new-invoice-items" style="flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
-
-                <div id="new-invoice-totals" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-color); flex-shrink: 0;"></div>
-              </section>
             </form>
           </div>
           <footer class="modal__footer modal-form__footer">

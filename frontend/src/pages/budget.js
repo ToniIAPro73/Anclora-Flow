@@ -483,7 +483,7 @@ export default function renderBudget() {
 
           <!-- Botón Recargar -->
           <div class="expenses__filters-group expenses__filters-group--pinned">
-            <button type="button" class="btn-ghost" data-action="retry-budgets">Recargar</button>
+            <button type="button" class="btn-ghost" data-action="retry-budgets"><span>🔄</span> Recargar</button>
           </div>
         </section>
       </section>
