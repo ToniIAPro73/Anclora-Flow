@@ -301,9 +301,9 @@ function renderItemsEditorWithTabs(editorKey) {
 
 function getSingleItemFormMarkup(item, index, editable, showDelete) {
   return `
-    <div class="invoice-item-form" data-index="${index}" style="display: grid; gap: 0.65rem; grid-template-columns: 2.5fr 1fr 0.9fr 1.1fr 0.9fr auto; align-items: end;">
+    <div class="invoice-item-form" data-index="${index}" style="display: grid; gap: 0.5rem; grid-template-columns: 2.5fr 0.9fr 0.8fr 1fr 0.8fr auto; align-items: end; padding-left: 0.15rem;">
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">Concepto *</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.2rem; font-size: 0.7rem; color: var(--text-secondary);">Concepto *</label>
         <input
           type="text"
           class="form-input"
@@ -311,11 +311,11 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
           value="${escapeHtml(item.description)}"
           ${editable ? '' : 'disabled'}
           placeholder="Servicio o producto"
-          style="width: 100%;"
+          style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.75rem; height: 30px;"
         />
       </div>
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">Unidad</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.2rem; font-size: 0.7rem; color: var(--text-secondary);">Unidad</label>
         <input
           type="text"
           class="form-input"
@@ -323,11 +323,11 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
           value="${escapeHtml(item.unitType)}"
           ${editable ? '' : 'disabled'}
           placeholder="unidad"
-          style="width: 100%;"
+          style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.75rem; height: 30px;"
         />
       </div>
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">Cantidad</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.2rem; font-size: 0.7rem; color: var(--text-secondary);">Cant.</label>
         <input
           type="number"
           class="form-input"
@@ -336,11 +336,11 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
           step="0.01"
           min="0"
           ${editable ? '' : 'disabled'}
-          style="width: 100%;"
+          style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.75rem; height: 30px;"
         />
       </div>
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">Precio unit.</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.2rem; font-size: 0.7rem; color: var(--text-secondary);">Precio</label>
         <input
           type="number"
           class="form-input"
@@ -349,11 +349,11 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
           step="0.01"
           min="0"
           ${editable ? '' : 'disabled'}
-          style="width: 100%;"
+          style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.75rem; height: 30px;"
         />
       </div>
       <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.8rem; color: var(--text-secondary);">IVA (%)</label>
+        <label style="display: block; font-weight: 600; margin-bottom: 0.2rem; font-size: 0.7rem; color: var(--text-secondary);">IVA</label>
         <input
           type="number"
           class="form-input"
@@ -363,7 +363,7 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
           min="0"
           max="100"
           ${editable ? '' : 'disabled'}
-          style="width: 100%;"
+          style="width: 100%; padding: 0.35rem 0.5rem; font-size: 0.75rem; height: 30px;"
         />
       </div>
       <div>
@@ -373,7 +373,7 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
         ` : ''}
       </div>
     </div>
-    <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-primary); border-radius: 6px; display: flex; gap: 1rem; font-size: 0.75rem; align-items: center; border-left: 3px solid #3b82f6;">
+    <div style="margin-top: 0.4rem; padding: 0.4rem 0.6rem; background: var(--bg-primary); border-radius: 4px; display: flex; gap: 1.5rem; font-size: 0.7rem; align-items: center; border-left: 3px solid #3b82f6;">
       <div style="display: flex; align-items: center; gap: 0.4rem;">
         <span style="color: var(--text-secondary); font-weight: 500;">Subtotal:</span>
         <strong style="color: var(--text-primary);">${currencyFormatter.format(calculateLineSubtotal(item))}</strong>
@@ -546,8 +546,23 @@ function handleItemEditorTabInput(e) {
   state.items[index] = item;
   state.latestTotals = calculateInvoiceTotals(state.items, state.irpfPercentage);
 
-  // Re-renderizar solo la línea actual para actualizar totales de línea
-  renderItemsEditorWithTabs(editorKey);
+  // Solo actualizar los totales sin re-renderizar todo el formulario
+  // Re-renderizar causa que el input pierda el foco
+  updateTotalsDisplay(editorKey);
+  
+  // Actualizar los totales de la línea actual directamente en el DOM
+  const lineContainer = e.target.closest('.invoice-item-form');
+  if (lineContainer && lineContainer.nextElementSibling) {
+    const lineTotals = calculateLineTotals(item);
+    const totalsDiv = lineContainer.nextElementSibling;
+    const subtotalEl = totalsDiv.querySelector('div:nth-child(1) strong');
+    const vatEl = totalsDiv.querySelector('div:nth-child(2) strong');
+    const totalEl = totalsDiv.querySelector('div:nth-child(3) strong');
+    
+    if (subtotalEl) subtotalEl.textContent = currencyFormatter.format(lineTotals.base);
+    if (vatEl) vatEl.textContent = currencyFormatter.format(lineTotals.vatAmount);
+    if (totalEl) totalEl.textContent = currencyFormatter.format(lineTotals.total);
+  }
 }
 
 function handleItemEditorTabClick(e) {
@@ -1618,7 +1633,7 @@ async function openNewInvoiceModal() {
     const modalHTML = `
       <div class="modal is-open" id="new-invoice-modal">
         <div class="modal__backdrop" onclick="closeNewInvoiceModal()"></div>
-        <div class="modal__panel" style="width: min(98vw, 1800px); max-width: 1800px; max-height: 85vh; display: flex; flex-direction: column;">
+        <div class="modal__panel" style="width: min(99vw, 1900px); max-width: 1900px; max-height: 90vh; display: flex; flex-direction: column;">
           <header class="modal__head" style="flex-shrink: 0; padding: 1rem 1.5rem;">
             <div>
               <h2 class="modal__title" style="margin: 0; font-size: 1.25rem;">Nueva factura</h2>
@@ -1626,21 +1641,21 @@ async function openNewInvoiceModal() {
             </div>
             <button type="button" class="modal__close" onclick="closeNewInvoiceModal()">&times;</button>
           </header>
-          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 0.85rem 1.5rem;">
+          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 0.75rem 1.25rem;">
             <form id="new-invoice-form" style="display: grid; grid-template-columns: 1fr 350px; gap: 1.25rem; height: 100%;">
               
               <!-- COLUMNA IZQUIERDA: Datos de factura y líneas -->
-              <div style="display: flex; flex-direction: column; gap: 0.5rem; min-height: 0;">
+              <div style="display: flex; flex-direction: column; gap: 0.4rem; min-height: 0;">
                 
                 <!-- Datos principales de la factura -->
-                <div style="display: grid; gap: 0.5rem; grid-template-columns: minmax(125px, auto) 1fr 1fr 1fr;">
+                <div style="display: grid; gap: 0.4rem; grid-template-columns: minmax(120px, auto) 1fr 1fr 1fr;">
                   <div style="min-width: 125px;">
                     <label for="new-invoice-number" style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.75rem; color: var(--text-secondary);">Nº Factura *</label>
                     <input type="text" id="new-invoice-number" name="invoice_number" class="form-input" placeholder="2024-001" required style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.8rem; height: 34px;" />
                   </div>
                   <div>
-                    <label for="new-invoice-status" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Estado</label>
-                    <select id="new-invoice-status" name="status" class="form-input" style="width: 100%;">
+                    <label for="new-invoice-status" style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.75rem; color: var(--text-secondary);">Estado</label>
+                    <select id="new-invoice-status" name="status" class="form-input" style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.8rem; height: 34px;">
                       <option value="draft" selected>Borrador</option>
                       <option value="pending">Pendiente</option>
                       <option value="sent">Enviada</option>
@@ -1649,12 +1664,12 @@ async function openNewInvoiceModal() {
                     </select>
                   </div>
                   <div style="min-width: 160px;">
-                    <label for="new-invoice-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Emisión</label>
-                    <input type="date" id="new-invoice-issue-date" name="issue_date" class="form-input" value="${today}" required style="width: 100%;" />
+                    <label for="new-invoice-issue-date" style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.75rem; color: var(--text-secondary);">F. Emisión</label>
+                    <input type="date" id="new-invoice-issue-date" name="issue_date" class="form-input" value="${today}" required style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.8rem; height: 34px;" />
                   </div>
                   <div style="min-width: 160px;">
-                    <label for="new-invoice-due-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">F. Vencimiento</label>
-                    <input type="date" id="new-invoice-due-date" name="due_date" class="form-input" value="${dueDefaultDate}" required style="width: 100%;" />
+                    <label for="new-invoice-due-date" style="display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.75rem; color: var(--text-secondary);">F. Vencimiento</label>
+                    <input type="date" id="new-invoice-due-date" name="due_date" class="form-input" value="${dueDefaultDate}" required style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.8rem; height: 34px;" />
                   </div>
                 </div>
                 
@@ -1677,10 +1692,10 @@ async function openNewInvoiceModal() {
                 </div>
 
                 <!-- Editor de líneas de factura -->
-                <section style="border: 1px solid var(--border-color); border-radius: 8px; padding: 0.65rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
-                    <button type="button" class="btn-secondary" id="add-new-invoice-item" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;">+ Añadir línea</button>
+                <section style="border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; background: var(--bg-secondary); flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <h3 style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">Líneas de factura</h3>
+                    <button type="button" class="btn-secondary" id="add-new-invoice-item" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">+ Añadir</button>
                   </div>
 
                   <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">

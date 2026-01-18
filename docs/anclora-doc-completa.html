@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anclora Flow - Documentación Técnica Completa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 280px;
+            background: #020617;
+            border-right: 1px solid #334155;
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        }
+
+        .logo {
+            padding: 1.5rem;
+            border-bottom: 1px solid #334155;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            color: #38bdf8;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .logo p {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        .nav-section {
+            padding: 1rem 0;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .nav-title {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            letter-spacing: 0.1em;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 2px solid transparent;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: rgba(56, 189, 248, 0.1);
+            color: #38bdf8;
+            border-left-color: #38bdf8;
+        }
+
+        .nav-item.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border-left-color: #38bdf8;
+            font-weight: 600;
+        }
+
+        /* MAIN CONTENT */
+        .main {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #38bdf8;
+            padding-bottom: 1rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #38bdf8;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #cbd5e1;
+            font-size: 0.95rem;
+        }
+
+        /* SECTIONS */
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #38bdf8;
+            margin: 1.5rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            margin: 1.5rem 0 0.75rem;
+            font-weight: 600;
+        }
+
+        p {
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        /* CARDS */
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            color: #38bdf8;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .card-badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        /* COMPARACIÓN */
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .comparison-item {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+
+        .comparison-item.winner {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .comparison-item h4 {
+            color: #38bdf8;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .comparison-item ul {
+            list-style: none;
+            font-size: 0.9rem;
+        }
+
+        .comparison-item li {
+            color: #cbd5e1;
+            margin-bottom: 0.5rem;
+            padding-left: 1.25rem;
+            position: relative;
+        }
+
+        .comparison-item li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        /* CÓDIGO */
+        .code-block {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            font-family: 'Courier New', monospace;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: #38bdf8;
+        }
+
+        /* TABLA */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+
+        th {
+            background: rgba(56, 189, 248, 0.1);
+            border-bottom: 2px solid #38bdf8;
+            padding: 1rem;
+            text-align: left;
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #334155;
+            color: #cbd5e1;
+        }
+
+        tr:hover {
+            background: rgba(56, 189, 248, 0.05);
+        }
+
+        /* LISTA CHECKPOINTS */
+        .checklist {
+            list-style: none;
+            padding: 1rem 0;
+        }
+
+        .checklist li {
+            padding: 0.5rem 0;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .checklist li:before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* BOTONES */
+        .btn {
+            display: inline-block;
+            background: #38bdf8;
+            color: #0f172a;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: #0284c7;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #38bdf8;
+            border: 1px solid #38bdf8;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        /* SCROLL */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid #334155;
+            }
+
+            .main {
+                margin-left: 0;
+            }
+
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        .alert {
+            background: rgba(56, 189, 248, 0.1);
+            border-left: 4px solid #38bdf8;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.25rem;
+        }
+
+        .alert.warning {
+            background: rgba(249, 115, 22, 0.1);
+            border-left-color: #f97316;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            border-left-color: #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>🚀 Anclora Flow</h1>
+                <p>Documentación Técnica Completa</p>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">📚 Parte 1: Introducción</div>
+                <div class="nav-item active" onclick="switchSection('intro')">Introducción</div>
+                <div class="nav-item" onclick="switchSection('arquitectura')">Arquitectura General</div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">🔧 Parte 8: Técnica Avanzada</div>
+                <div class="nav-item" onclick="switchSection('ocr')">OCR Avanzado</div>
+                <div class="nav-item" onclick="switchSection('storage')">Storage</div>
+                <div class="nav-item" onclick="switchSection('ia')">IA Assistant</div>
+                <div class="nav-item" onclick="switchSection('optimizacion')">Optimización</div>
+                <div class="nav-item" onclick="switchSection('seguridad')">Seguridad</div>
+                <div class="nav-item" onclick="switchSection('troubleshooting')">Troubleshooting</div>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-title">📋 Recursos</div>
+                <div class="nav-item" onclick="switchSection('componentes')">Componentes React</div>
+                <div class="nav-item" onclick="switchSection('deployment')">Deployment</div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main">
+            <!-- INTRO -->
+            <section id="intro" class="section active">
+                <div class="header">
+                    <h1>👋 Bienvenido a Anclora Flow</h1>
+                    <p>Documentación técnica completa para consultores IA en fiscalidad española</p>
+                </div>
+
+                <div class="alert">
+                    <strong>📌 Estado:</strong> Documentación actualizada a 2026-01-17
+                </div>
+
+                <p>Este documento compila toda la información técnica necesaria para:</p>
+                <ul style="list-style: disc; margin-left: 2rem; margin-bottom: 1rem;">
+                    <li>Entender la arquitectura completa de Anclora Flow</li>
+                    <li>Configurar OCR, Storage e IA</li>
+                    <li>Desplegar en producción</li>
+                    <li>Resolver problemas avanzados</li>
+                </ul>
+
+                <h3 style="color: #cbd5e1; margin: 1.5rem 0;">📊 Estadísticas del Proyecto</h3>
+                <table>
+                    <tr>
+                        <th>Métrica</th>
+                        <th>Valor</th>
+                    </tr>
+                    <tr>
+                        <td>Stack Técnico</td>
+                        <td>FastAPI + React + PostgreSQL + Docker</td>
+                    </tr>
+                    <tr>
+                        <td>OCR Engines Soportados</td>
+                        <td>3 (Tesseract, PaddleOCR, RapidOCR)</td>
+                    </tr>
+                    <tr>
+                        <td>Opciones Storage</td>
+                        <td>3 (Local, Backblaze B2, DigitalOcean)</td>
+                    </tr>
+                    <tr>
+                        <td>Modelos de IA Integrados</td>
+                        <td>Claude-3.5-Sonnet + Contextos Especializados</td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- ARQUITECTURA -->
+            <section id="arquitectura" class="section">
+                <div class="header">
+                    <h1>🏗️ Arquitectura General</h1>
+                    <p>Componentes principales y flujo de datos</p>
+                </div>
+
+                <h3 class="section-title">🔄 Flujo Principal</h3>
+
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h4>1️⃣ Usuario sube documento</h4>
+                        <p>PDF, imagen o factura</p>
+                    </div>
+                    <div class="comparison-item">
+                        <h4>2️⃣ OCR procesa</h4>
+                        <p>Extrae texto y datos</p>
+                    </div>
+                    <div class="comparison-item">
+                        <h4>3️⃣ Storage guarda</h4>
+                        <p>Local o en cloud</p>
+                    </div>
+                </div>
+
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h4>4️⃣ IA analiza</h4>
+                        <p>Contexto fiscal/contable</p>
+                    </div>
+                    <div class="comparison-item">
+                        <h4>5️⃣ BD almacena</h4>
+                        <p>PostgreSQL estructurado</p>
+                    </div>
+                    <div class="comparison-item">
+                        <h4>6️⃣ Frontend muestra</h4>
+                        <p>React interactivo</p>
+                    </div>
+                </div>
+
+                <h3 class="section-title">🎯 Stack Técnico</h3>
+                
+                <div class="card">
+                    <div class="card-title">Backend</div>
+                    <p><strong>FastAPI + Uvicorn</strong> - Framework moderno y rápido para Python</p>
+                    <ul style="list-style: disc; margin-left: 2rem;">
+                        <li>Async/await nativo</li>
+                        <li>Validación automática con Pydantic</li>
+                        <li>OpenAPI/Swagger incluido</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Base de Datos</div>
+                    <p><strong>PostgreSQL + SQLAlchemy</strong> - Relacional robusto con ORM</p>
+                    <ul style="list-style: disc; margin-left: 2rem;">
+                        <li>Soporte para tipos complejos (JSON, JSONB)</li>
+                        <li>Full-text search</li>
+                        <li>Escalable para millones de registros</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Frontend</div>
+                    <p><strong>React + TypeScript</strong> - UI moderna y type-safe</p>
+                    <ul style="list-style: disc; margin-left: 2rem;">
+                        <li>Components reutilizables</li>
+                        <li>State management con Context/Redux</li>
+                        <li>Responsive design</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Infraestructura</div>
+                    <p><strong>Docker + Compose + Redis</strong> - Containerización y caché</p>
+                    <ul style="list-style: disc; margin-left: 2rem;">
+                        <li>Orquestación multi-servicio</li>
+                        <li>Redis para sesiones y caché</li>
+                        <li>APScheduler para tareas programadas</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- OCR -->
+            <section id="ocr" class="section">
+                <div class="header">
+                    <h1>🔤 Configuración OCR Avanzada</h1>
+                    <p>Tres opciones disponibles según tu caso de uso</p>
+                </div>
+
+                <h3 class="section-title">📊 Comparativa de OCR</h3>
+
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h4>✅ Tesseract</h4>
+                        <div class="card-badge">MVP/Testing</div>
+                        <ul>
+                            <li>Costo: $0</li>
+                            <li>Precisión: 70-80%</li>
+                            <li>Velocidad: Lenta</li>
+                            <li>RAM: Baja</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-item winner">
+                        <h4>🏆 PaddleOCR</h4>
+                        <div class="card-badge">Recomendado</div>
+                        <ul>
+                            <li>Costo: $0</li>
+                            <li>Precisión: 90%+</li>
+                            <li>Velocidad: Media</li>
+                            <li>RAM: Alta</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-item">
+                        <h4>⚡ RapidOCR</h4>
+                        <div class="card-badge">Batch Processing</div>
+                        <ul>
+                            <li>Costo: $0</li>
+                            <li>Precisión: 88-92%</li>
+                            <li>Velocidad: MuyRápida</li>
+                            <li>RAM: Media</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3 class="section-title">🚀 Instalación Rápida</h3>
+
+                <h4 class="section-subtitle">Opción 1: PaddleOCR (Recomendado)</h4>
+                <div class="code-block">
+<code>pip install paddleocr==2.7.0.3
+pip install pdf2image==1.16.3
+pip install Pillow==9.5.0</code>
+                </div>
+
+                <h4 class="section-subtitle">Opción 2: Tesseract</h4>
+                <div class="code-block">
+<code># macOS
+brew install tesseract tesseract-lang
+
+# Ubuntu
+sudo apt-get install tesseract-ocr tesseract-ocr-spa
+
+# requirements.txt
+pytesseract==0.3.10</code>
+                </div>
+
+                <div class="alert warning">
+                    <strong>⚠️ Importante:</strong> PaddleOCR descarga ~200MB de modelos en la primera ejecución. Usa cache local en docker-compose.
+                </div>
+            </section>
+
+            <!-- STORAGE -->
+            <section id="storage" class="section">
+                <div class="header">
+                    <h1>💾 Estrategias de Storage</h1>
+                    <p>Elige según presupuesto y escala</p>
+                </div>
+
+                <h3 class="section-title">💰 Comparativa de Costos</h3>
+
+                <table>
+                    <tr>
+                        <th>Opción</th>
+                        <th>Costo Mensual</th>
+                        <th>Almacenamiento</th>
+                        <th>Mejor para</th>
+                    </tr>
+                    <tr>
+                        <td>Local Storage</td>
+                        <td>$0</td>
+                        <td>Limitado por disco</td>
+                        <td>Desarrollo, MVP</td>
+                    </tr>
+                    <tr>
+                        <td>Backblaze B2</td>
+                        <td>~$6/TB</td>
+                        <td>10GB gratis/mes</td>
+                        <td>Producción (presupuesto)</td>
+                    </tr>
+                    <tr>
+                        <td>DigitalOcean Spaces</td>
+                        <td>$5</td>
+                        <td>250GB</td>
+                        <td>Producción (balance)</td>
+                    </tr>
+                </table>
+
+                <div class="card">
+                    <div class="card-title">🟢 Local Storage</div>
+                    <p><strong>Ideal para:</strong> Desarrollo y testing</p>
+                    <div class="code-block">
+<code># docker-compose.yml
+volumes:
+  - ./storage:/app/storage</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🟡 Backblaze B2</div>
+                    <p><strong>Ideal para:</strong> Producción con presupuesto limitado</p>
+                    <p><strong>Costo:</strong> ~$6 USD/TB/mes (después de 10GB/mes gratis)</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔵 DigitalOcean Spaces</div>
+                    <p><strong>Ideal para:</strong> Producción con mejor UX</p>
+                    <p><strong>Costo:</strong> $5 USD/mes (250GB)</p>
+                </div>
+            </section>
+
+            <!-- IA ASSISTANT -->
+            <section id="ia" class="section">
+                <div class="header">
+                    <h1>🤖 Integración Asistente IA</h1>
+                    <p>Claude especializado en fiscalidad española</p>
+                </div>
+
+                <div class="alert success">
+                    <strong>✅ Ventaja:</strong> Contextos especializados para Tax, Accounting, Invoicing y Payments
+                </div>
+
+                <h3 class="section-title">🎯 4 Contextos Disponibles</h3>
+
+                <div class="card">
+                    <div class="card-title">1. Tax Context</div>
+                    <p>Especialidad en impuestos, modelos fiscales (130, 303, 111), retenciones, IRPF, IVA</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">2. Accounting Context</div>
+                    <p>Contabilidad, registros, deducibilidad de gastos, márgenes de ganancia</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">3. Invoicing Context</div>
+                    <p>Facturación, control de pagos, cobranza, clientes morosos</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">4. Payments Context</div>
+                    <p>Gestión de cobros, métodos de pago, reconciliación bancaria</p>
+                </div>
+
+                <h3 class="section-title">🔌 Endpoint API</h3>
+
+                <div class="code-block">
+<code>POST /api/v1/assistant/chat
+{
+  "message": "¿Cuál es el modelo 130?",
+  "context": "tax"  # tax | accounting | invoicing | payments
+}</code>
+                </div>
+
+                <h3 class="section-title">🔑 Configuración .env</h3>
+
+                <div class="code-block">
+<code>CLAUDE_API_KEY=sk-ant-xxxxxxxxxxxx
+CLAUDE_MODEL=claude-3-5-sonnet-20241022</code>
+                </div>
+            </section>
+
+            <!-- OPTIMIZACIÓN -->
+            <section id="optimizacion" class="section">
+                <div class="header">
+                    <h1>⚡ Optimización de Rendimiento</h1>
+                    <p>Técnicas para escalar en producción</p>
+                </div>
+
+                <h3 class="section-title">🎨 Caching de OCR</h3>
+
+                <p>Reutiliza resultados OCR para archivos duplicados usando Redis:</p>
+
+                <div class="code-block">
+<code>cache_key = md5(file_content).hexdigest()
+cached_result = redis.get(f"ocr:{cache_key}")
+if cached_result:
+    return cached_result  # Retorno instantáneo!
+else:
+    result = ocr.extract(file)
+    redis.setex(f"ocr:{cache_key}", 604800, result)
+    return result</code>
+                </div>
+
+                <div class="alert success">
+                    <strong>📈 Mejora:</strong> Reducción de 95% en tiempo de respuesta para archivos repetidos
+                </div>
+
+                <h3 class="section-title">📦 Batch Processing con Celery</h3>
+
+                <p>Procesa múltiples documentos en background:</p>
+
+                <div class="code-block">
+<code>@celery_app.task(queue='ocr')
+def process_receipt_ocr(receipt_id: str):
+    # Procesa en worker separado
+    result = ocr.extract(receipt.file_path)
+    receipt.extracted_data = result
+    db.commit()</code>
+                </div>
+
+                <h3 class="section-title">🐘 Pooling de Conexiones BD</h3>
+
+                <table>
+                    <tr>
+                        <th>Configuración</th>
+                        <th>Valor Recomendado</th>
+                    </tr>
+                    <tr>
+                        <td>Pool Size</td>
+                        <td>20</td>
+                    </tr>
+                    <tr>
+                        <td>Max Overflow</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td>Pool Recycle</td>
+                        <td>3600 (1 hora)</td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- SEGURIDAD -->
+            <section id="seguridad" class="section">
+                <div class="header">
+                    <h1>🔐 Seguridad</h1>
+                    <p>Mejores prácticas en producción</p>
+                </div>
+
+                <h3 class="section-title">✅ Validación de Archivos</h3>
+
+                <div class="card">
+                    <div class="card-title">1. Validar MIME Type Real</div>
+                    <p>No confiar en extensión, validar con magic numbers:</p>
+                    <div class="code-block">
+<code>import magic
+mime = magic.Magic(mime=True)
+file_mime = mime.from_file(file_path)
+# Validar contra ALLOWED_MIMETYPES</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">2. Escanear Malware (Opcional)</div>
+                    <p>Usar ClamAV para análisis profundo:</p>
+                    <div class="code-block">
+<code>import clamd
+cd = clamd.ClamD()
+result = cd.scan_file(file_path)</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">3. Rate Limiting</div>
+                    <p>Máximo 5 uploads por minuto:</p>
+                    <div class="code-block">
+<code>@router.post("/")
+@limiter.limit("5/minute")
+async def upload_receipt(...):</code>
+                    </div>
+                </div>
+
+                <h3 class="section-title">🔑 Variables de Entorno</h3>
+
+                <ul class="checklist">
+                    <li>NUNCA commitear .env a Git</li>
+                    <li>Usar .env.example con placeholders</li>
+                    <li>Validar variables en startup</li>
+                    <li>Rotación periódica de API keys</li>
+                </ul>
+            </section>
+
+            <!-- TROUBLESHOOTING -->
+            <section id="troubleshooting" class="section">
+                <div class="header">
+                    <h1>🔧 Troubleshooting Avanzado</h1>
+                    <p>Resolución de problemas comunes</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">❌ OCR muy lento en producción</div>
+                    <p><strong>Síntomas:</strong> Uploads tardan >30 segundos</p>
+                    <p><strong>Solución 1:</strong> Activar GPU</p>
+                    <div class="code-block">
+<code>pip install onnxruntime-gpu
+export USE_GPU=true</code>
+                    </div>
+                    <p><strong>Solución 2:</strong> Usar Celery (procesamiento en background)</p>
+                    <p><strong>Solución 3:</strong> Reducir resolución de imagen</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">💾 Almacenamiento lleno</div>
+                    <p><strong>Síntomas:</strong> Error "No space left on device"</p>
+                    <div class="code-block">
+<code># Ver uso
+du -sh ./storage/*
+
+# Limpiar archivos >90 días
+find ./storage -mtime +90 -delete</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🐘 Base de datos corrupta</div>
+                    <p><strong>Síntomas:</strong> Errores de conexión, queries lentas</p>
+                    <p><strong>Backup automático:</strong></p>
+                    <div class="code-block">
+<code>docker exec anclora_postgres pg_dump -U user db > backup.sql</code>
+                    </div>
+                    <p><strong>Restaurar:</strong></p>
+                    <div class="code-block">
+<code>docker exec -i anclora_postgres psql -U user db < backup.sql</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">💾 Memoria RAM insuficiente</div>
+                    <p><strong>Síntomas:</strong> Proceso muere sin error</p>
+                    <p><strong>Monitorear:</strong></p>
+                    <div class="code-block">
+<code>docker stats anclora_backend
+# Limitar en compose:
+memory: 2g
+memswap_limit: 2g</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COMPONENTES REACT -->
+            <section id="componentes" class="section">
+                <div class="header">
+                    <h1>⚛️ Componentes React</h1>
+                    <p>Componentes reutilizables para la UI</p>
+                </div>
+
+                <div class="alert">
+                    <strong>📍 Ubicación:</strong> /frontend/src/components/
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📤 ReceiptUpload</div>
+                    <p>Maneja carga de documentos con validación</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📊 DataExtractor</div>
+                    <p>Muestra datos extraídos por OCR de forma legible</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">💬 AssistantChat</div>
+                    <p>Chat con IA para preguntas fiscales</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📈 DashboardMetrics</div>
+                    <p>KPIs y gráficos de uso</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">⚙️ SettingsPanel</div>
+                    <p>Configuración de usuario y preferencias</p>
+                </div>
+            </section>
+
+            <!-- DEPLOYMENT -->
+            <section id="deployment" class="section">
+                <div class="header">
+                    <h1>🚀 Deployment en Producción</h1>
+                    <p>Checklist final antes de lanzar</p>
+                </div>
+
+                <h3 class="section-title">✅ Checklist Pre-Deployment</h3>
+
+                <ul class="checklist">
+                    <li>OCR engine elegido y configurado</li>
+                    <li>Storage elegido (local, B2 o DigitalOcean)</li>
+                    <li>Variables de entorno completadas</li>
+                    <li>Base de datos migrada y testeada</li>
+                    <li>Redis corriendo y accesible</li>
+                    <li>Celery workers activos</li>
+                    <li>Logs centralizados (Sentry o similar)</li>
+                    <li>Monitoring activo (NewRelic, DataDog)</li>
+                    <li>Backups automáticos configurados</li>
+                    <li>SSL/HTTPS activo</li>
+                    <li>Rate limiting configurado</li>
+                    <li>CORS limitado a dominios autorizados</li>
+                    <li>Tests pasando al 100%</li>
+                    <li>Load testing completado</li>
+                </ul>
+
+                <h3 class="section-title">🌐 Hosting Recomendado</h3>
+
+                <table>
+                    <tr>
+                        <th>Componente</th>
+                        <th>Recomendación</th>
+                        <th>Costo</th>
+                    </tr>
+                    <tr>
+                        <td>Backend (FastAPI)</td>
+                        <td>DigitalOcean App Platform o Railway</td>
+                        <td>$5-20/mes</td>
+                    </tr>
+                    <tr>
+                        <td>Frontend (React)</td>
+                        <td>Vercel o Netlify</td>
+                        <td>Gratis-20/mes</td>
+                    </tr>
+                    <tr>
+                        <td>Base de Datos</td>
+                        <td>DigitalOcean Managed Database</td>
+                        <td>$15/mes</td>
+                    </tr>
+                    <tr>
+                        <td>Storage</td>
+                        <td>Backblaze B2 o DigitalOcean Spaces</td>
+                        <td>$5-15/mes</td>
+                    </tr>
+                    <tr>
+                        <td>Total Mínimo</td>
+                        <td colspan="2"><strong>~$30-50/mes</strong></td>
+                    </tr>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        function switchSection(sectionId) {
+            // Ocultar todas las secciones
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            // Mostrar la sección seleccionada
+            document.getElementById(sectionId).classList.add('active');
+
+            // Marcar el nav item como activo
+            event.target.classList.add('active');
+
+            // Scroll al top
+            document.querySelector('.main').scrollTop = 0;
+        }
+    </script>
+</body>
+</html>
