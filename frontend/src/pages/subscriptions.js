@@ -1,31 +1,53 @@
+/**
+ * GESTIÓN DE SUSCRIPCIONES - VISTA DUAL
+ * 
+ * Pestaña 1: MIS GASTOS - Servicios que YO PAGO (GitHub, Adobe, etc.)
+ * Pestaña 2: MIS INGRESOS - Clientes que ME PAGAN (planes de suscripción)
+ */
+
+// ==========================================
+// ESTADO GLOBAL
+// =========================================
 const subscriptionState = {
-  subscriptions: [],
-  summary: {
-    total_subscriptions: 0,
-    active_subscriptions: 0,
-    paused_subscriptions: 0,
-    cancelled_subscriptions: 0,
-    monthly_recurring_revenue: 0,
-    next_30_days_revenue: 0,
+  activeTab: 'expenses', // 'expenses' o 'revenue'
+  
+  // Mis gastos (subscriptions)
+  mySubscriptions: [],
+  mySubscriptionsSummary: {
+    total: 0,
+    active: 0,
+    trial: 0,
+    monthly_cost: 0,
+    trials_expiring_soon: 0
   },
-  upcoming: [],
-  breakdown: [],
-  suggestions: [],
-  clients: [],
+  
+  // Mis ingresos (customer_subscriptions)
+  customerSubscriptions: [],
+  customerSubscriptionsSummary: {
+    total: 0,
+    active: 0,
+    trial: 0,
+    mrr: 0,
+    arr: 0,
+    trials_expiring_soon: 0
+  },
+  
   filters: {
-    search: "",
-    status: "all",
-    billingCycle: "all",
-    autoInvoice: "all",
+    expenses: { search: '', status: 'all', category: 'all' },
+    revenue: { search: '', status: 'all', plan: 'all' }
   },
+  
   loading: false,
-  error: null,
+  error: null
 };
 
-const currencyFormatter = new Intl.NumberFormat("es-ES", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 2,
+// ==========================================
+// UTILIDADES
+// ==========================================
+const currencyFormatter = new Intl.NumberFormat('es-ES', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 2
 });
 
 function formatCurrency(value) {
@@ -35,1045 +57,440 @@ function formatCurrency(value) {
 }
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return '—';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("es-ES", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
   });
 }
 
-function escapeHtml(value = "") {
+function escapeHtml(value = '') {
   return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-let debounceTimer = null;
-function debounce(callback, delay = 320) {
-  window.clearTimeout(debounceTimer);
-  debounceTimer = window.setTimeout(callback, delay);
-}
-
-function setLoading(isLoading) {
-  subscriptionState.loading = isLoading;
-  const spinner = document.querySelector("[data-subscriptions-loading]");
-  if (spinner) spinner.hidden = !isLoading;
-}
-
-function setError(message) {
-  subscriptionState.error = message;
-  const box = document.querySelector("[data-subscriptions-error]");
-  if (!box) return;
-  if (!message) {
-    box.hidden = true;
-    box.innerHTML = "";
-    return;
-  }
-  box.hidden = false;
-  box.innerHTML = `
-    <div class="module-error__content">
-      <span class="module-error__icon">⚠️</span>
-      <div>
-        <p class="module-error__title">No pudimos cargar las suscripciones</p>
-        <p class="module-error__message">${escapeHtml(message)}</p>
-      </div>
-      <button type="button" class="btn btn-secondary" data-action="retry-subscriptions">Reintentar</button>
-    </div>
-  `;
-}
-
-function showToast(message, type = "info") {
-  const toast = document.createElement("div");
-  toast.className = `notification notification--${type}`;
-  toast.innerHTML = `
-    <span>${escapeHtml(message)}</span>
-    <button type="button" class="notification__close" aria-label="Cerrar">×</button>
-  `;
-  toast
-    .querySelector(".notification__close")
-    .addEventListener("click", () => toast.remove());
-  document.body.appendChild(toast);
-  window.setTimeout(() => toast.remove(), 3200);
-}
-
-async function loadSubscriptions() {
-  const response = await window.api.getSubscriptions({
-    search: subscriptionState.filters.search || undefined,
-    status:
-      subscriptionState.filters.status !== "all"
-        ? subscriptionState.filters.status
-        : undefined,
-    billingCycle:
-      subscriptionState.filters.billingCycle !== "all"
-        ? subscriptionState.filters.billingCycle
-        : undefined,
-    autoInvoice:
-      subscriptionState.filters.autoInvoice !== "all"
-        ? subscriptionState.filters.autoInvoice === "true"
-        : undefined,
-  });
-  const { subscriptions = [] } = response || {};
-  subscriptionState.subscriptions = subscriptions.map((item) => ({
-    id: String(item.id),
-    name: item.name,
-    description: item.description,
-    clientId: item.client_id ? String(item.client_id) : null,
-    clientName: item.client_name,
-    amount: item.amount,
-    currency: item.currency || "EUR",
-    billingCycle: item.billing_cycle,
-    nextBillingDate: item.next_billing_date,
-    status: item.status,
-    autoInvoice: item.auto_invoice,
-    startDate: item.start_date,
-    relatedRevenue: item.related_revenue,
-    type:
-      item.type ||
-      item.subscription_type ||
-      (item.category === "income" ? "income" : "expense"),
-  }));
-}
-
-async function loadSummary() {
-  const summary = await window.api.getSubscriptionSummary();
-  if (summary) {
-    subscriptionState.summary = summary;
-  }
-}
-
-async function loadUpcoming() {
-  try {
-    const upcoming = await window.api.getSubscriptionUpcoming(6);
-    subscriptionState.upcoming = Array.isArray(upcoming) ? upcoming : [];
-  } catch (error) {
-    subscriptionState.upcoming = [];
-  }
-}
-
-async function loadBreakdown() {
-  try {
-    const breakdown = await window.api.getSubscriptionStatusBreakdown();
-    subscriptionState.breakdown = Array.isArray(breakdown) ? breakdown : [];
-  } catch (error) {
-    subscriptionState.breakdown = [];
-  }
-}
-
-function buildSuggestions() {
-  const active = subscriptionState.subscriptions.filter(
-    (item) => item.status === "active"
-  );
-  const upcomingSoon = subscriptionState.upcoming
-    .slice()
-    .sort(
-      (a, b) =>
-        new Date(a.next_billing_date || a.nextBillingDate) -
-        new Date(b.next_billing_date || b.nextBillingDate)
-    )
-    .slice(0, 3);
-
-  const highest = active
-    .slice()
-    .sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0))
-    .slice(0, 3);
-
-  subscriptionState.suggestions = [
-    ...upcomingSoon.map((item) => ({
-      type: "upcoming",
-      label: `Cobro próximo ${formatDate(
-        item.next_billing_date || item.nextBillingDate
-      )}`,
-      value: `${escapeHtml(item.name)} · ${formatCurrency(item.amount ?? 0)}`,
-    })),
-    ...highest.map((item) => ({
-      type: "high",
-      label: "Alta facturación recurrente",
-      value: `${escapeHtml(item.name)} · ${formatCurrency(item.amount ?? 0)}`,
-    })),
-  ];
-}
-
-async function loadClients() {
-  try {
-    const response = await window.api.getClients({ isActive: true });
-    subscriptionState.clients = Array.isArray(response?.clients)
-      ? response.clients.map((client) => ({
-          ...client,
-          id: String(client.id),
-        }))
-      : [];
-  } catch (error) {
-    subscriptionState.clients = [];
-  }
-}
-
-function renderSummary() {
-  const summary = subscriptionState.summary;
-  const total = document.getElementById("subscriptions-total");
-  const active = document.getElementById("subscriptions-active");
-  const paused = document.getElementById("subscriptions-paused");
-  const cancelled = document.getElementById("subscriptions-cancelled");
-  const mrr = document.getElementById("subscriptions-mrr");
-  const cashflow = document.getElementById("subscriptions-cashflow");
-
-  if (total) total.textContent = summary.total_subscriptions ?? 0;
-  if (active) active.textContent = summary.active_subscriptions ?? 0;
-  if (paused) paused.textContent = summary.paused_subscriptions ?? 0;
-  if (cancelled) cancelled.textContent = summary.cancelled_subscriptions ?? 0;
-  if (mrr)
-    mrr.textContent = formatCurrency(summary.monthly_recurring_revenue ?? 0);
-  if (cashflow)
-    cashflow.textContent = formatCurrency(summary.next_30_days_revenue ?? 0);
-}
-
-function renderSubscriptionsTable() {
-  const tbody = document.querySelector("[data-subscriptions-table]");
-  if (!tbody) return;
-
-  if (!subscriptionState.subscriptions.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="9">
-          <div class="empty-state">
-            <span class="empty-state__icon">🔁</span>
-            <h3>No hay suscripciones registradas.</h3>
-            <p>Configura tu primera suscripción para automatizar la facturación recurrente.</p>
-            <button type="button" class="btn btn-primary" data-open-subscription>Crear suscripción</button>
-          </div>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  const highlightSingle = subscriptionState.subscriptions.length === 1;
-
-  tbody.innerHTML = subscriptionState.subscriptions
-    .map((sub) => {
-      const statusBadge =
-        sub.status === "active"
-          ? "success"
-          : sub.status === "paused"
-          ? "warning"
-          : "danger";
-      const cycleLabel =
-        sub.billingCycle === "monthly"
-          ? "Mensual"
-          : sub.billingCycle === "quarterly"
-          ? "Trimestral"
-          : sub.billingCycle === "yearly"
-          ? "Anual"
-          : "Personalizado";
-      const typeLabel =
-        sub.type === "income" ? "Ingreso recurrente" : "Gasto recurrente";
-
-      return `
-        <tr data-subscription-row="${sub.id}" class="subscriptions-table__row${
-        highlightSingle ? " is-selected" : ""
-      }">
-          <td>
-            <div class="table-cell--main">
-              <strong>${escapeHtml(sub.name)}</strong>
-              <span>${escapeHtml(sub.description || "Sin descripción")}</span>
-            </div>
-          </td>
-          <td>
-            <span class="badge badge--neutral">${typeLabel}</span>
-          </td>
-          <td>${escapeHtml(sub.clientName || "Sin cliente")}</td>
-          <td>
-            <span class="badge badge--info">${cycleLabel}</span>
-          </td>
-          <td>
-            <span>${formatDate(sub.nextBillingDate)}</span>
-            <span class="meta">${formatDate(sub.startDate)}</span>
-          </td>
-          <td>
-            <strong>${formatCurrency(sub.amount ?? 0)}</strong>
-            <span class="meta">${escapeHtml(sub.currency || "EUR")}</span>
-          </td>
-          <td>
-            <span class="badge badge--${
-              sub.autoInvoice ? "success" : "neutral"
-            }">${sub.autoInvoice ? "Automática" : "Manual"}</span>
-          </td>
-          <td>
-            <span class="badge badge--${statusBadge}">
-              ${
-                sub.status === "active"
-                  ? "Activa"
-                  : sub.status === "paused"
-                  ? "Pausada"
-                  : "Cancelada"
-              }
-            </span>
-          </td>
-          <td>
-            <div class="table-actions">
-              <button type="button" class="btn-icon" data-subscription-view="${
-                sub.id
-              }" title="Ver">👁️</button>
-              <button type="button" class="btn-icon" data-subscription-edit="${
-                sub.id
-              }" title="Editar">✏️</button>
-              <button type="button" class="btn-icon" data-subscription-delete="${
-                sub.id
-              }" title="Eliminar" style="color: var(--danger, #ef4444);">🗑️</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
-}
-
-function renderInsights() {
-  const upcomingList = document.querySelector("[data-upcoming-subscriptions]");
-  const breakdownList = document.querySelector("[data-status-breakdown]");
-  const suggestionList = document.querySelector(
-    "[data-subscription-suggestions]"
-  );
-
-  if (upcomingList) {
-    if (!subscriptionState.upcoming.length) {
-      upcomingList.innerHTML = '<li class="empty">Sin cobros próximos</li>';
-    } else {
-      upcomingList.innerHTML = subscriptionState.upcoming
-        .map(
-          (item) => `
-            <li>
-              <span class="title">${escapeHtml(item.name)}</span>
-              <span class="meta">${formatDate(
-                item.next_billing_date || item.nextBillingDate
-              )} · ${formatCurrency(item.amount ?? 0)}</span>
-            </li>
-          `
-        )
-        .join("");
-    }
-  }
-
-  if (breakdownList) {
-    if (!subscriptionState.breakdown.length) {
-      breakdownList.innerHTML = '<li class="empty">Sin datos por estado</li>';
-    } else {
-      breakdownList.innerHTML = subscriptionState.breakdown
-        .map(
-          (item) => `
-            <li>
-              <span class="title">${escapeHtml(item.status)}</span>
-              <span class="meta">${item.count} · ${formatCurrency(
-            item.total_amount ?? 0
-          )}</span>
-            </li>
-          `
-        )
-        .join("");
-    }
-  }
-
-  if (suggestionList) {
-    if (!subscriptionState.suggestions.length) {
-      suggestionList.innerHTML =
-        '<li class="empty">Sin recomendaciones generadas</li>';
-    } else {
-      suggestionList.innerHTML = subscriptionState.suggestions
-        .map(
-          (item) => `
-            <li>
-              <span class="title">${escapeHtml(item.label)}</span>
-              <span class="meta">${escapeHtml(item.value)}</span>
-            </li>
-          `
-        )
-        .join("");
-    }
-  }
-}
-
-function getSubscriptionById(id) {
-  if (!id) return null;
-  return subscriptionState.subscriptions.find((item) => item.id === id) || null;
-}
-
-function buildSubscriptionFormFields(subscription = {}) {
-  const clientOptions = [
-    '<option value="">Sin cliente</option>',
-    ...subscriptionState.clients.map(
-      (client) =>
-        `<option value="${client.id}" ${
-          subscription.clientId === String(client.id) ? "selected" : ""
-        }>${escapeHtml(client.name || "Cliente sin nombre")}</option>`
-    ),
-  ].join("");
-
-  return `
-    <!-- Row 1: Name (2 col), Client (1 col), Status (1 col) -->
-    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.75rem;">
-      <label class="form-field">
-        <span>Nombre *</span>
-        <input type="text" name="name" value="${escapeHtml(
-          subscription.name || ""
-        )}" required />
-      </label>
-      <label class="form-field">
-        <span>Cliente</span>
-        <select name="clientId" style="font-size: 0.85rem;">
-          ${clientOptions}
-        </select>
-      </label>
-      <label class="form-field">
-        <span>Estado</span>
-        <select name="status">
-          <option value="active" ${
-            subscription.status === "active" ? "selected" : ""
-          }>Activa</option>
-          <option value="paused" ${
-            subscription.status === "paused" ? "selected" : ""
-          }>Pausada</option>
-          <option value="cancelled" ${
-            subscription.status === "cancelled" ? "selected" : ""
-          }>Cancelada</option>
-        </select>
-      </label>
-    </div>
-
-    <!-- Row 2: Amount, Currency, Type, Billing Cycle (4 cols) -->
-    <div style="display: grid; grid-template-columns: 1fr 0.7fr 1fr 1.3fr; gap: 0.75rem; margin-top: 0.75rem;">
-      <label class="form-field">
-        <span>Importe *</span>
-        <input type="number" step="0.01" min="0" name="amount" value="${
-          subscription.amount ?? ""
-        }" required />
-      </label>
-      <label class="form-field">
-        <span>Moneda</span>
-        <input type="text" name="currency" value="${escapeHtml(
-          subscription.currency || "EUR"
-        )}" maxlength="5" />
-      </label>
-      <label class="form-field">
-        <span>Tipo</span>
-        <select name="type">
-          <option value="expense" ${
-            (subscription.type || "expense") === "expense" ? "selected" : ""
-          }>Gasto</option>
-          <option value="income" ${
-            subscription.type === "income" ? "selected" : ""
-          }>Ingreso</option>
-        </select>
-      </label>
-      <label class="form-field">
-        <span>Ciclo</span>
-        <select name="billingCycle">
-          <option value="monthly" ${
-            subscription.billingCycle === "monthly" ? "selected" : ""
-          }>Mensual</option>
-          <option value="quarterly" ${
-            subscription.billingCycle === "quarterly" ? "selected" : ""
-          }>Trimestral</option>
-          <option value="yearly" ${
-            subscription.billingCycle === "yearly" ? "selected" : ""
-          }>Anual</option>
-          <option value="custom" ${
-            subscription.billingCycle === "custom" ? "selected" : ""
-          }>Personal</option>
-        </select>
-      </label>
-    </div>
-
-    <!-- Row 3: StartDate, NextBilling, AutoInvoice (Inline) -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 0.75rem; margin-top: 0.75rem;">
-      <label class="form-field">
-        <span>Inicio *</span>
-        <input type="date" name="startDate" value="${
-          subscription.startDate ? subscription.startDate.split("T")[0] : ""
-        }" required />
-      </label>
-      <label class="form-field">
-        <span>Próximo cobro *</span>
-        <input type="date" name="nextBillingDate" value="${
-          subscription.nextBillingDate
-            ? subscription.nextBillingDate.split("T")[0]
-            : ""
-        }" required />
-      </label>
-      <div class="form-field form-field--inline" style="justify-content: flex-start; padding-top: 1.2rem; padding-left: 0.5rem;">
-         <label class="toggle">
-            <input type="checkbox" name="autoInvoice" ${
-              subscription.autoInvoice !== false ? "checked" : ""
-            } />
-            <span class="toggle__slider"></span>
-            <span class="toggle__label">Generar factura auto.</span>
-          </label>
-      </div>
-    </div>
-
-    <!-- Row 4: Description -->
-    <div style="margin-top: 0.75rem;">
-      <label class="form-field">
-        <span>Descripción</span>
-        <textarea name="description" rows="1" placeholder="Descripción opcional" style="min-height: 2.2rem;">${escapeHtml(
-          subscription.description || ""
-        )}</textarea>
-      </label>
-    </div>
-  `;
-}
-
-// ... existing code ...
-
-function openSubscriptionModal(mode, subscriptionId = null) {
-  closeSubscriptionModal();
-  const subscription = subscriptionId
-    ? getSubscriptionById(String(subscriptionId))
-    : null;
-
-  if (mode !== "create" && !subscription && mode !== "create") {
-    showToast("No se encontró la suscripción seleccionada", "warning");
-    return;
-  }
-
-  if (mode === "view") {
-    // ... view logic preserves standard width ...
-    const detailHtml = buildSubscriptionDetail(subscription);
-    const modalHtml = `
-    <div class="modal is-open" id="subscription-modal">
-      <div class="modal__backdrop" data-modal-close></div>
-      <div class="modal__panel" style="width: min(95vw, 640px);">
-        <header class="modal__head">
-          <div>
-            <h2 class="modal__title">Detalle de la suscripción</h2>
-            <p class="modal__subtitle">${escapeHtml(
-              subscription?.name || ""
-            )}</p>
-          </div>
-          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
-        </header>
-          <div class="modal__body modal-form__body" style="display: grid; gap: 1.5rem;">
-            ${detailHtml}
-          </div>
-        <footer class="modal__footer modal-form__footer">
-          <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-          <button type="button" class="btn-primary" data-modal-edit="${
-            subscription?.id
-          }">Editar</button>
-          </footer>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML("beforeend", modalHtml);
-    // ... listener attachments ...
-    const modal = document.getElementById("subscription-modal");
-    modal?.querySelector(".modal__backdrop")?.addEventListener("click", closeSubscriptionModal);
-    modal?.querySelectorAll("[data-modal-close]").forEach((btn) => btn.addEventListener("click", closeSubscriptionModal));
-    modal?.querySelector("[data-modal-edit]")?.addEventListener("click", (ev) => {
-        const id = ev.currentTarget.dataset.modalEdit;
-        closeSubscriptionModal();
-        openSubscriptionModal("edit", id);
-      });
-    return;
-  }
-
-  const title = mode === "edit" ? "Editar suscripción" : "Nueva suscripción";
-  const formId = "subscription-form";
-  const formFields = buildSubscriptionFormFields(subscription || {});
+function showNotification(message, type = 'info') {
+  // Implementación simplificada - usar sistema de notificaciones global si existe
+  console.log(`[${type.toUpperCase()}]`, message);
   
-  // UPDATED: Width increased to 800px to accommodate horizontal layout
-  const modalHtml = `
-    <div class="modal is-open" id="subscription-modal">
-      <div class="modal__backdrop" data-modal-close></div>
-      <div class="modal__panel" style="width: min(95vw, 800px); max-width: 800px; padding: 1.5rem;">
-        <header class="modal__head" style="margin-bottom: 1rem;">
-          <div>
-            <h2 class="modal__title">${title}</h2>
-            <p class="modal__subtitle">Gestiona la facturación recurrente con toda la información clave.</p>
-          </div>
-          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar">×</button>
-        </header>
-        <form class="modal-form" id="${formId}" data-form-type="subscription" data-subscription-id="${
-    subscription?.id || ""
-  }" novalidate>
-          <div class="modal__body modal-form__body" style="overflow-y: visible;">
-            ${formFields}
-          </div>
-          <footer class="modal__footer modal-form__footer" style="margin-top: 1.5rem;">
-            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
-            <button type="submit" form="${formId}" class="btn-primary">${
-    mode === "edit" ? "Guardar cambios" : "Crear suscripción"
-  }</button>
-          </footer>
-        </form>
-      </div>
+  const toast = document.createElement('div');
+  toast.className = `notification notification--${type}`;
+  toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+  toast.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <span>${escapeHtml(message)}</span>
+      <button type="button" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
     </div>
   `;
-
-  document.body.insertAdjacentHTML("beforeend", modalHtml);
-  const modal = document.getElementById("subscription-modal");
-  modal
-    ?.querySelector(".modal__backdrop")
-    ?.addEventListener("click", closeSubscriptionModal);
-  modal
-    ?.querySelectorAll("[data-modal-close]")
-    .forEach((btn) => btn.addEventListener("click", closeSubscriptionModal));
-  modal
-    ?.querySelector("form")
-    ?.addEventListener("submit", handleSubscriptionFormSubmit);
+  
+  document.body.appendChild(toast);
+  toast.querySelector('button').addEventListener('click', () => toast.remove());
+  
+  setTimeout(() => toast.remove(), 5000);
 }
 
-
-
-function buildSubscriptionDetail(subscription) {
-  if (!subscription) {
-    return `
-      <div style="display: grid; gap: 1rem;">
-        <p style="margin: 0; font-size: 0.95rem; color: var(--text-secondary);">
-          No se encontró la suscripción seleccionada.
-        </p>
-      </div>
-    `;
+// ==========================================
+// CARGA DE DATOS
+// ==========================================
+async function loadMySubscriptions() {
+  try {
+    const response = await window.api.getSubscriptions({ type: 'expenses' });
+    
+    subscriptionState.mySubscriptions = response.subscriptions || [];
+    subscriptionState.mySubscriptionsSummary = calculateExpensesSummary(subscriptionState.mySubscriptions);
+    
+    renderExpensesTab();
+  } catch (error) {
+    console.error('Error loading my subscriptions:', error);
+    showNotification('Error al cargar tus suscripciones de gastos', 'error');
   }
+}
 
-  const cycleLabel =
-    subscription.billingCycle === "monthly"
-      ? "Mensual"
-      : subscription.billingCycle === "quarterly"
-      ? "Trimestral"
-      : subscription.billingCycle === "yearly"
-      ? "Anual"
-      : "Personalizado";
-  const typeLabel =
-    subscription.type === "income" ? "Ingreso recurrente" : "Gasto recurrente";
+async function loadCustomerSubscriptions() {
+  try {
+    const response = await window.api.getCustomerSubscriptions();
+    
+    subscriptionState.customerSubscriptions = response.subscriptions || [];
+    subscriptionState.customerSubscriptionsSummary = calculateRevenueSummary(subscriptionState.customerSubscriptions);
+    
+    renderRevenueTab();
+  } catch (error) {
+    console.error('Error loading customer subscriptions:', error);
+    showNotification('Error al cargar suscripciones de clientes', 'error');
+  }
+}
 
+function calculateExpensesSummary(subscriptions) {
+  const now = new Date();
+  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  
+  return {
+    total: subscriptions.length,
+    active: subscriptions.filter(s => s.status === 'active').length,
+    trial: subscriptions.filter(s => s.status === 'trial').length,
+    monthly_cost: subscriptions
+      .filter(s => s.status === 'active' || s.status === 'trial')
+      .reduce((sum, s) => {
+        if (s.billing_frequency === 'monthly') return sum + parseFloat(s.amount);
+        if (s.billing_frequency === 'quarterly') return sum + (parseFloat(s.amount) / 3);
+        if (s.billing_frequency === 'yearly') return sum + (parseFloat(s.amount) / 12);
+        return sum;
+      }, 0),
+    trials_expiring_soon: subscriptions.filter(s => {
+      if (s.status !== 'trial' || !s.trial_end_date) return false;
+      const endDate = new Date(s.trial_end_date);
+      return endDate <= in7Days;
+    }).length
+  };
+}
+
+function calculateRevenueSummary(subscriptions) {
+  const now = new Date();
+  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  
+  const activeSubs = subscriptions.filter(s => s.status === 'active' || s.status === 'trial');
+  
+  const mrr = activeSubs.reduce((sum, s) => {
+    if (s.billing_frequency === 'monthly') return sum + parseFloat(s.amount);
+    if (s.billing_frequency === 'quarterly') return sum + (parseFloat(s.amount) / 3);
+    if (s.billing_frequency === 'yearly') return sum + (parseFloat(s.amount) / 12);
+    return sum;
+  }, 0);
+  
+  return {
+    total: subscriptions.length,
+    active: subscriptions.filter(s => s.status === 'active').length,
+    trial: subscriptions.filter(s => s.status === 'trial').length,
+    mrr: mrr,
+    arr: mrr * 12,
+    trials_expiring_soon: subscriptions.filter(s => {
+      if (s.status !== 'trial' || !s.trial_end_date) return false;
+      const endDate = new Date(s.trial_end_date);
+      return endDate <= in7Days;
+    }).length
+  };
+}
+
+// ==========================================
+// RENDERIZADO - TABS
+// ==========================================
+function switchTab(tab) {
+  subscriptionState.activeTab = tab;
+  
+  // Actualizar UI de tabs
+  document.querySelectorAll('[data-tab]').forEach(tabEl => {
+    if (tabEl.dataset.tab === tab) {
+      tabEl.classList.add('active');
+    } else {
+      tabEl.classList.remove('active');
+    }
+  });
+  
+  // Mostrar/ocultar contenido
+  document.querySelectorAll('[data-tab-content]').forEach(content => {
+    if (content.dataset.tabContent === tab) {
+      content.style.display = 'block';
+    } else {
+      content.style.display = 'none';
+    }
+  });
+  
+  // Cargar datos si es necesario
+  if (tab === 'expenses' && subscriptionState.mySubscriptions.length === 0) {
+    loadMySubscriptions();
+  } else if (tab === 'revenue' && subscriptionState.customerSubscriptions.length === 0) {
+    loadCustomerSubscriptions();
+  }
+}
+
+// ==========================================
+// RENDERIZADO - TAB DE GASTOS
+// ==========================================
+function renderExpensesTab() {
+  const container = document.querySelector('[data-tab-content="expenses"]');
+  if (!container) return;
+  
+  const summary = subscriptionState.mySubscriptionsSummary;
+  const subscriptions = subscriptionState.mySubscriptions;
+  
+  container.innerHTML = `
+    <!-- Métricas de gastos -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+      <div class="stat-card">
+        <div class="stat-card__label">Total suscripciones</div>
+        <div class="stat-card__value">${summary.total}</div>
+        <div class="stat-card__sublabel">${summary.active} activas · ${summary.trial} en prueba</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card__label">Gasto mensual</div>
+        <div class="stat-card__value">${formatCurrency(summary.monthly_cost)}</div>
+        <div class="stat-card__sublabel">Coste recurrente aproximado</div>
+      </div>
+      
+      ${summary.trials_expiring_soon > 0 ? `
+        <div class="stat-card stat-card--warning">
+          <div class="stat-card__label">⚠️ Trials por expirar</div>
+          <div class="stat-card__value">${summary.trials_expiring_soon}</div>
+          <div class="stat-card__sublabel">En los próximos 7 días</div>
+        </div>
+      ` : ''}
+    </div>
+    
+    <!-- Tabla de suscripciones de gastos -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Servicio</th>
+            <th>Proveedor</th>
+            <th>Categoría</th>
+            <th>Importe</th>
+            <th>Frecuencia</th>
+            <th>Próximo cargo</th>
+            <th>Estado</th>
+            <th>Trial</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${subscriptions.length === 0 ? `
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 3rem;">
+                <p style="color: var(--text-secondary); margin: 0;">No tienes suscripciones de gastos registradas</p>
+                <button type="button" class="btn-primary" style="margin-top: 1rem;" onclick="openAddExpenseSubscriptionModal()">
+                  + Añadir suscripción
+                </button>
+              </td>
+            </tr>
+          ` :subscriptions.map(sub => renderExpenseSubscriptionRow(sub)).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderExpenseSubscriptionRow(sub) {
+  const statusBadge = {
+    trial: { label: 'Prueba', class: 'badge--warning' },
+    active: { label: 'Activa', class: 'badge--success' },
+    paused: { label: 'Pausada', class: 'badge--neutral' },
+    cancelled: { label: 'Cancelada', class: 'badge--error' }
+  }[sub.status] || { label: sub.status, class: '' };
+  
+  const trialInfo = sub.has_trial && sub.status === 'trial' 
+    ? `${sub.trial_days} días${sub.trial_requires_card ? ' (tarjeta req.)' : ' (sin tarjeta)'}`
+    : '—';
+  
   return `
-    <div style="display: grid; gap: 1.25rem;">
-      <section style="display: grid; gap: 0.75rem;">
+    <tr>
+      <td><strong>${escapeHtml(sub.service_name)}</strong></td>
+      <td>${escapeHtml(sub.provider)}</td>
+      <td><span class="category-badge">${escapeHtml(sub.category || '—')}</span></td>
+      <td>${formatCurrency(sub.amount)}</td>
+      <td>${sub.billing_frequency}</td>
+      <td>${formatDate(sub.next_billing_date)}</td>
+      <td><span class="badge ${statusBadge.class}">${statusBadge.label}</span></td>
+      <td>${trialInfo}</td>
+      <td>
+        <button type="button" class="btn-icon" title="Editar">✏️</button>
+        <button type="button" class="btn-icon" title="Eliminar">🗑️</button>
+      </td>
+    </tr>
+  `;
+}
+
+// ==========================================
+// RENDERIZADO - TAB DE INGRESOS
+// ==========================================
+function renderRevenueTab() {
+  const container = document.querySelector('[data-tab-content="revenue"]');
+  if (!container) return;
+  
+  const summary = subscriptionState.customerSubscriptionsSummary;
+  const subscriptions = subscriptionState.customerSubscriptions;
+  
+  container.innerHTML = `
+    <!-- Métricas de ingresos -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+      <div class="stat-card stat-card--success">
+        <div class="stat-card__label">MRR (Mensual)</div>
+        <div class="stat-card__value">${formatCurrency(summary.mrr)}</div>
+        <div class="stat-card__sublabel">Ingresos recurrentes mensuales</div>
+      </div>
+      
+      <div class="stat-card stat-card--success">
+        <div class="stat-card__label">ARR (Anual)</div>
+        <div class="stat-card__value">${formatCurrency(summary.arr)}</div>
+        <div class="stat-card__sublabel">Proyección anual</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card__label">Clientes suscritos</div>
+        <div class="stat-card__value">${summary.total}</div>
+        <div class="stat-card__sublabel">${summary.active} activos · ${summary.trial} en prueba</div>
+      </div>
+      
+      ${summary.trials_expiring_soon > 0 ? `
+        <div class="stat-card stat-card--warning">
+          <div class="stat-card__label">⚠️ Trials por expirar</div>
+          <div class="stat-card__value">${summary.trials_expiring_soon}</div>
+          <div class="stat-card__sublabel">Oportunidades de conversión</div>
+        </div>
+      ` : ''}
+    </div>
+    
+    <!-- Tabla de suscripciones de clientes -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Plan</th>
+            <th>Importe</th>
+            <th>Frecuencia</th>
+            <th>Próx. factura</th>
+            <th>Estado</th>
+            <th>Trial</th>
+            <th>Revenue total</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${subscriptions.length === 0 ? `
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 3rem;">
+                <p style="color: var(--text-secondary); margin: 0;">No tienes clientes suscritos aún</p>
+                <button type="button" class="btn-primary" style="margin-top: 1rem;" onclick="openAddCustomerSubscriptionModal()">
+                  + Añadir cliente suscrito
+                </button>
+              </td>
+            </tr>
+          ` : subscriptions.map(sub => renderCustomerSubscriptionRow(sub)).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderCustomerSubscriptionRow(sub) {
+  const statusBadge = {
+    trial: { label: 'Prueba', class: 'badge--warning' },
+    active: { label: 'Activa', class: 'badge--success' },
+    past_due: { label: 'Impagada', class: 'badge--error' },
+    cancelled: { label: 'Cancelada', class: 'badge--neutral' }
+  }[sub.status] || { label: sub.status, class: '' };
+  
+  const trialInfo = sub.has_trial && sub.status === 'trial'
+    ? `${sub.trial_days} días (expira: ${formatDate(sub.trial_end_date)})`
+    : '—';
+  
+  return `
+    <tr>
+      <td><strong>${escapeHtml(sub.client_name || 'Cliente')}</strong></td>
+      <td>
+        <span class="plan-badge plan-badge--${sub.plan_code}">${escapeHtml(sub.plan_name)}</span>
+      </td>
+      <td>${formatCurrency(sub.amount)}</td>
+      <td>${sub.billing_frequency}</td>
+      <td>${formatDate(sub.next_billing_date)}</td>
+      <td><span class="badge ${statusBadge.class}">${statusBadge.label}</span></td>
+      <td>${trialInfo}</td>
+      <td>${formatCurrency(sub.total_revenue || 0)}</td>
+      <td>
+        <button type="button" class="btn-icon" title="Ver detalles">👁️</button>
+        <button type="button" class="btn-icon" title="Editar">✏️</button>
+        ${sub.status === 'trial' ? '<button type="button" class="btn-icon" title="Convertir">✅</button>' : ''}
+      </td>
+    </tr>
+  `;
+}
+
+// ==========================================
+// RENDERIZADO PRINCIPAL
+// ==========================================
+export function renderSubscriptions() {
+  const html = `
+    <section class="subscriptions-module">
+      <!-- Header -->
+      <header class="module-header">
         <div>
-          <h3 style="margin: 0; font-size: 1.1rem;">${escapeHtml(
-            subscription.name
-          )}</h3>
-          <p style="margin: 0; color: var(--text-secondary);">
-            ${escapeHtml(subscription.clientName || "Sin cliente asociado")}
+          <h1 style="margin: 0; font-size: 1.75rem;">Gestión de Suscripciones</h1>
+          <p style="margin: 0.5rem 0 0; color: var(--text-secondary);">
+            Controla tus gastos recurrentes y los ingresos de tus clientes
           </p>
         </div>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-          <span class="badge badge--${
-            subscription.status === "active"
-              ? "success"
-              : subscription.status === "paused"
-              ? "warning"
-              : "danger"
-          }">
-            ${
-              subscription.status === "active"
-                ? "Activa"
-                : subscription.status === "paused"
-                ? "Pausada"
-                : "Cancelada"
-            }
-          </span>
-          <span class="badge badge--info">${cycleLabel}</span>
-          <span class="badge badge--${
-            subscription.autoInvoice ? "success" : "neutral"
-          }">${subscription.autoInvoice ? "Auto facturación" : "Manual"}</span>
-          <span class="badge badge--neutral">${typeLabel}</span>
-        </div>
-      </section>
-      <section style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
-          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Importe</span>
-          <span style="font-size: 0.95rem; font-weight: 600;">${formatCurrency(
-            subscription.amount ?? 0
-          )}</span>
-        </div>
-        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
-          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Moneda</span>
-          <span style="font-size: 0.95rem; font-weight: 600;">${escapeHtml(
-            subscription.currency || "EUR"
-          )}</span>
-        </div>
-        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
-          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Tipo</span>
-          <span style="font-size: 0.95rem; font-weight: 600;">${typeLabel}</span>
-        </div>
-        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
-          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Próximo cobro</span>
-          <span style="font-size: 0.95rem; font-weight: 600;">${formatDate(
-            subscription.nextBillingDate
-          )}</span>
-        </div>
-        <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary); display: grid; gap: 0.35rem;">
-          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Inicio</span>
-          <span style="font-size: 0.95rem; font-weight: 600;">${formatDate(
-            subscription.startDate
-          )}</span>
-        </div>
-      </section>
-      <section style="display: grid; gap: 0.5rem;">
-        <h3 style="margin: 0; font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
-          Descripción
-        </h3>
-        <p style="margin: 0; color: var(--text-primary); white-space: pre-wrap;">
-          ${escapeHtml(subscription.description || "Sin descripción añadida")}
-        </p>
-      </section>
-    </div>
-  `;
-}
-
-function closeSubscriptionModal() {
-  const modal = document.getElementById("subscription-modal");
-  if (modal) modal.remove();
-}
-
-
-
-async function refreshSubscriptionsModule() {
-  if (typeof window.api === "undefined") {
-    setError("Servicio API no disponible. Comprueba la carga de api.js");
-    return;
-  }
-
-  if (!window.api.isAuthenticated()) {
-    setError("Inicia sesión para gestionar tus suscripciones.");
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setError(null);
-    await Promise.all([
-      loadSubscriptions(),
-      loadSummary(),
-      loadUpcoming(),
-      loadBreakdown(),
-      loadClients(),
-    ]);
-    buildSuggestions();
-    renderSummary();
-    renderSubscriptionsTable();
-    renderInsights();
-  } catch (error) {
-    console.error("Error loading subscriptions module", error);
-    setError("Ocurrió un problema al obtener las suscripciones.");
-  } finally {
-    setLoading(false);
-  }
-}
-
-function handleClick(event) {
-  const retryButton = event.target.closest(
-    '[data-action="retry-subscriptions"]'
-  );
-  if (retryButton) {
-    void refreshSubscriptionsModule();
-    return;
-  }
-
-  const newButton = event.target.closest("[data-open-subscription]");
-  if (newButton) {
-    openSubscriptionModal("create");
-    return;
-  }
-
-  if (event.target.closest("[data-modal-close]")) {
-    closeSubscriptionModal();
-    return;
-  }
-
-  const viewBtn = event.target.closest("[data-subscription-view]");
-  if (viewBtn) {
-    event.stopPropagation();
-    openSubscriptionModal("view", viewBtn.dataset.subscriptionView);
-    return;
-  }
-
-  const modalEditBtn = event.target.closest("[data-modal-edit]");
-  if (modalEditBtn) {
-    event.stopPropagation();
-    const id = modalEditBtn.dataset.modalEdit;
-    closeSubscriptionModal();
-    openSubscriptionModal("edit", id);
-    return;
-  }
-
-  const editBtn = event.target.closest("[data-subscription-edit]");
-  if (editBtn) {
-    event.stopPropagation();
-    openSubscriptionModal("edit", editBtn.dataset.subscriptionEdit);
-    return;
-  }
-
-  const deleteBtn = event.target.closest("[data-subscription-delete]");
-  if (deleteBtn) {
-    event.stopPropagation();
-    void handleSubscriptionDelete(deleteBtn.dataset.subscriptionDelete);
-    return;
-  }
-
-  const row = event.target.closest("[data-subscription-row]");
-  if (row && !event.target.closest("button")) {
-    openSubscriptionModal("view", row.dataset.subscriptionRow);
-  }
-}
-
-function handleInput(event) {
-  if (event.target.matches("[data-subscriptions-search]")) {
-    subscriptionState.filters.search = event.target.value;
-    debounce(() => void refreshSubscriptionsModule());
-  }
-}
-
-function handleChange(event) {
-  if (event.target.matches("[data-subscriptions-status]")) {
-    subscriptionState.filters.status = event.target.value;
-    void refreshSubscriptionsModule();
-    return;
-  }
-
-  if (event.target.matches("[data-subscriptions-cycle]")) {
-    subscriptionState.filters.billingCycle = event.target.value;
-    void refreshSubscriptionsModule();
-    return;
-  }
-
-  if (event.target.matches("[data-subscriptions-autoinvoice]")) {
-    subscriptionState.filters.autoInvoice = event.target.value;
-    void refreshSubscriptionsModule();
-  }
-}
-
-async function handleSubscriptionFormSubmit(event) {
-  event.preventDefault();
-  const form = event.target.closest("form");
-  if (!form) return;
-  const data = new FormData(form);
-
-  const payload = {
-    name: data.get("name")?.toString().trim(),
-    clientId: data.get("clientId") || undefined,
-    amount: data.get("amount")
-      ? Number.parseFloat(data.get("amount"))
-      : undefined,
-    currency: data.get("currency")?.toString().trim() || "EUR",
-    billingCycle: data.get("billingCycle") || "monthly",
-    startDate: data.get("startDate") || undefined,
-    nextBillingDate: data.get("nextBillingDate") || undefined,
-    status: data.get("status") || "active",
-    autoInvoice: data.get("autoInvoice") === "on",
-    description: data.get("description")?.toString().trim() || undefined,
-    type: data.get("type") || "expense",
-  };
-
-  const editingId = form.dataset.subscriptionId
-    ? String(form.dataset.subscriptionId)
-    : null;
-
-  try {
-    let response;
-    if (editingId) {
-      response = await window.api.updateSubscription(editingId, payload);
-      showToast("Suscripción actualizada correctamente", "success");
-    } else {
-      response = await window.api.createSubscription(payload);
-      showToast("Suscripción creada correctamente", "success");
-    }
-    closeSubscriptionModal();
-    await refreshSubscriptionsModule();
-  } catch (error) {
-    console.error("Error saving subscription", error);
-    showToast("No se pudo guardar la suscripción", "error");
-  }
-}
-
-async function handleSubscriptionDelete(id) {
-  if (!window.confirm("¿Seguro que deseas eliminar esta suscripción?")) return;
-  try {
-    await window.api.deleteSubscription(id);
-    showToast("Suscripción eliminada", "success");
-    await refreshSubscriptionsModule();
-  } catch (error) {
-    console.error("Error deleting subscription", error);
-    showToast("No se pudo eliminar la suscripción", "error");
-  }
-}
-
-export function initSubscriptions() {
-  const module = document.querySelector(".subscriptions");
-  if (!module) return;
-
-  module.addEventListener("click", handleClick);
-  module.addEventListener("input", handleInput);
-  module.addEventListener("change", handleChange);
-
-  window.requestAnimationFrame(() => {
-    void refreshSubscriptionsModule();
-  });
-}
-
-export default function renderSubscriptions() {
-  return `
-    <section class="subscriptions" aria-labelledby="subscriptions-title">
-      <header class="expenses__hero">
-        <div class="expenses__hero-copy">
-          <h1 id="subscriptions-title">Gestión de suscripciones</h1>
-          <p>Controla gastos e ingresos recurrentes, ciclos de facturación y cobros previstos sin salir de Flow.</p>
-        </div>
-        <div class="expenses__hero-actions">
-          <button type="button" class="btn-primary" data-open-subscription>Nueva suscripción</button>
-        </div>
       </header>
-
-      <section aria-labelledby="subscriptions-overview" style="margin: 2rem 0 2.5rem;">
-        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.25rem;">
-          <h2 id="subscriptions-overview" style="margin: 0; font-size: 1.1rem;">Visión general</h2>
+      
+      <!-- Tabs -->
+      <div class="tabs-container" style="margin: 2rem 0 1.5rem;">
+        <div class="tabs">
+          <button 
+            type="button" 
+            class="tab active" 
+            data-tab="expenses" 
+            onclick="switchTab('expenses')"
+            style="padding: 0.75rem 1.5rem; font-size: 1rem; border-bottom: 3px solid var(--primary-color);"
+          >
+            💸 Mis Gastos
+            <span class="tab-badge" data-expenses-count>0</span>
+          </button>
+          
+          <button 
+            type="button" 
+            class="tab" 
+            data-tab="revenue" 
+            onclick="switchTab('revenue')"
+            style="padding: 0.75rem 1.5rem; font-size: 1rem;"
+          >
+            💰 Mis Ingresos (Clientes)
+            <span class="tab-badge" data-revenue-count>0</span>
+          </button>
         </div>
-      <div class="summary-cards">
-        <article class="card stat-card">
-          <div class="card-icon" style="background: var(--color-primary-light);">🔁</div>
-          <div class="card-content">
-            <span class="card-label">Suscripciones totales</span>
-            <span class="card-value" id="subscriptions-total">0</span>
-          </div>
-        </article>
-        <article class="card stat-card">
-          <div class="card-icon" style="background: var(--color-success-light);">✅</div>
-          <div class="card-content">
-            <span class="card-label">Activas</span>
-            <span class="card-value" id="subscriptions-active">0</span>
-          </div>
-        </article>
-        <article class="card stat-card">
-          <div class="card-icon" style="background: var(--color-warning-light);">⏸️</div>
-          <div class="card-content">
-            <span class="card-label">Pausadas</span>
-            <span class="card-value" id="subscriptions-paused">0</span>
-          </div>
-        </article>
-        <article class="card stat-card">
-          <div class="card-icon" style="background: var(--color-danger-light);">🛑</div>
-          <div class="card-content">
-            <span class="card-label">Canceladas</span>
-            <span class="card-value" id="subscriptions-cancelled">0</span>
-          </div>
-        </article>
-        <article class="card stat-card">
-          <div class="card-icon" style="background: var(--color-tertiary-light);">💶</div>
-          <div class="card-content">
-            <span class="card-label">MRR estimado</span>
-            <span class="card-value" id="subscriptions-mrr">€0</span>
-            <span class="card-trend">Ingresos mensuales</span>
-          </div>
-        </article>
-        <article class="card stat-card">
-          <div class="card-icon" style="background: var(--color-info-light);">📅</div>
-          <div class="card-content">
-            <span class="card-label">Cobros próximos</span>
-            <span class="card-value" id="subscriptions-cashflow">€0</span>
-            <span class="card-trend">30 días</span>
-          </div>
-        </article>
       </div>
-      </section>
-
-      <section aria-labelledby="subscriptions-filters" style="margin: 0 0 2.5rem;">
-        <h2 id="subscriptions-filters" style="margin: 0 0 1.25rem; font-size: 1.1rem;">Filtrar suscripciones</h2>
-      <section class="expenses__filters" aria-label="Filtros de suscripciones">
-        <div class="expenses__filters-group">
-          <label class="visually-hidden" for="subscription-search">Buscar suscripciones</label>
-          <input type="search" id="subscription-search" class="expenses__search" placeholder="Nombre, descripción o cliente..." autocomplete="off" data-subscriptions-search />
-        </div>
-        <div class="expenses__filters-group">
-          <label class="visually-hidden" for="subscription-status-filter">Estado</label>
-          <select id="subscription-status-filter" class="expenses__select" data-subscriptions-status>
-            <option value="all">Todos los estados</option>
-            <option value="active">Activa</option>
-            <option value="paused">Pausada</option>
-            <option value="cancelled">Cancelada</option>
-          </select>
-        </div>
-        <div class="expenses__filters-group">
-          <label class="visually-hidden" for="subscription-cycle-filter">Ciclo</label>
-          <select id="subscription-cycle-filter" class="expenses__select" data-subscriptions-cycle>
-            <option value="all">Todos los ciclos</option>
-            <option value="monthly">Mensual</option>
-            <option value="quarterly">Trimestral</option>
-            <option value="yearly">Anual</option>
-            <option value="custom">Personalizado</option>
-          </select>
-        </div>
-        <div class="expenses__filters-group">
-          <label class="visually-hidden" for="subscription-autoinvoice-filter">Auto facturación</label>
-          <select id="subscription-autoinvoice-filter" class="expenses__select" data-subscriptions-autoinvoice>
-            <option value="all">Todas</option>
-            <option value="true">Automáticas</option>
-            <option value="false">Manuales</option>
-          </select>
-        </div>
-        <div class="expenses__filters-group expenses__filters-group--pinned">
-          <button type="button" class="btn-ghost" data-action="retry-subscriptions"><span>🔄</span> Recargar</button>
-        </div>
-      </section>
-
-      </section>
-
-      <section aria-labelledby="subscriptions-table-title" style="margin: 0 0 2.5rem;">
-        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1rem;">
-          <h2 id="subscriptions-table-title" style="margin: 0; font-size: 1.1rem;">Listado de suscripciones</h2>
-        </div>
-      <section class="expenses-table" aria-label="Listado de suscripciones">
-        <div class="expenses-table__surface">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Servicio</th>
-                <th scope="col">Tipo</th>
-                <th scope="col">Cliente</th>
-                <th scope="col">Ciclo</th>
-                <th scope="col">Próximo cobro</th>
-                <th scope="col">Importe</th>
-                <th scope="col">Auto-Fact.</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Acciones</th>
-              </tr>
-            </thead>
-            <tbody data-subscriptions-table>
-              <tr>
-                <td colspan="9" class="empty-state">Cargando suscripciones...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="module-loading" data-subscriptions-loading hidden>
-          <span class="spinner"></span>
+      
+      <!-- Tab Content: Mis Gastos -->
+      <div data-tab-content="expenses" style="display: block;">
+        <div style="text-align: center; padding: 3rem;">
+          <div class="spinner"></div>
           <p>Cargando suscripciones...</p>
         </div>
-        <div class="module-error" data-subscriptions-error hidden></div>
-      </section>
-
-      </section>
-
-      <section class="subscriptions-insights" aria-label="Indicadores de suscripciones" style="display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 1.5rem;">
-        <h2 style="grid-column: 1 / -1; margin: 0; font-size: 1.1rem;">Indicadores clave</h2>
-        <article class="card" style="padding: 1.5rem;">
-          <h3 style="margin-top: 0;">Próximos cobros</h3>
-          <ul class="insight-list" data-upcoming-subscriptions style="max-height: 180px; overflow-y: auto;"></ul>
-        </article>
-        <article class="card" style="padding: 1.5rem;">
-          <h3 style="margin-top: 0;">Distribución por estado</h3>
-          <ul class="insight-list" data-status-breakdown style="max-height: 180px; overflow-y: auto;"></ul>
-        </article>
-        <article class="card" style="padding: 1.5rem;">
-          <h3 style="margin-top: 0;">Recomendaciones</h3>
-          <ul class="insight-list" data-subscription-suggestions style="max-height: 180px; overflow-y: auto;"></ul>
-        </article>
-      </section>
+      </div>
+      
+      <!-- Tab Content: Mis Ingresos -->
+      <div data-tab-content="revenue" style="display: none;">
+        <div style="text-align: center; padding: 3rem;">
+          <p style="color: var(--text-secondary);">
+            Cambia a esta pestaña para ver los clientes suscritos a tus servicios
+          </p>
+        </div>
+      </div>
     </section>
   `;
+  
+  // Inicializar página
+  setTimeout(() => {
+    initSubscriptionsPage();
+  }, 100);
+  
+  return html;
 }
+
+function initSubscriptionsPage() {
+  // Exponer funciones globalmente
+  window.switchTab = switchTab;
+  window.openAddExpenseSubscriptionModal = () => showNotification('Modal de añadir suscripción de gasto - Por implementar', 'info');
+  window.openAddCustomerSubscriptionModal = () => showNotification('Modal de añadir cliente suscrito - Por implementar', 'info');
+  
+  // Cargar datos iniciales
+  loadMySubscriptions();
+}
+
+export default renderSubscriptions;

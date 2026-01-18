@@ -201,6 +201,25 @@ class APIService {
   async getSubscriptionUpcoming(limit = 5) { return this.get(`/subscriptions/upcoming?limit=${limit}`); }
   async getSubscriptionStatusBreakdown() { return this.get('/subscriptions/status-breakdown'); }
 
+  // Suscripciones de Clientes (Ingresos recurrentes)
+  async getCustomerSubscriptions(filters = {}) {
+    const query = this._buildQuery(filters);
+    return this.get(`/customer-subscriptions?${query}`);
+  }
+  
+  async createCustomerSubscription(data) { return this.post('/customer-subscriptions', data); }
+  async updateCustomerSubscription(id, data) { return this.put(`/customer-subscriptions/${id}`, data); }
+  async deleteCustomerSubscription(id) { return this.delete(`/customer-subscriptions/${id}`); }
+  async convertTrialToActive(id) { return this.post(`/customer-subscriptions/${id}/convert-trial`); }
+  async upgradePlan(id, newPlanCode) { return this.post(`/customer-subscriptions/${id}/upgrade`, { plan_code: newPlanCode }); }
+  async cancelCustomerSubscription(id, reason = '') { return this.post(`/customer-subscriptions/${id}/cancel`, { reason }); }
+  
+  async getCustomerSubscriptionMRR() { return this.get('/customer-subscriptions/mrr'); }
+  async getCustomerSubscriptionARR() { return this.get('/customer-subscriptions/arr'); }
+  async getExpiringTrials(days = 7) { return this.get(`/customer-subscriptions/expiring-trials?days=${days}`); }
+  async getChurnMetrics() { return this.get('/customer-subscriptions/churn'); }
+
+
   // Presupuestos
   async getBudgets(filters = {}) { 
     const query = this._buildQuery(filters);
