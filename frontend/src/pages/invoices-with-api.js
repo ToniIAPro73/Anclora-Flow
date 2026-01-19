@@ -1363,6 +1363,133 @@ function showVerifactuCSVModal(invoiceId) {
   document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
+// === CONFIGURACIÓN VERIFACTU ===
+
+async function openVerifactuConfigModal() {
+  try {
+    showNotification('Cargando configuración...', 'info');
+    let config = null;
+    
+    try {
+      config = await window.api.getVerifactuConfig();
+    } catch (error) {
+      console.warn('No se pudo obtener configuración (posiblemente primer uso):', error);
+      config = {
+        enabled: false,
+        test_mode: true,
+        software_nif: '',
+        software_name: 'Anclora Flow',
+        software_version: '1.0.0'
+      };
+    }
+
+    const modalHTML = `
+      <div class="modal is-open" id="verifactu-config-modal">
+        <div class="modal__backdrop" onclick="document.getElementById('verifactu-config-modal').remove()"></div>
+        <div class="modal__panel" style="max-width: 550px;">
+          <header class="modal__head">
+            <div>
+              <h2 class="modal__title">Configuración Verifactu</h2>
+              <p class="modal__subtitle">Sistema de emisión de facturas verificables (AEAT)</p>
+            </div>
+            <button type="button" class="modal__close" onclick="document.getElementById('verifactu-config-modal').remove()">×</button>
+          </header>
+          <div class="modal__body" style="padding: 1.5rem;">
+            <form id="verifactu-config-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+              
+              <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                  <div style="padding-top: 2px;">
+                    <input type="checkbox" id="verifactu-enabled" name="enabled" ${config.enabled ? 'checked' : ''} style="width: 1.2rem; height: 1.2rem;">
+                  </div>
+                  <div>
+                    <label for="verifactu-enabled" style="font-weight: 600; color: var(--text-primary); display: block; margin-bottom: 0.25rem;">Habilitar Verifactu</label>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+                      Activa la generación automática de registros de facturación verificables al completar una factura.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <label for="software-nif" style="display: block; font-weight: 600; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">NIF del Desarrollador</label>
+                  <input type="text" id="software-nif" name="software_nif" class="form-input" value="${config.software_nif || ''}" placeholder="Ej: B12345678" style="width: 100%;">
+                </div>
+                <div>
+                  <label for="software-version" style="display: block; font-weight: 600; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Versión Software</label>
+                  <input type="text" id="software-version" name="software_version" class="form-input" value="${config.software_version || '1.0.0'}" placeholder="1.0.0" style="width: 100%;">
+                </div>
+              </div>
+              
+              <div>
+                <label for="software-name" style="display: block; font-weight: 600; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Nombre Software</label>
+                <input type="text" id="software-name" name="software_name" class="form-input" value="${config.software_name || 'Anclora Flow'}" placeholder="Nombre de tu aplicación" style="width: 100%;">
+              </div>
+
+              <div style="margin-top: 0.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                  <input type="checkbox" id="test-mode" name="test_mode" ${config.test_mode ? 'checked' : ''}>
+                  <span style="font-size: 0.95rem; color: var(--text-primary);">Modo Pruebas (Entorno Test AEAT)</span>
+                </label>
+                <p style="margin: 0.25rem 0 0 1.8rem; font-size: 0.85rem; color: var(--text-secondary);">
+                  Recomendado para desarrollo. No enviará datos reales a Hacienda.
+                </p>
+              </div>
+
+            </form>
+          </div>
+          <footer class="modal__footer">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('verifactu-config-modal').remove()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="saveVerifactuConfig()">Guardar Configuración</button>
+          </footer>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Eliminar notificaciones de carga
+    document.querySelectorAll('.notification--info').forEach(n => n.remove());
+
+  } catch (error) {
+    console.error('Error opening config:', error);
+    showNotification('Error al abrir la configuración: ' + error.message, 'error');
+  }
+}
+
+async function saveVerifactuConfig() {
+  try {
+    const enabled = document.getElementById('verifactu-enabled').checked;
+    const testMode = document.getElementById('test-mode').checked;
+    const softwareNif = document.getElementById('software-nif').value;
+    const softwareName = document.getElementById('software-name').value;
+    const softwareVersion = document.getElementById('software-version').value;
+
+    if (enabled && !softwareNif) {
+      showNotification('El NIF es obligatorio si Verifactu está habilitado', 'warning');
+      return;
+    }
+
+    showNotification('Guardando configuración...', 'info');
+
+    await window.api.updateVerifactuConfig({
+      enabled,
+      test_mode: testMode,
+      software_nif: softwareNif,
+      software_name: softwareName,
+      software_version: softwareVersion
+    });
+
+    document.getElementById('verifactu-config-modal').remove();
+    showNotification('Configuración de Verifactu guardada correctamente', 'success');
+
+  } catch (error) {
+    console.error('Error saving config:', error);
+    showNotification('Error al guardar: ' + (error.data?.error || error.message), 'error');
+  }
+}
+
 // === ACCIONES DE FACTURA ===
 
 // Ver detalles de factura
@@ -2780,6 +2907,8 @@ async function submitAddPayment() {
 window.openAddPaymentModal = openAddPaymentModal;
 window.closeAddPaymentModal = closeAddPaymentModal;
 window.submitAddPayment = submitAddPayment;
+window.openVerifactuConfigModal = openVerifactuConfigModal;
+window.saveVerifactuConfig = saveVerifactuConfig;
 
 // Export para uso en módulos
 export { loadInvoices, registerInvoiceVerifactu, showVerifactuQRModal, showVerifactuCSVModal, openAddPaymentModal };
@@ -2823,6 +2952,10 @@ export function renderInvoices() {
           </select>
         </div>
         <div class="invoices__filters-group">
+          <button type="button" class="btn-ghost" onclick="openVerifactuConfigModal()" title="Configuración Verifactu">
+            <span>⚙️</span>
+            Verifactu
+          </button>
           <button type="button" class="btn-ghost" onclick="loadInvoices()">
             <span>🔄</span>
             Recargar

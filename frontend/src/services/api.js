@@ -148,6 +148,14 @@ class APIService {
     return this.post(`/verifactu/register/${id}`);
   }
 
+  async getVerifactuConfig() {
+    return this.get('/verifactu/config');
+  }
+
+  async updateVerifactuConfig(data) {
+    return this.put('/verifactu/config', data);
+  }
+
   async generateInvoicePdf(id) {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/invoices/${id}/pdf`, {
@@ -258,6 +266,42 @@ class APIService {
   setToken(token) {
     this.token = token;
     localStorage.setItem('token', token);
+  }
+
+  // Suscripciones (Gastos)
+  async getSubscriptions(filters = {}) {
+    const query = this._buildQuery(filters);
+    return this.get(`/subscriptions?${query}`);
+  }
+
+  async createSubscription(data) {
+    return this.post('/subscriptions', data);
+  }
+
+  async updateSubscription(id, data) {
+    return this.put(`/subscriptions/${id}`, data);
+  }
+
+  async deleteSubscription(id) {
+    return this.delete(`/subscriptions/${id}`);
+  }
+
+  // Suscripciones de Clientes (Ingresos)
+  async getCustomerSubscriptions(filters = {}) {
+    const query = this._buildQuery(filters);
+    return this.get(`/customer-subscriptions?${query}`);
+  }
+
+  async createCustomerSubscription(data) {
+    return this.post('/customer-subscriptions', data);
+  }
+
+  async updateCustomerSubscription(id, data) {
+    return this.put(`/customer-subscriptions/${id}`, data);
+  }
+
+  async deleteCustomerSubscription(id) {
+    return this.delete(`/customer-subscriptions/${id}`);
   }
 
   clearToken() {

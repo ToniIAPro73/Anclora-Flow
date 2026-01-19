@@ -559,11 +559,168 @@ export function renderSubscriptions() {
   return html;
 }
 
+
+// ==========================================
+// MODALES
+// ==========================================
+
+async function openAddCustomerSubscriptionModal() {
+  try {
+    // 1. Cargar clientes para el select
+    showNotification('Cargando clientes...', 'info');
+    const response = await window.api.getClients({ limit: 100 });
+    const clients = response.clients || [];
+    
+    // Eliminar notificación de carga
+    document.querySelectorAll('.notification--info').forEach(n => n.remove());
+
+    const modalHTML = `
+      <div class="modal is-open" id="add-customer-subscription-modal">
+        <div class="modal__backdrop" onclick="document.getElementById('add-customer-subscription-modal').remove()"></div>
+        <div class="modal__panel" style="max-width: 600px;">
+          <header class="modal__head">
+            <h2 class="modal__title">Nueva Suscripción de Cliente</h2>
+            <button type="button" class="modal__close" onclick="document.getElementById('add-customer-subscription-modal').remove()">×</button>
+          </header>
+          <div class="modal__body">
+            <form id="add-customer-subscription-form">
+              
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label" for="sub-client">Cliente *</label>
+                <select id="sub-client" name="clientId" class="form-input" required>
+                  <option value="">Seleccionar cliente...</option>
+                  ${clients.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
+                </select>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                  <label class="form-label" for="sub-plan-name">Nombre del Plan *</label>
+                  <input type="text" id="sub-plan-name" name="planName" class="form-input" placeholder="Ej. Mantenimiento Web" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sub-plan-code">Código Plan *</label>
+                  <input type="text" id="sub-plan-code" name="planCode" class="form-input" placeholder="Ej. PLAN_BASIC" required style="text-transform: uppercase;">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                  <label class="form-label" for="sub-amount">Importe *</label>
+                  <input type="number" id="sub-amount" name="amount" class="form-input" step="0.01" min="0" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sub-frequency">Frecuencia *</label>
+                  <select id="sub-frequency" name="billingFrequency" class="form-input" required>
+                    <option value="monthly">Mensual</option>
+                    <option value="quarterly">Trimestral</option>
+                    <option value="yearly">Anual</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                  <label class="form-label" for="sub-start-date">Fecha Inicio *</label>
+                  <input type="date" id="sub-start-date" name="startDate" class="form-input" required value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sub-status">Estado</label>
+                  <select id="sub-status" name="status" class="form-input">
+                    <option value="active">Activa</option>
+                    <option value="trial">Periodo de prueba</option>
+                    <option value="past_due">Impagada</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-group-checkbox" style="display: flex; gap: 0.5rem; align-items: center; cursor: pointer;">
+                  <input type="checkbox" name="autoInvoice" checked>
+                  <span>Generar factura automáticamente</span>
+                </label>
+              </div>
+
+            </form>
+          </div>
+          <footer class="modal__footer">
+            <button class="btn-secondary" onclick="document.getElementById('add-customer-subscription-modal').remove()">Cancelar</button>
+            <button class="btn-primary" onclick="submitCustomerSubscription()">Crear Suscripción</button>
+          </footer>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Auto-fill plan code based on name
+    const nameInput = document.getElementById('sub-plan-name');
+    const codeInput = document.getElementById('sub-plan-code');
+    
+    if (nameInput && codeInput) {
+      nameInput.addEventListener('input', () => {
+        if (!codeInput.value || codeInput.dataset.touched !== 'true') {
+          codeInput.value = nameInput.value
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '_')
+            .replace(/__+/g, '_')
+            .replace(/^_|_$/g, '');
+        }
+      });
+      
+      codeInput.addEventListener('input', () => codeInput.dataset.touched = 'true');
+    }
+
+  } catch (error) {
+    console.error('Error opening modal:', error);
+    showNotification('Error al cargar formulario: ' + error.message, 'error');
+  }
+}
+
+async function submitCustomerSubscription() {
+  const form = document.getElementById('add-customer-subscription-form');
+  if (!form.reportValidity()) return;
+
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
+  
+  // Procesar datos
+  data.amount = parseFloat(data.amount);
+  data.autoInvoice = form.querySelector('[name="autoInvoice"]').checked;
+  
+  // Calcular periodos
+  const startDate = new Date(data.startDate);
+  data.currentPeriodStart = data.startDate;
+  
+  const endPeriod = new Date(startDate);
+  if (data.billingFrequency === 'monthly') endPeriod.setMonth(endPeriod.getMonth() + 1);
+  else if (data.billingFrequency === 'quarterly') endPeriod.setMonth(endPeriod.getMonth() + 3);
+  else if (data.billingFrequency === 'yearly') endPeriod.setFullYear(endPeriod.getFullYear() + 1);
+  
+  data.currentPeriodEnd = endPeriod.toISOString();
+  data.nextBillingDate = endPeriod.toISOString();
+
+  try {
+    showNotification('Creando suscripción...', 'info');
+    await window.api.createCustomerSubscription(data);
+    
+    document.getElementById('add-customer-subscription-modal').remove();
+    showNotification('Suscripción creada correctamente', 'success');
+    
+    loadCustomerSubscriptions(); // Recargar tabla
+  } catch (error) {
+    console.error('Error creating subscription:', error);
+    showNotification('Error al crear suscripción: ' + (error.data?.error || error.message), 'error');
+  }
+}
+
 function initSubscriptionsPage() {
   // Exponer funciones globalmente
   window.switchTab = switchTab;
   window.openAddExpenseSubscriptionModal = () => showNotification('Modal de añadir suscripción de gasto - Por implementar', 'info');
-  window.openAddCustomerSubscriptionModal = () => showNotification('Modal de añadir cliente suscrito - Por implementar', 'info');
+  window.openAddCustomerSubscriptionModal = openAddCustomerSubscriptionModal;
+  window.submitCustomerSubscription = submitCustomerSubscription;
+
   
   // Cargar datos iniciales
   loadMySubscriptions();

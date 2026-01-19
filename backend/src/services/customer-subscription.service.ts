@@ -5,9 +5,7 @@ import {
   ICustomerSubscriptionUpdate,
   ICustomerSubscriptionMRR,
   ICustomerSubscriptionARR
-} from '../types/customer-subs
-
-cription.js';
+} from '../types/customer-subscription.js';
 
 export class CustomerSubscriptionService {
   async findById(id: string, userId: string): Promise<ICustomerSubscription | null> {
