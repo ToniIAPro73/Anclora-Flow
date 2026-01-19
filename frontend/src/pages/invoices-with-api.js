@@ -177,8 +177,8 @@ function renderVerifactuQrImage(invoice, containerId) {
   if (qrSource && !isPlaceholderVerifactuQr(qrSource)) {
     const img = document.createElement('img');
     img.alt = 'QR Verifactu';
-    img.style.width = '280px';
-    img.style.height = '280px';
+    img.style.width = '150px';
+    img.style.height = '150px';
     img.style.display = 'block';
     img.style.borderRadius = '8px';
     img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
@@ -206,8 +206,8 @@ function renderQrFallback(invoice, container) {
 
   const img = document.createElement('img');
   img.alt = 'QR Verifactu generado';
-  img.style.width = '280px';
-  img.style.height = '280px';
+  img.style.width = '150px';
+  img.style.height = '150px';
   img.style.display = 'block';
   img.style.borderRadius = '8px';
   img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
@@ -1175,11 +1175,11 @@ async function registerInvoiceVerifactu(invoiceId) {
 
     // Actualizar factura con los datos completos desde el backend
     if (invoice && updatedInvoice) {
-      invoice.verifactuStatus = updatedInvoice.verifactu_status || 'registered';
-      invoice.verifactuCsv = updatedInvoice.verifactu_csv;
-      invoice.verifactuQrCode = updatedInvoice.verifactu_qr_code;
-      invoice.verifactuUrl = updatedInvoice.verifactu_url;
-      invoice.verifactuHash = updatedInvoice.verifactu_hash;
+      invoice.verifactuStatus = updatedInvoice.verifactuStatus || 'registered';
+      invoice.verifactuCsv = updatedInvoice.verifactuCsv;
+      invoice.verifactuQrCode = updatedInvoice.verifactuQrCode;
+      invoice.verifactuUrl = updatedInvoice.verifactuUrl;
+      invoice.verifactuHash = updatedInvoice.verifactuHash;
 
       console.log('Datos Verifactu actualizados:', {
         csv: invoice.verifactuCsv,
@@ -1239,60 +1239,52 @@ function showVerifactuQRModal(invoiceId) {
   const modalHTML = `
     <div class="modal is-open" id="verifactu-qr-modal">
       <div class="modal__backdrop" onclick="document.getElementById('verifactu-qr-modal').remove()"></div>
-      <div class="modal__panel" style="max-width: 600px;">
-        <header class="modal__head">
+      <div class="modal__panel" style="max-width: 800px; width: 100%; display: flex; flex-direction: column; margin: auto;">
+        <header class="modal__head" style="padding: 1.5rem 2rem 0.5rem 2rem; border-bottom: none;">
           <div>
-            <h2 class="modal__title">Codigo QR - Verifactu</h2>
-            <p class="modal__subtitle">Factura ${invoice.number}</p>
+            <h2 class="modal__title" style="font-size: 1.75rem; font-weight: 700;">Codigo QR - Verifactu</h2>
+            <p class="modal__subtitle" style="font-size: 1rem; margin-top: 0.25rem; color: var(--text-secondary);">Factura ${invoice.number}</p>
           </div>
-          <button type="button" class="modal__close" onclick="document.getElementById('verifactu-qr-modal').remove()">&times;</button>
+          <button type="button" class="modal__close" style="font-size: 1.5rem;" onclick="document.getElementById('verifactu-qr-modal').remove()">&times;</button>
         </header>
-        <div class="modal__body" style="padding: 2rem;">
+        <div class="modal__body" style="padding: 0 2rem 1.5rem 2rem; overflow: visible;">
           ${invoice.verifactuCsv ? `
-            <div style="text-align: center; margin-bottom: 2rem;">
-              <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">Codigo Seguro de Verificacion</p>
-              <p style="color: var(--text-primary); font-size: 1.125rem; font-weight: 600;">
-                <code style="background: var(--bg-secondary); padding: 0.5rem 1rem; border-radius: 6px; font-family: monospace; color: var(--text-primary); letter-spacing: 1px;">
+            <div style="text-align: center; margin-bottom: 1rem;">
+              <p style="color: var(--text-secondary); margin-bottom: 0.25rem; font-size: 0.85rem; font-weight: 500;">Codigo Seguro de Verificacion</p>
+              <p style="color: var(--text-primary); font-size: 1rem; font-weight: 600;">
+                <code style="background: var(--bg-secondary); padding: 0.4rem 1rem; border-radius: 6px; font-family: monospace; color: var(--text-primary); letter-spacing: 1px; border: 1px solid var(--border-color);">
                   ${invoice.verifactuCsv}
                 </code>
               </p>
             </div>
           ` : ''}
-          <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
-            <div id="verifactu-qr-image" style="padding: 1.5rem; background: var(--bg-primary, #ffffff); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.08);">
+          <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+            <div id="verifactu-qr-image" style="padding: 0.5rem; background: var(--bg-primary, #ffffff); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
             </div>
           </div>
-          <p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center;">
-            Escanea este codigo QR para verificar la factura.
+          <p style="font-size: 0.9rem; color: var(--text-secondary); text-align: center; margin-bottom: 0.5rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+            Escanea para verificar en AEAT.
           </p>
           ${verificationUrl ? `
-            <div style="text-align: center; margin-top: 1rem;">
+            <div style="text-align: center;">
               ${isTestUrl ? `
-                <p style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
-                  Enlace de modo test. La verificacion oficial puede no estar disponible.
+                <p style="font-size: 0.8rem; color: var(--text-secondary); font-style: italic;">
+                  Entorno de pruebas (Sandbox)
                 </p>
               ` : `
-                <a href="${verificationUrl}" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration: none; display: inline-block;">
-                  Abrir enlace AEAT
+                <a href="${verificationUrl}" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; padding: 0.4rem 0.8rem; border-radius: 6px;">
+                  <span>🔗</span> Link AEAT
                 </a>
               `}
             </div>
-          ` : `
-            <div style="text-align: center; margin-top: 1rem;">
-              <p style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
-                Todavia no hay un enlace publico disponible.
-              </p>
-            </div>
-          `}
+          ` : ''}
         </div>
-        <footer class="modal__footer" style="display: flex; gap: 0.75rem;">
-          <button class="btn-secondary" style="flex: 1;" onclick="document.getElementById('verifactu-qr-modal').remove()">Cerrar</button>
+        <footer class="modal__footer modal-form__footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('verifactu-qr-modal').remove()">Cerrar</button>
           ${qrDownloadSrc ? `
-            <a href="${qrDownloadSrc}" download="verifactu-qr-${invoice.number}.png" class="btn-primary" style="flex: 1; text-decoration: none; display: flex; align-items: center; justify-content: center;">
-              Descargar QR
-            </a>
+            <a href="${qrDownloadSrc}" download="verifactu-qr-${invoice.number}.png" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Descargar QR</a>
           ` : `
-            <button class="btn-primary" style="flex: 1;" disabled>QR no disponible</button>
+            <button class="btn-primary" disabled>QR no disponible</button>
           `}
         </footer>
       </div>
@@ -1350,9 +1342,9 @@ function showVerifactuCSVModal(invoiceId) {
             Este código CSV identifica de forma única esta factura en el sistema Verifactu de la AEAT.
           </p>
         </div>
-        <footer class="modal__footer">
-          <button class="btn-secondary" onclick="document.getElementById('verifactu-csv-modal').remove()">Cerrar</button>
-          <button class="btn-primary" onclick="navigator.clipboard.writeText('${invoice.verifactuCsv}').then(() => showNotification('CSV copiado al portapapeles', 'success'))">
+        <footer class="modal__footer modal-form__footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('verifactu-csv-modal').remove()">Cerrar</button>
+          <button type="button" class="btn-primary" onclick="navigator.clipboard.writeText('${invoice.verifactuCsv}').then(() => showNotification('CSV copiado al portapapeles', 'success'))">
             Copiar CSV
           </button>
         </footer>
@@ -1439,7 +1431,7 @@ async function openVerifactuConfigModal() {
 
             </form>
           </div>
-          <footer class="modal__footer">
+          <footer class="modal__footer modal-form__footer">
             <button type="button" class="btn-secondary" onclick="document.getElementById('verifactu-config-modal').remove()">Cancelar</button>
             <button type="button" class="btn-primary" onclick="saveVerifactuConfig()">Guardar Configuración</button>
           </footer>
@@ -1505,12 +1497,12 @@ async function viewInvoice(invoiceId) {
         <div class="modal__panel" style="width: min(95vw, 1400px); max-width: 1400px; max-height: 92vh; display: flex; flex-direction: column;">
           <header class="modal__head" style="flex-shrink: 0;">
             <div>
-              <h2 class="modal__title">Factura ${invoice.invoice_number}</h2>
+              <h2 class="modal__title">Factura ${invoice.invoiceNumber || invoice.number || invoice.invoice_number}</h2>
               <p class="modal__subtitle">Detalles completos de la factura</p>
             </div>
             <button type="button" class="modal__close" onclick="document.getElementById('view-invoice-modal').remove()">×</button>
           </header>
-          <div class="modal__body" style="flex: 1; overflow-y: hidden; padding: 1.75rem;">
+          <div class="modal__body" style="flex: 1; overflow-y: auto; padding: 1.25rem;">
             <div style="display: flex; flex-direction: column; gap: 1.5rem; height: 100%; min-height: 0;">
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; padding: 1.1rem 1.25rem; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
                 <div>
@@ -1821,6 +1813,10 @@ async function openNewInvoiceModal() {
                     </select>
                   </div>
                   <div>
+                    <label for="new-invoice-description" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Descripción</label>
+                    <input type="text" id="new-invoice-description" name="description" class="form-input" style="width: 100%;" placeholder="Concepto general de la factura" />
+                  </div>
+                  <div>
                     <label for="new-invoice-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">Notas</label>
                     <textarea id="new-invoice-notes" name="notes" rows="2" class="form-input" style="resize: none; width: 100%;" placeholder="Observaciones internas o para el cliente"></textarea>
                   </div>
@@ -1920,7 +1916,12 @@ async function submitNewInvoice() {
     const dueDate = formData.get('due_date');
     const status = formData.get('status') || 'draft';
     const clientId = formData.get('client_id') || null;
-    const notes = (formData.get('notes') || '').trim();
+    let notes = (formData.get('notes') || '').trim();
+    const description = (formData.get('description') || '').trim();
+
+    if (description) {
+      notes = `Concepto: ${description}\n\n${notes}`.trim();
+    }
 
     if (!invoiceNumber) {
       showNotification('El numero de factura es obligatorio.', 'warning');
@@ -2610,7 +2611,7 @@ function setupFilters() {
 
 async function openAddPaymentModal(invoiceId = null) {
   try {
-    showNotification('Preparando formulario de pago...', 'info');
+    // showNotification('Preparando formulario de pago...', 'info');
 
     // Si no se proporciona invoiceId, buscar la factura seleccionada
     const targetInvoiceId = invoiceId || selectedInvoiceId;
@@ -2639,155 +2640,108 @@ async function openAddPaymentModal(invoiceId = null) {
     const alreadyPaid = 0; // TODO: Calcular de la suma de pagos existentes cuando tengamos la API
     const remainingAmount = totalInvoice - alreadyPaid;
 
-    const today = formatDateForInput(new Date());
+    const today = new Date().toISOString().split('T')[0];
 
+    // MODAL COMPACTO - SIN SCROLL
     const modalHTML = `
-      <div class="modal is-open" id="add-payment-modal">
+      <div class="modal is-open" id="add-payment-modal" style="display: flex; align-items: center; justify-content: center;">
         <div class="modal__backdrop" onclick="closeAddPaymentModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 700px); max-width: 700px; max-height: 85vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="flex-shrink: 0; padding: 1.25rem 1.5rem;">
+        
+        <div class="modal__panel" style="width: 100%; max-width: 650px; margin: auto; max-height: 90vh; display: flex; flex-direction: column;">
+          <!-- Header Compacto -->
+          <div style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface);">
             <div>
-              <h2 class="modal__title" style="margin: 0; font-size: 1.4rem; font-weight: 700;">💰 Registrar Pago</h2>
-              <p class="modal__subtitle" style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
-                Factura: <strong>${escapeHtml(invoice.invoice_number || invoice.invoiceNumber)}</strong> 
-                ${invoice.client_name || invoice.clientName ? `• Cliente: ${escapeHtml(invoice.client_name || invoice.clientName)}` : ''}
-              </p>
+              <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">💰 Registrar Pago</h2>
+              <div style="margin-top: 0.25rem; font-size: 0.85rem; color: var(--text-secondary);">
+                Factura: <strong style="color: var(--primary-color);">${escapeHtml(invoice.invoice_number || invoice.invoiceNumber)}</strong>
+                ${invoice.client_name ? `• ${escapeHtml(invoice.client_name)}` : ''}
+              </div>
             </div>
-            <button type="button" class="modal__close" onclick="closeAddPaymentModal()">&times;</button>
-          </header>
+            <button type="button" onclick="closeAddPaymentModal()" style="background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; padding: 0;">&times;</button>
+          </div>
           
-          <div class="modal__body" style="flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem;">
+          <!-- Body -->
+          <div style="padding: 1.25rem 1.5rem; overflow-y: auto;">
             <form id="add-payment-form">
-              <!-- Información de la factura -->
-              <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
-                  <div>
-                    <div style="opacity: 0.9; margin-bottom: 0.25rem; font-size: 0.8rem;">Total factura</div>
-                    <div style="font-size: 1.75rem; font-weight: 700;">${formatCurrency(totalInvoice)}</div>
-                  </div>
-                  <div>
-                    <div style="opacity: 0.9; margin-bottom: 0.25rem; font-size: 0.8rem;">Pendiente de pago</div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: ${remainingAmount > 0 ? '#fbbf24' : '#34d399'};">
-                      ${formatCurrency(remainingAmount)}
-                    </div>
-                  </div>
+              <!-- Info Banner Inline -->
+              <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Total</div>
+                  <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${formatCurrency(totalInvoice)}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pendiente</div>
+                  <div style="font-size: 1.1rem; font-weight: 700; color: ${remainingAmount > 0 ? '#b45309' : '#047857'};">${formatCurrency(remainingAmount)}</div>
                 </div>
               </div>
 
-              <!-- Campos del formulario -->
-              <div style="display: grid; gap: 1.25rem;">
-                <!-- Importe -->
-                <div>
-                  <label for="payment-amount" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
-                    Importe del pago <span style="color: #ef4444;">*</span>
-                  </label>
-                  <div style="position: relative;">
-                    <input 
-                      type="number" 
-                      id="payment-amount" 
-                      name="amount" 
-                      class="form-input" 
-                      value="${remainingAmount.toFixed(2)}"
-                      step="0.01" 
-                      min="0.01"
-                      max="${remainingAmount}"
-                      required 
-                      style="width: 100%; padding: 0.75rem; font-size: 1.1rem; font-weight: 600; padding-right: 3rem;" 
-                      placeholder="0.00"
-                    />
-                    <span style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 1.1rem; font-weight: 600;">€</span>
-                  </div>
-                  <p style="margin: 0.4rem 0 0 0; font-size: 0.8rem; color: var(--text-secondary);">
-                    💡 Importe máximo disponible: <strong>${formatCurrency(remainingAmount)}</strong>
-                  </p>
-                </div>
-
-                <!-- Fecha y Método de pago en dos columnas -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                  <!-- Fecha de pago -->
+              <!-- Form Fields - Grid Layout -->
+              <div style="display: grid; gap: 1rem;">
+                
+                <!-- Row 1: Amount & Date & Method -->
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 1rem;">
                   <div>
-                    <label for="payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
-                      Fecha del pago <span style="color: #ef4444;">*</span>
+                    <label for="payment-amount" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem; color: var(--text-primary);">
+                      Importe <span style="color: #ef4444;">*</span>
                     </label>
-                    <input 
-                      type="date" 
-                      id="payment-date" 
-                      name="payment_date" 
-                      class="form-input" 
-                      value="${today}" 
-                      max="${today}"
-                      required 
-                      style="width: 100%; padding: 0.75rem; font-size: 0.95rem;" 
-                    />
+                    <div style="position: relative;">
+                      <input type="number" id="payment-amount" name="amount" value="${remainingAmount.toFixed(2)}" step="0.01" min="0.01" max="${remainingAmount}" required 
+                        class="form-input" style="width: 100%; font-weight: 600;" placeholder="0.00" />
+                      <span style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 0.85rem;">€</span>
+                    </div>
                   </div>
 
-                  <!-- Método de pago -->
                   <div>
-                    <label for="payment-method" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
-                      Método de pago <span style="color: #ef4444;">*</span>
+                    <label for="payment-date" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem; color: var(--text-primary);">
+                      Fecha <span style="color: #ef4444;">*</span>
                     </label>
-                    <select 
-                      id="payment-method" 
-                      name="payment_method" 
-                      class="form-input" 
-                      required 
-                      style="width: 100%; padding: 0.75rem; font-size: 0.95rem;"
-                    >
+                    <input type="date" id="payment-date" name="payment_date" value="${today}" max="${today}" required class="form-input" style="width: 100%;" />
+                  </div>
+
+                  <div>
+                    <label for="payment-method" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem; color: var(--text-primary);">
+                      Método <span style="color: #ef4444;">*</span>
+                    </label>
+                    <select id="payment-method" name="payment_method" required class="form-input" style="width: 100%;">
                       <option value="">Seleccionar...</option>
-                      <option value="bank_transfer" selected>🏦 Transferencia Bancaria</option>
-                      <option value="card">💳 Tarjeta</option>
-                      <option value="cash">💵 Efectivo</option>
-                      <option value="cheque">📝 Cheque</option>
-                      <option value="paypal">🅿️ PayPal</option>
-                      <option value="stripe">💠 Stripe</option>
-                      <option value="other">📦 Otro</option>
+                      <option value="bank_transfer" selected>Transferencia</option>
+                      <option value="card">Tarjeta</option>
+                      <option value="cash">Efectivo</option>
+                      <option value="paypal">PayPal</option>
+                      <option value="other">Otro</option>
                     </select>
                   </div>
                 </div>
 
-                <!-- ID de transacción (opcional) -->
-                <div>
-                  <label for="payment-transaction-id" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
-                    ID de Transacción <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.85rem;">(opcional)</span>
-                  </label>
-                  <input 
-                    type="text" 
-                    id="payment-transaction-id" 
-                    name="transaction_id" 
-                    class="form-input" 
-                    placeholder="Ej: TRX-2024-001234" 
-                    maxlength="255"
-                    style="width: 100%; padding: 0.75rem; font-size: 0.95rem;" 
-                  />
+                <!-- Row 2: Transaction ID & Notes -->
+                <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1rem;">
+                  <div>
+                    <label for="payment-transaction-id" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem; color: var(--text-primary);">
+                      ID Transacción <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.75rem;">(Op.)</span>
+                    </label>
+                    <input type="text" id="payment-transaction-id" name="transaction_id" placeholder="Ej: TRX-123" maxlength="100" class="form-input" style="width: 100%;" />
+                  </div>
+                  <div>
+                    <label for="payment-notes" style="display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.85rem; color: var(--text-primary);">
+                      Notas <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.75rem;">(Op.)</span>
+                    </label>
+                    <input type="text" id="payment-notes" name="notes" placeholder="Observaciones..." maxlength="200" class="form-input" style="width: 100%;" />
+                  </div>
                 </div>
 
-                <!-- Notas (opcional) -->
-                <div>
-                  <label for="payment-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
-                    Notas <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.85rem;">(opcional)</span>
-                  </label>
-                  <textarea 
-                    id="payment-notes" 
-                    name="notes" 
-                    rows="3" 
-                    class="form-input" 
-                    placeholder="Observaciones sobre el pago..."
-                    maxlength="500"
-                    style="resize: vertical; width: 100%; padding: 0.75rem; font-size: 0.95rem;"
-                  ></textarea>
-                </div>
               </div>
 
               <input type="hidden" name="invoice_id" value="${targetInvoiceId}" />
             </form>
           </div>
           
-          <footer class="modal__footer modal-form__footer" style="flex-shrink: 0; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
-            <button type="button" class="btn-secondary" onclick="closeAddPaymentModal()" style="padding: 0.75rem 1.5rem;">
+          <!-- Footer Compacto -->
+          <footer style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem; background: var(--bg-surface); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+            <button type="button" class="btn-secondary" onclick="closeAddPaymentModal()" style="padding: 0.5rem 1rem;">
               Cancelar
             </button>
-            <button type="button" class="btn-primary" onclick="submitAddPayment()" style="padding: 0.75rem 1.5rem; font-weight: 600;">
-              💾 Registrar Pago
+            <button type="button" class="btn-primary" onclick="submitAddPayment()" style="padding: 0.5rem 1.5rem; font-weight: 600;">
+              Registrar Pago
             </button>
           </footer>
         </div>
@@ -2796,37 +2750,26 @@ async function openAddPaymentModal(invoiceId = null) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Validación de importe en tiempo real
+    // Validación de importe en tiempo real (sin cambios)
     const amountInput = document.getElementById('payment-amount');
     if (amountInput) {
       amountInput.addEventListener('input', () => {
         const value = sanitizeNumber(amountInput.value, 0);
         if (value > remainingAmount) {
-          amountInput.setCustomValidity(`El importe no puede superar ${formatCurrency(remainingAmount)}`);
+          amountInput.setCustomValidity(`Máximo: ${formatCurrency(remainingAmount)}`);
         } else if (value <= 0) {
-          amountInput.setCustomValidity('El importe debe ser mayor que 0');
+          amountInput.setCustomValidity('Debe ser positivo');
         } else {
           amountInput.setCustomValidity('');
         }
       });
     }
-
-    // Validación de fecha (no puede ser futura)
-    const dateInput = document.getElementById('payment-date');
-    if (dateInput) {
-      dateInput.addEventListener('change', () => {
-        const selectedDate = new Date(dateInput.value);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (selectedDate > today) {
-          dateInput.setCustomValidity('La fecha de pago no puede ser futura');
-          showNotification('La fecha de pago no puede ser futura', 'warning');
-        } else {
-          dateInput.setCustomValidity('');
-        }
-      });
-    }
+    
+    // Enfocar importe al abrir
+    setTimeout(() => {
+        const input = document.getElementById('payment-amount');
+        if (input) input.select();
+    }, 100);
 
   } catch (error) {
     console.error('Error al abrir modal de pago:', error);
@@ -2952,7 +2895,7 @@ export function renderInvoices() {
           </select>
         </div>
         <div class="invoices__filters-group">
-          <button type="button" class="btn-ghost" onclick="openVerifactuConfigModal()" title="Configuración Verifactu">
+          <button type="button" class="btn-ghost" onclick="openVerifactuConfigModal()" title="Configuración Verifactu" style="margin-right: 0.5rem;">
             <span>⚙️</span>
             Verifactu
           </button>

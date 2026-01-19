@@ -401,42 +401,84 @@ class VerifactuService {
   static async updateConfig(userId: string, configData: any): Promise<IVerifactuConfig> {
     const fields: string[] = [];
     const values: any[] = [];
-    let paramCount = 1;
+    const insertFields: string[] = ['user_id'];
+    const insertPlaceholders: string[] = ['$1'];
+    const insertValues: any[] = [userId];
 
-    const allowedFields = [
-      'enabled',
-      'auto_register',
-      'certificate_path',
-      'certificate_password',
-      'software_nif',
-      'software_name',
-      'software_version',
-      'software_license',
-      'test_mode'
-    ];
+    // Mapeo de campos camelCase a snake_case permitidos
+    const allowedFields = {
+      enabled: 'enabled',
+      autoRegister: 'auto_register',
+      certificatePath: 'certificate_path',
+      certificatePassword: 'certificate_password',
+      softwareNif: 'software_nif',
+      softwareName: 'software_name',
+      softwareVersion: 'software_version',
+      softwareLicense: 'software_license',
+      testMode: 'test_mode'
+    };
 
-    Object.keys(configData).forEach(key => {
-      // Convert camelCase to snake_case if necessary (though the input seems to be snake_case based on route)
-      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-      if (allowedFields.includes(snakeKey)) {
-        fields.push(`${snakeKey} = $${paramCount}`);
-        values.push(configData[key]);
+    // Preparar datos para UPDATE y INSERT
+    let paramCount = 2; // Empezamos en 2 porque $1 es userId para el WHERE/INSERT
+    const updateSets: string[] = [];
+
+    Object.entries(configData).forEach(([key, value]) => {
+      // @ts-ignore
+      const dbField = allowedFields[key] || allowedFields[key.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`)];
+      
+      if (dbField) {
+        updateSets.push(`${dbField} = $${paramCount}`);
+        values.push(value);
+        
+        insertFields.push(dbField);
+        insertPlaceholders.push(`$${paramCount}`);
+        insertValues.push(value);
+        
         paramCount++;
       }
     });
 
-    if (fields.length === 0) {
+    if (updateSets.length === 0) {
       throw new Error('No hay campos válidos para actualizar');
     }
 
-    values.push(userId);
+    // Usar UPSERT (INSERT ... ON CONFLICT DO UPDATE)
+    // Nota: values contiene los valores de los campos. Necesitamos construir un array con [userId, ...values]
+    const queryValues = [userId, ...values];
+
+    // Ajustar los índices de parámetros para la consulta completa
+    // INSERT INTO ... VALUES ($1, $2, ...) ON CONFLICT (user_id) DO UPDATE SET col = $2, ...
+    
+    // Reconstruir placeholders para INSERT y UPDATE basados en queryValues
+    // queryValues[0] es userId ($1)
+    // queryValues[1] es el primer campo ($2), etc.
+    
+    const finalInsertPlaceholders = queryValues.map((_, i) => `$${i + 1}`);
+    // Para insertFields, necesitamos coincidir con los valores. insertFields[0] es user_id
+    
+    // Simplificación: Vamos a intentar INSERT primero, si falla por unique constraint, hacemos UPDATE
+    // O mejor, INSERT ON CONFLICT
+    
+    const insertCols = insertFields.join(', ');
+    // $1, $2, $3...
+    const insertVals = finalInsertPlaceholders.join(', ');
+    
+    // Construir SET clause para UPDATE: col = EXCLUDED.col
+    const updateClause = insertFields
+      .filter(f => f !== 'user_id')
+      .map(f => `${f} = EXCLUDED.${f}`)
+      .join(', ');
+    
+    // Asegurarse de actualizar updated_at
+    const finalUpdateClause = `${updateClause}, updated_at = CURRENT_TIMESTAMP`;
 
     const result = await query(
-      `UPDATE verifactu_config
-       SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
-       WHERE user_id = $${paramCount}
+      `INSERT INTO verifactu_config (${insertCols})
+       VALUES (${insertVals})
+       ON CONFLICT (user_id)
+       DO UPDATE SET ${finalUpdateClause}
        RETURNING *`,
-      values
+      queryValues
     );
 
     const row = result.rows[0];

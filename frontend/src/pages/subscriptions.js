@@ -294,8 +294,8 @@ function renderExpenseSubscriptionRow(sub, isFirst = false) {
       <td style="padding: 1rem; text-align: center;"><span class="badge ${statusBadge.class}">${statusBadge.label}</span></td>
       <td style="padding: 1rem; text-align: center;">${trialInfo}</td>
       <td style="padding: 1rem; text-align: right;">
-        <button type="button" class="btn-icon" title="Editar" style="margin-right: 0.5rem;">✏️</button>
-        <button type="button" class="btn-icon" title="Eliminar">🗑️</button>
+        <button type="button" class="btn-icon" title="Editar" style="margin-right: 0.5rem;" onclick="showNotification('Editar suscripción: Funcionalidad en desarrollo', 'info')">✏️</button>
+        <button type="button" class="btn-icon" title="Eliminar" onclick="showNotification('Eliminar suscripción: Funcionalidad en desarrollo', 'info')">🗑️</button>
       </td>
     </tr>
   `;
@@ -390,7 +390,7 @@ function renderCustomerSubscriptionRow(sub, isFirst = false) {
       <td style="padding: 1rem; text-align: right;">${formatCurrency(sub.total_revenue || 0)}</td>
       <td style="padding: 1rem; text-align: right;">
         <button type="button" class="btn-icon" title="Ver detalles" style="margin-right: 0.5rem;">👁️</button>
-        <button type="button" class="btn-icon" title="Editar" style="margin-right: 0.5rem;">✏️</button>
+        <button type="button" class="btn-icon" title="Editar" style="margin-right: 0.5rem;" onclick="showNotification('Editar suscripción de cliente: Funcionalidad en desarrollo', 'info')">✏️</button>
         ${sub.status === 'trial' ? '<button type="button" class="btn-icon" title="Convertir">✅</button>' : ''}
       </td>
     </tr>
@@ -486,7 +486,7 @@ export function renderSubscriptions() {
         </div>
         
         <!-- Table -->
-        <div class="table-container" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+        <div class="table-container" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; overflow-x: auto;">
           <div style="text-align: center; padding: 3rem;">
             <div class="spinner"></div>
             <p>Cargando suscripciones...</p>
@@ -540,7 +540,7 @@ export function renderSubscriptions() {
         </div>
         
         <!-- Table -->
-        <div class="table-container" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+        <div class="table-container" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; overflow-x: auto;">
           <div style="text-align: center; padding: 3rem;">
             <p style="color: var(--text-secondary);">
               Cargando clientes...
