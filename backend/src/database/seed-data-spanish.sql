@@ -94,8 +94,8 @@ BEGIN
 
     -- Factura 1: Pagada completamente
     v_invoice_id := gen_random_uuid();
-    INSERT INTO invoices (id, user_id, client_id, project_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, created_at, updated_at)
-    VALUES (v_invoice_id, v_user_id, v_client_garcia, v_project_web, '2025-001', '2025-09-15', '2025-10-15', 'paid', 8500.00, 21.00, 1785.00, 15.00, 1275.00, 9010.00, 'EUR', NOW() - INTERVAL '120 days', NOW());
+    INSERT INTO invoices (id, user_id, client_id, project_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, paid_amount, created_at, updated_at)
+    VALUES (v_invoice_id, v_user_id, v_client_garcia, v_project_web, '2025-001', '2025-09-15', '2025-10-15', 'paid', 8500.00, 21.00, 1785.00, 15.00, 1275.00, 9010.00, 'EUR', 9010.00, NOW() - INTERVAL '120 days', NOW());
     
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_type, unit_price, vat_percentage, amount, created_at)
     VALUES 
@@ -105,8 +105,8 @@ BEGIN
 
     -- Factura 2: Enviada, pendiente de pago
     v_invoice_id := gen_random_uuid();
-    INSERT INTO invoices (id, user_id, client_id, project_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, created_at, updated_at)
-    VALUES (v_invoice_id, v_user_id, v_client_rodriguez, v_project_crm, '2025-002', '2025-11-20', '2025-12-20', 'sent', 6000.00, 21.00, 1260.00, 15.00, 900.00, 6360.00, 'EUR', NOW() - INTERVAL '60 days', NOW());
+    INSERT INTO invoices (id, user_id, client_id, project_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, paid_amount, created_at, updated_at)
+    VALUES (v_invoice_id, v_user_id, v_client_rodriguez, v_project_crm, '2025-002', '2025-11-20', '2025-12-20', 'sent', 6000.00, 21.00, 1260.00, 15.00, 900.00, 6360.00, 'EUR', 0.00, NOW() - INTERVAL '60 days', NOW());
     
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_type, unit_price, vat_percentage, amount, created_at)
     VALUES 
@@ -116,8 +116,8 @@ BEGIN
 
     -- Factura 3: Pagada parcialmente
     v_invoice_id := gen_random_uuid();
-    INSERT INTO invoices (id, user_id, client_id, project_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, created_at, updated_at)
-    VALUES (v_invoice_id, v_user_id, v_client_innovatech, v_project_app, '2025-003', '2025-12-10', '2026-01-10', 'sent', 10000.00, 21.00, 2100.00, 15.00, 1500.00, 10600.00, 'EUR', NOW() - INTERVAL '40 days', NOW());
+    INSERT INTO invoices (id, user_id, client_id, project_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, paid_amount, created_at, updated_at)
+    VALUES (v_invoice_id, v_user_id, v_client_innovatech, v_project_app, '2025-003', '2025-12-10', '2026-01-10', 'sent', 10000.00, 21.00, 2100.00, 15.00, 1500.00, 10600.00, 'EUR', 5300.00, NOW() - INTERVAL '40 days', NOW());
     
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_type, unit_price, vat_percentage, amount, created_at)
     VALUES 
@@ -127,8 +127,8 @@ BEGIN
 
     -- Factura 4: Pendiente
     v_invoice_id := gen_random_uuid();
-    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, created_at, updated_at)
-    VALUES (v_invoice_id, v_user_id, v_client_digital, '2025-004', '2025-12-05', '2026-01-05', 'sent', 3200.00, 21.00, 672.00, 15.00, 480.00, 3392.00, 'EUR', NOW() - INTERVAL '45 days', NOW());
+    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, paid_amount, created_at, updated_at)
+    VALUES (v_invoice_id, v_user_id, v_client_digital, '2025-004', '2025-12-05', '2026-01-05', 'sent', 3200.00, 21.00, 672.00, 15.00, 480.00, 3392.00, 'EUR', 0.00, NOW() - INTERVAL '45 days', NOW());
     
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_type, unit_price, vat_percentage, amount, created_at)
     VALUES 
@@ -139,8 +139,8 @@ BEGIN
 
     -- Factura 5: Vencida
     v_invoice_id := gen_random_uuid();
-    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, created_at, updated_at)
-    VALUES (v_invoice_id, v_user_id, v_client_torres, '2025-005', '2025-10-20', '2025-11-20', 'overdue', 7500.00, 21.00, 1575.00, 15.00, 1125.00, 7950.00, 'EUR', NOW() - INTERVAL '90 days', NOW());
+    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, paid_amount, created_at, updated_at)
+    VALUES (v_invoice_id, v_user_id, v_client_torres, '2025-005', '2025-10-20', '2025-11-20', 'overdue', 7500.00, 21.00, 1575.00, 15.00, 1125.00, 7950.00, 'EUR', 0.00, NOW() - INTERVAL '90 days', NOW());
     
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_type, unit_price, vat_percentage, amount, created_at)
     VALUES 
@@ -150,8 +150,8 @@ BEGIN
 
     -- Factura 6: Borrador
     v_invoice_id := gen_random_uuid();
-    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, created_at, updated_at)
-    VALUES (v_invoice_id, v_user_id, v_client_fernandez, '2026-001', '2026-01-15', '2026-02-15', 'draft', 5400.00, 21.00, 1134.00, 15.00, 810.00, 5724.00, 'EUR', NOW() - INTERVAL '5 days', NOW());
+    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, paid_amount, created_at, updated_at)
+    VALUES (v_invoice_id, v_user_id, v_client_fernandez, '2026-001', '2026-01-15', '2026-02-15', 'draft', 5400.00, 21.00, 1134.00, 15.00, 810.00, 5724.00, 'EUR', 0.00, NOW() - INTERVAL '5 days', NOW());
     
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_type, unit_price, vat_percentage, amount, created_at)
     VALUES 
@@ -161,8 +161,8 @@ BEGIN
 
     -- Facturas adicionales
     v_invoice_id := gen_random_uuid();
-    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, created_at, updated_at)
-    VALUES (v_invoice_id, v_user_id, v_client_ecommerce, '2025-006', '2025-11-30', '2025-12-30', 'sent', 4500.00, 21.00, 945.00, 15.00, 675.00, 4770.00, 'EUR', NOW() - INTERVAL '50 days', NOW());
+    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, paid_amount, created_at, updated_at)
+    VALUES (v_invoice_id, v_user_id, v_client_ecommerce, '2025-006', '2025-11-30', '2025-12-30', 'sent', 4500.00, 21.00, 945.00, 15.00, 675.00, 4770.00, 'EUR', 0.00, NOW() - INTERVAL '50 days', NOW());
     
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_type, unit_price, vat_percentage, amount, created_at)
     VALUES 
@@ -171,8 +171,8 @@ BEGIN
     (gen_random_uuid(), v_invoice_id, 'Integración pasarela de pago', 16, 'horas', 50.00, 21.00, 800.00, NOW() - INTERVAL '50 days');
 
     v_invoice_id := gen_random_uuid();
-    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, created_at, updated_at)
-    VALUES (v_invoice_id, v_user_id, v_client_hosteleria, '2025-007', '2025-12-15', '2026-01-15', 'paid', 2800.00, 21.00, 588.00, 15.00, 420.00, 2968.00, 'EUR', NOW() - INTERVAL '35 days', NOW());
+    INSERT INTO invoices (id, user_id, client_id, invoice_number, issue_date, due_date, status, subtotal, vat_percentage, vat_amount, irpf_percentage, irpf_amount, total, currency, paid_amount, created_at, updated_at)
+    VALUES (v_invoice_id, v_user_id, v_client_hosteleria, '2025-007', '2025-12-15', '2026-01-15', 'paid', 2800.00, 21.00, 588.00, 15.00, 420.00, 2968.00, 'EUR', 2968.00, NOW() - INTERVAL '35 days', NOW());
     
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_type, unit_price, vat_percentage, amount, created_at)
     VALUES 

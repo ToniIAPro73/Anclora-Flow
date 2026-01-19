@@ -230,6 +230,26 @@ CREATE TABLE IF NOT EXISTS activity_log (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Invoice Audit Log (for detailed history of changes)
+CREATE TABLE IF NOT EXISTS invoice_audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action VARCHAR(50) NOT NULL, -- 'created', 'updated', 'deleted', 'status_changed', 'payment_received'
+    old_value JSONB,
+    new_value JSONB,
+    change_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add paid_amount to invoices if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'invoices' AND column_name = 'paid_amount') THEN
+        ALTER TABLE invoices ADD COLUMN paid_amount DECIMAL(12, 2) DEFAULT 0;
+    END IF;
+END $$;
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_clients_user_id ON clients(user_id);
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
@@ -238,6 +258,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_user_id ON invoices(user_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_client_id ON invoices(client_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 CREATE INDEX IF NOT EXISTS idx_invoices_issue_date ON invoices(issue_date);
+CREATE INDEX IF NOT EXISTS idx_invoices_paid_amount ON invoices(paid_amount);
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON expenses(user_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
@@ -248,6 +269,42 @@ CREATE INDEX IF NOT EXISTS idx_tax_events_user_id ON tax_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_tax_events_due_date ON tax_events(due_date);
 CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_user_id ON activity_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_invoice_audit_log_invoice_id ON invoice_audit_log(invoice_id);
+
+-- Trigger function to update invoice status and paid_amount on payment
+CREATE OR REPLACE FUNCTION update_invoice_on_payment()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_total DECIMAL(12, 2);
+    v_paid DECIMAL(12, 2);
+BEGIN
+    -- Get invoice total
+    SELECT total INTO v_total FROM invoices WHERE id = NEW.invoice_id;
+    
+    -- Calculate total paid
+    SELECT COALESCE(SUM(amount), 0) INTO v_paid FROM payments WHERE invoice_id = NEW.invoice_id;
+    
+    -- Update invoice
+    UPDATE invoices 
+    SET 
+        paid_amount = v_paid,
+        status = CASE 
+            WHEN v_paid >= v_total THEN 'paid'
+            WHEN v_paid > 0 THEN 'partial'
+            ELSE status
+        END,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.invoice_id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_invoice_on_payment ON payments;
+CREATE TRIGGER trg_update_invoice_on_payment
+AFTER INSERT OR UPDATE OR DELETE ON payments
+FOR EACH ROW
+EXECUTE FUNCTION update_invoice_on_payment();
 
 -- Create trigger function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

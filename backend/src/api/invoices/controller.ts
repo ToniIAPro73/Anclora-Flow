@@ -49,6 +49,18 @@ export const getStatistics = async (req: Request, res: Response) => {
   }
 };
 
+export const checkNumberUniqueness = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as any).id as string;
+    const { invoiceNumber } = req.params;
+    const exists = await invoiceRepository.findByNumber(userId, invoiceNumber as string);
+    res.json({ exists: !!exists });
+  } catch (error) {
+    console.error('Error checking invoice number uniqueness:', error);
+    res.status(500).json({ error: 'Error al verificar el número de factura' });
+  }
+};
+
 export const getMonthlyIncome = async (req: Request, res: Response) => {
   try {
     const months = req.query.months ? parseInt(req.query.months as string) : 12;
@@ -94,12 +106,23 @@ export const createInvoice = async (req: Request, res: Response) => {
 export const updateInvoice = async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any).id as string;
-    const invoice = await invoiceRepository.update(req.params.id as string, userId, req.body);
-
-    if (!invoice) {
+    
+    // Security check: only allow updating if status is 'draft'
+    const currentInvoice = await invoiceRepository.findById(req.params.id as string, userId);
+    if (!currentInvoice) {
       return res.status(404).json({ error: 'Factura no encontrada' });
     }
 
+    if (currentInvoice.status !== 'draft') {
+      return res.status(403).json({ error: 'Solo se pueden editar facturas en estado borrador' });
+    }
+
+    // Require change reason
+    if (!req.body.changeReason) {
+      return res.status(400).json({ error: 'El motivo del cambio es obligatorio para editar una factura' });
+    }
+
+    const invoice = await invoiceRepository.update(req.params.id as string, userId, req.body);
     res.json(invoice);
   } catch (error) {
     console.error('Error updating invoice:', error);
@@ -147,5 +170,44 @@ export const updateOverdueStatus = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error updating overdue invoices:', error);
     res.status(500).json({ error: 'Error al actualizar facturas vencidas' });
+  }
+};
+
+export const getInvoicePayments = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as any).id as string;
+    const payments = await invoiceRepository.getPayments(req.params.id as string, userId);
+    res.json(payments);
+  } catch (error) {
+    console.error('Error fetching invoice payments:', error);
+    res.status(500).json({ error: 'Error al obtener los pagos de la factura' });
+  }
+};
+
+export const addInvoicePayment = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as any).id as string;
+    // Check if invoice exists and belongs to user
+    const invoice = await invoiceRepository.findById(req.params.id as string, userId);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Factura no encontrada' });
+    }
+
+    const payment = await invoiceRepository.createPayment(userId, req.params.id as string, req.body);
+    res.status(201).json(payment);
+  } catch (error) {
+    console.error('Error adding invoice payment:', error);
+    res.status(500).json({ error: 'Error al registrar el pago' });
+  }
+};
+
+export const getInvoiceAuditLog = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as any).id as string;
+    const logs = await invoiceRepository.getAuditLog(req.params.id as string, userId);
+    res.json(logs);
+  } catch (error) {
+    console.error('Error fetching invoice audit log:', error);
+    res.status(500).json({ error: 'Error al obtener el historial de la factura' });
   }
 };

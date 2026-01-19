@@ -4476,3 +4476,525 @@ table tr[hidden] {
 .progress--danger .progress__bar {
   background: #ef4444;
 }
+
+/* --- ENRIQUECIMIENTO MODAL CONSULTA --- */
+
+/* Resumen de Importes */
+.invoice-summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.invoice-summary-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.invoice-summary-stat__label {
+  color: var(--text-secondary);
+}
+
+.invoice-summary-stat__value {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.invoice-summary-stat--pending {
+  padding: 0.75rem;
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  margin-top: 0.25rem;
+}
+
+[data-theme="dark"] .invoice-summary-stat--pending {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* Historial de Pagos */
+.invoice-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.history-item {
+  padding: 0.75rem;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  transition: transform 0.2s ease;
+}
+
+.history-item:hover {
+  transform: translateX(4px);
+  border-color: var(--primary-color);
+}
+
+.history-item__header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.history-item__title {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.history-item__date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.history-item__meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Registro de Actividad (Timeline) */
+.invoice-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  position: relative;
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.invoice-activity::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-color);
+}
+
+.activity-log-item {
+  position: relative;
+}
+
+.activity-log-item__dot {
+  position: absolute;
+  left: -22px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  border: 2px solid var(--bg-surface);
+  z-index: 1;
+}
+
+.activity-log-item__action {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 0.15rem;
+}
+
+.activity-log-item__reason {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 0.25rem;
+}
+
+.activity-log-item__footer {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* Genéricos */
+.empty-state {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 1rem 0;
+  font-style: italic;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.badge--neutral {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.text-danger  { color: #ef4444; }
+
+/* --- COMPONENTES TABLAS FASE 4 (Normativa Directriz) --- */
+
+.table-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-color-20);
+  background: var(--bg-surface);
+}
+
+.btn-config-columns {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-config-columns:hover {
+  background: var(--bg-surface);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Tabla Base */
+.table-container {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.data-table thead {
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.data-table th {
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.15s;
+}
+
+.data-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table-row-clickable {
+  cursor: pointer;
+}
+
+.table-row-clickable:hover {
+  background-color: var(--bg-secondary);
+}
+
+.data-table td {
+  padding: 1rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+/* Paginación */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem 0;
+  margin-top: 1rem;
+}
+
+.btn-paginate {
+  padding: 0.5rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-paginate:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.btn-paginate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.page-btn.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-left: 1rem;
+}
+
+/* DRAWER LATERAL */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.drawer-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 480px;
+  max-width: 100%;
+  height: 100vh;
+  background: var(--bg-surface);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer.is-open {
+  transform: translateX(0);
+}
+
+.drawer__header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drawer__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.drawer__close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  line-height: 1;
+}
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.drawer__footer {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 1rem;
+  background: var(--bg-secondary);
+}
+
+@media (max-width: 600px) {
+  .drawer {
+    width: 100%;
+  }
+}
+
+/* --- TABLAS RESPONSIVAS (Normativa Directriz) --- */
+
+@media (max-width: 900px) {
+  /* Ocultar columnas no críticas */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Transformar tabla en Grid */
+  .invoices-table table, 
+  .invoices-table thead, 
+  .invoices-table tbody, 
+  .invoices-table th, 
+  .invoices-table td, 
+  .invoices-table tr {
+    display: block;
+  }
+
+  /* Ocultar cabecera real */
+  .invoices-table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .invoices-table__row {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    margin-bottom: 1.25rem;
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    position: relative;
+  }
+
+  .invoices-table__row.is-selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color-20);
+  }
+
+  .invoices-table td {
+    border: none;
+    padding: 0.5rem 0;
+    text-align: left;
+    position: relative;
+    padding-top: 1.5rem; /* Espacio para el label */
+  }
+
+  /* Etiquetas de datos */
+  .invoices-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+  }
+
+  /* Ajustes específicos de columnas */
+  .invoices-table td[data-label="Nº Factura"],
+  .invoices-table td[data-label="Importe"] {
+    grid-column: span 1;
+  }
+
+  .invoices-table td[data-label="Cliente"] {
+    grid-column: span 2;
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .invoices-table td[data-label="Estado"] {
+    grid-column: span 1;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .invoices-table td[data-label="ACCIONES"] {
+    grid-column: span 2;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    justify-content: flex-end;
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .invoices-table td[data-label="ACCIONES"]::before {
+    display: none; /* No mostrar label para acciones */
+  }
+
+  .invoices-table__number { font-size: 1.1rem; }
+  .invoices-table__amount { font-size: 1.1rem; color: var(--primary-color); }
+  .invoices-table__client { font-weight: 600; font-size: 1rem; }
+}
+
+[data-theme="dark"] .invoices-table__row {
+  background: var(--bg-dark-secondary);
+}

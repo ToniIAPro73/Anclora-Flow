@@ -32,6 +32,7 @@ export interface IInvoice {
   notes?: string | null;
   paymentMethod?: string | null;
   paymentDate?: Date | null;
+  paidAmount: number;
   createdAt: Date;
   updatedAt: Date;
   
@@ -76,4 +77,30 @@ export interface IInvoiceCreate {
 export interface IInvoiceUpdate extends Partial<IInvoiceCreate> {
   paymentMethod?: string | null;
   paymentDate?: Date | string | null;
+}
+
+export interface IPayment {
+  id: string;
+  userId: string;
+  invoiceId: string;
+  amount: number;
+  paymentDate: Date;
+  paymentMethod?: string | null;
+  transactionId?: string | null;
+  notes?: string | null;
+  createdAt: Date;
+  createdByInternalId?: string; // For joining with users
+  createdByName?: string;
+}
+
+export interface IInvoiceAuditLog {
+  id: string;
+  invoiceId: string;
+  userId: string;
+  action: 'created' | 'updated' | 'deleted' | 'status_changed' | 'payment_received';
+  oldValue?: any;
+  newValue?: any;
+  changeReason?: string | null;
+  createdAt: Date;
+  userName?: string;
 }

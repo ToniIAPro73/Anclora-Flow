@@ -140,6 +140,13 @@ export class InvoiceRepository extends BaseRepository<IInvoice> {
         [userId, 'invoice_created', 'invoice', invoice.id, `Factura ${invoiceNumber} creada`]
       );
 
+      // Add to audit log
+      await client.query(
+        `INSERT INTO invoice_audit_log (invoice_id, user_id, action, new_value)
+         VALUES ($1, $2, $3, $4)`,
+        [invoice.id, userId, 'created', JSON.stringify(invoice)]
+      );
+
       return invoice;
     });
   }
@@ -176,6 +183,12 @@ export class InvoiceRepository extends BaseRepository<IInvoice> {
           paramCount++;
         }
       });
+
+      // Get current invoice state for audit log
+      const oldInvoiceSql = `SELECT * FROM invoices WHERE id = $1 AND user_id = $2`;
+      const oldInvoiceResult = await client.query(oldInvoiceSql, [id, userId]);
+      if (oldInvoiceResult.rows.length === 0) return null;
+      const oldInvoice = oldInvoiceResult.rows[0];
 
       let updatedInvoiceRow: any = null;
 
@@ -220,6 +233,13 @@ export class InvoiceRepository extends BaseRepository<IInvoice> {
       // Re-fetch items if they were updated or just to be complete
       const itemsRes = await client.query('SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY created_at', [id]);
       invoice.items = this.mapRows(itemsRes.rows);
+
+      // Add to audit log
+      await client.query(
+        `INSERT INTO invoice_audit_log (invoice_id, user_id, action, old_value, new_value, change_reason)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, userId, 'updated', JSON.stringify(oldInvoice), JSON.stringify(updatedInvoiceRow), (updates as any).changeReason || 'Actualización de factura']
+      );
 
       return invoice;
     });
@@ -340,6 +360,17 @@ export class InvoiceRepository extends BaseRepository<IInvoice> {
     return invoice;
   }
 
+
+  async findByNumber(userId: string, invoiceNumber: string): Promise<IInvoice | null> {
+    const result = await this.executeQuery(
+      'SELECT * FROM invoices WHERE user_id = $1 AND invoice_number = $2',
+      [userId, invoiceNumber]
+    );
+
+    if (result.rows.length === 0) return null;
+    return this.mapToCamel(result.rows[0]);
+  }
+
   async getVerifactuStatus(id: string, userId: string): Promise<any> {
     const sql = `
       SELECT
@@ -416,6 +447,55 @@ export class InvoiceRepository extends BaseRepository<IInvoice> {
 
     const result = await this.executeQuery(sql, [userId]);
     return this.mapToCamel(result.rows[0]);
+  }
+
+  async getPayments(invoiceId: string, userId: string): Promise<any[]> {
+    const sql = `
+      SELECT p.*, u.name as created_by_name
+      FROM payments p
+      LEFT JOIN users u ON p.user_id = u.id
+      WHERE p.invoice_id = $1 AND p.user_id = $2
+      ORDER BY p.payment_date DESC, p.created_at DESC
+    `;
+    const result = await this.executeQuery(sql, [invoiceId, userId]);
+    return this.mapRows(result.rows);
+  }
+
+  async createPayment(userId: string, invoiceId: string, paymentData: any): Promise<any> {
+    const { amount, paymentDate, paymentMethod, transactionId, notes } = paymentData;
+    
+    return this.withTransaction(async (client) => {
+      const sql = `
+        INSERT INTO payments (user_id, invoice_id, amount, payment_date, payment_method, transaction_id, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `;
+      const result = await client.query(sql, [userId, invoiceId, amount, paymentDate, paymentMethod, transactionId, notes]);
+      const payment = this.mapToCamel(result.rows[0]);
+
+      // Trigger already updates invoice status and paid_amount
+      
+      // Add to audit log
+      await client.query(
+        `INSERT INTO invoice_audit_log (invoice_id, user_id, action, new_value, change_reason)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [invoiceId, userId, 'payment_received', JSON.stringify(payment), `Pago registrado: ${amount} €`]
+      );
+
+      return payment;
+    });
+  }
+
+  async getAuditLog(invoiceId: string, userId: string): Promise<any[]> {
+    const sql = `
+      SELECT l.*, u.name as user_name
+      FROM invoice_audit_log l
+      LEFT JOIN users u ON l.user_id = u.id
+      WHERE l.invoice_id = $1 AND (l.user_id = $2 OR EXISTS(SELECT 1 FROM users WHERE id = $2)) -- Simplified access check
+      ORDER BY l.created_at DESC
+    `;
+    const result = await this.executeQuery(sql, [invoiceId, userId]);
+    return this.mapRows(result.rows);
   }
 }
 

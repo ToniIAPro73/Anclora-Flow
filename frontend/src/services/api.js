@@ -156,6 +156,23 @@ class APIService {
     return this.put('/verifactu/config', data);
   }
 
+  // Pagos y Auditoría
+  async getInvoicePayments(id) {
+    return this.get(`/invoices/${id}/payments`);
+  }
+
+  async addInvoicePayment(id, data) {
+    return this.post(`/invoices/${id}/payments`, data);
+  }
+
+  async getInvoiceAuditLog(id) {
+    return this.get(`/invoices/${id}/audit-log`);
+  }
+
+  async checkInvoiceNumberUniqueness(invoiceNumber) {
+    return this.get(`/invoices/check-number/${invoiceNumber}`);
+  }
+
   async generateInvoicePdf(id) {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/invoices/${id}/pdf`, {

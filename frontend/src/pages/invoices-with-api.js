@@ -11,6 +11,20 @@ let currentFilters = {
   client: 'all'
 };
 
+// --- ESTADO DE PAGINACIÓN Y COLUMNAS (Fase 4) ---
+let currentPage = 1;
+const PAGE_SIZE = 10;
+let visibleColumns = {
+  number: true,
+  client: true,
+  issueDate: false,
+  dueDate: false,
+  total: true,
+  status: true,
+  verifactu: false,
+  days: false
+};
+
 // Estado temporal para formularios de edición/creación
 let invoiceEditState = null;
 const invoiceItemEditors = {
@@ -1494,9 +1508,22 @@ async function viewInvoice(invoiceId) {
     showNotification('Cargando detalles de la factura...', 'info');
 
     const invoice = await window.api.getInvoice(invoiceId);
+    let payments = [];
+    let auditLogs = [];
+
+    try {
+      payments = await window.api.getInvoicePayments(invoiceId);
+      auditLogs = await window.api.getInvoiceAuditLog(invoiceId);
+    } catch (e) {
+      console.warn('No se pudieron cargar pagos o auditoría:', e);
+    }
+
+    const totalInvoice = sanitizeNumber(invoice.total, 0);
+    const paidAmount = sanitizeNumber(invoice.paidAmount || invoice.paid_amount, 0);
+    const remainingBalance = Math.max(0, totalInvoice - paidAmount);
 
     const modalHTML = `
-      <div class="modal is-open invoice-modal" id="view-invoice-modal">
+      <div class="modal is-open" id="view-invoice-modal">
         <div class="modal__backdrop" onclick="document.getElementById('view-invoice-modal').remove()"></div>
         <div class="modal__panel modal__panel--xl modal__panel--flex">
           <header class="modal__head">
@@ -1577,9 +1604,66 @@ async function viewInvoice(invoiceId) {
                 <div class="modal-form__column modal-form__column--side">
                   <section class="modal-section modal-section--card modal-section--totals">
                     <div class="modal-section__header">
-                      <h3 class="modal-section__title">Resumen</h3>
+                      <h3 class="modal-section__title">Resumen de Importes</h3>
                     </div>
-                    <div id="view-invoice-totals"></div>
+                    <div class="invoice-summary-stats">
+                      <div class="invoice-summary-stat">
+                        <span class="invoice-summary-stat__label">Total Factura</span>
+                        <span class="invoice-summary-stat__value">${formatCurrency(totalInvoice)}</span>
+                      </div>
+                      <div class="invoice-summary-stat">
+                        <span class="invoice-summary-stat__label">Pagado hasta hoy</span>
+                        <span class="invoice-summary-stat__value text-success">${formatCurrency(paidAmount)}</span>
+                      </div>
+                      <div class="invoice-summary-stat invoice-summary-stat--pending">
+                        <span class="invoice-summary-stat__label">Saldo Pendiente</span>
+                        <span class="invoice-summary-stat__value ${remainingBalance > 0 ? 'text-warning' : 'text-success'}">${formatCurrency(remainingBalance)}</span>
+                      </div>
+                    </div>
+                    <div id="view-invoice-totals" style="margin-top: 1.5rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;"></div>
+                  </section>
+
+                  <section class="modal-section modal-section--card">
+                    <div class="modal-section__header">
+                      <h3 class="modal-section__title">Historial de Pagos</h3>
+                      <span class="badge badge--neutral">${payments.length}</span>
+                    </div>
+                    <div class="invoice-history">
+                      ${payments.length > 0 ? payments.map(p => `
+                        <div class="history-item">
+                          <div class="history-item__header">
+                            <span class="history-item__title">${formatCurrency(p.amount)}</span>
+                            <span class="history-item__date">${formatDate(p.paymentDate || p.payment_date)}</span>
+                          </div>
+                          <div class="history-item__meta">
+                            ${p.paymentMethod === 'bank_transfer' ? 'Transferencia' : p.paymentMethod}
+                            ${p.transactionId ? ` • Ref: ${p.transactionId}` : ''}
+                          </div>
+                        </div>
+                      `).join('') : '<p class="empty-state">No hay pagos registrados.</p>'}
+                    </div>
+                  </section>
+
+                  <section class="modal-section modal-section--card">
+                    <div class="modal-section__header">
+                      <h3 class="modal-section__title">Registro de Actividad</h3>
+                    </div>
+                    <div class="invoice-activity">
+                      ${auditLogs.length > 0 ? auditLogs.map(log => `
+                        <div class="activity-log-item">
+                          <div class="activity-log-item__dot"></div>
+                          <div class="activity-log-item__content">
+                            <div class="activity-log-item__action">
+                              <strong>${log.action === 'CREATE' ? 'Creación' : log.action === 'UPDATE' ? 'Actualización' : log.action === 'PAYMENT' ? 'Pago Recibido' : log.action}</strong>
+                            </div>
+                            ${log.changeReason ? `<div class="activity-log-item__reason">${log.changeReason}</div>` : ''}
+                            <div class="activity-log-item__footer">
+                              <span>${formatDate(log.createdAt || log.created_at)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      `).join('') : '<p class="empty-state">Sin actividad registrada.</p>'}
+                    </div>
                   </section>
                 </div>
               </div>
@@ -1703,6 +1787,12 @@ async function editInvoice(invoiceId) {
                       <label class="form-field invoice-modal__field invoice-modal__field--lg">
                         <span>Notas</span>
                         <textarea id="edit-notes" name="notes" rows="2" class="form-input">${invoice.notes || ''}</textarea>
+                      </label>
+                    </div>
+                    <div class="invoice-modal__row">
+                      <label class="form-field invoice-modal__field invoice-modal__field--xl">
+                        <span>Motivo del cambio (Obligatorio)</span>
+                        <input type="text" id="edit-change-reason" name="changeReason" class="form-input" placeholder="Ej: Error en el precio unitario, Cambio de fecha por acuerdo..." />
                       </label>
                     </div>
                   </section>
@@ -1950,6 +2040,38 @@ async function openNewInvoiceModal() {
       initialPaymentDate: null
     });
 
+    // --- VALIDACIÓN DE UNICIDAD EN TIEMPO REAL ---
+    const numberInput = document.getElementById('new-invoice-number');
+    let debounceTimer;
+
+    if (numberInput) {
+      numberInput.addEventListener('input', () => {
+        const value = numberInput.value.trim();
+        
+        // Limpiar estilos previos
+        numberInput.classList.remove('is-invalid', 'is-valid');
+        const existingError = numberInput.parentElement.querySelector('.form-field__error');
+        if (existingError) existingError.remove();
+
+        if (!value) return;
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+          try {
+            const { exists } = await window.api.checkInvoiceNumberUniqueness(value);
+            if (exists) {
+              numberInput.classList.add('is-invalid');
+              numberInput.insertAdjacentHTML('afterend', '<span class="form-field__error" style="color: #e53e3e; font-size: 0.75rem; margin-top: 0.25rem; display: block;">Este número de factura ya está en uso.</span>');
+            } else {
+              numberInput.classList.add('is-valid');
+            }
+          } catch (error) {
+            console.error('Error al verificar unicidad:', error);
+          }
+        }, 500); // 500ms debounce
+      });
+    }
+
     const notifications = document.querySelectorAll('.notification--info');
     notifications.forEach(n => n.remove());
   } catch (error) {
@@ -1987,20 +2109,35 @@ async function submitNewInvoice() {
       notes = `Concepto: ${description}\n\n${notes}`.trim();
     }
 
+    // --- VALIDACIONES ---
+    const errors = [];
+
+    // 1. Número de factura (Patrón)
     if (!invoiceNumber) {
-      showNotification('El numero de factura es obligatorio.', 'warning');
-      return;
+      errors.push('El número de factura es obligatorio.');
+    } else {
+      const invoicePattern = /^[A-Z0-9\-\/]+$/i;
+      if (!invoicePattern.test(invoiceNumber)) {
+        errors.push('El número de factura tiene un formato inválido (solo letras, números, guiones y barras).');
+      }
     }
 
+    // 2. Cliente obligatorio
+    if (!clientId) {
+      errors.push('Debes seleccionar un cliente.');
+    }
+
+    // 3. Fechas obligatorias y consistentes
     if (!issueDate || !dueDate) {
-      showNotification('Las fechas de emision y vencimiento son obligatorias.', 'warning');
-      return;
+      errors.push('Las fechas de emisión y vencimiento son obligatorias.');
+    } else if (new Date(dueDate) < new Date(issueDate)) {
+      errors.push('La fecha de vencimiento no puede ser anterior a la de emisión.');
     }
 
+    // 4. Líneas de factura
     const editorState = getItemsEditorState('create');
     if (!editorState || !editorState.items || editorState.items.length === 0) {
-      showNotification('Anade al menos una linea de concepto antes de crear la factura.', 'warning');
-      return;
+      errors.push('Añade al menos una línea de concepto.');
     }
 
     const items = editorState.items
@@ -2008,10 +2145,10 @@ async function submitNewInvoice() {
         const quantity = sanitizeNumber(item.quantity, 0);
         const unitPrice = sanitizeNumber(item.unitPrice, 0);
         const vatPercentage = sanitizeNumber(item.vatPercentage, 0);
-        const description = (item.description || '').trim();
+        const itemDescription = (item.description || '').trim();
         const totals = calculateLineTotals({ quantity, unitPrice, vatPercentage });
         return {
-          description,
+          description: itemDescription,
           quantity,
           unitType: item.unitType || 'unidad',
           unitPrice,
@@ -2022,9 +2159,20 @@ async function submitNewInvoice() {
       .filter(item => item.description.length > 0);
 
     if (items.length === 0) {
-      showNotification('Anade al menos una linea con descripcion para crear la factura.', 'warning');
+      errors.push('Añade al menos una línea con descripción.');
+    } else {
+      items.forEach((item, index) => {
+        if (item.quantity <= 0) errors.push(`Línea ${index + 1}: La cantidad debe ser mayor que 0.`);
+        if (item.unitPrice < 0) errors.push(`Línea ${index + 1}: El precio no puede ser negativo.`);
+        if (item.vatPercentage < 0 || item.vatPercentage > 100) errors.push(`Línea ${index + 1}: IVA inválido.`);
+      });
+    }
+
+    if (errors.length > 0) {
+      showNotification(errors.join('<br>'), 'warning');
       return;
     }
+    // --- FIN VALIDACIONES ---
 
     const totals = calculateInvoiceTotals(items, editorState.irpfPercentage);
 
@@ -2102,17 +2250,35 @@ async function saveInvoiceChanges(invoiceId) {
     }
 
     const editorState = getItemsEditorState('edit');
+    const changeReason = (formData.get('changeReason') || '').trim();
 
+    // --- VALIDACIONES ---
+    const errors = [];
+
+    // 1. Motivo del cambio obligatorio
+    if (!changeReason) {
+      errors.push('El motivo del cambio es obligatorio para registrar la modificación.');
+    }
+
+    // 2. Fechas consistentes
+    if (!issueDate || !dueDate) {
+      errors.push('Las fechas de emisión y vencimiento son obligatorias.');
+    } else if (new Date(dueDate) < new Date(issueDate)) {
+      errors.push('La fecha de vencimiento no puede ser anterior a la de emisión.');
+    }
+
+    // 3. Líneas de factura (Solo si está en Borrador se pueden editar)
+    let preparedItems = null;
     if (editorState && status === 'draft') {
-      const preparedItems = editorState.items
+      preparedItems = editorState.items
         .map((item) => {
           const quantity = sanitizeNumber(item.quantity, 0);
           const unitPrice = sanitizeNumber(item.unitPrice, 0);
           const vatPercentage = sanitizeNumber(item.vatPercentage, 0);
-          const description = (item.description || '').trim();
+          const itemDescription = (item.description || '').trim();
           const totals = calculateLineTotals({ quantity, unitPrice, vatPercentage });
           return {
-            description,
+            description: itemDescription,
             quantity,
             unitType: item.unitType || 'unidad',
             unitPrice,
@@ -2123,10 +2289,25 @@ async function saveInvoiceChanges(invoiceId) {
         .filter(item => item.description.length > 0);
 
       if (preparedItems.length === 0) {
-        showNotification('Anade al menos una linea con descripcion para guardar la factura.', 'warning');
-        return;
+        errors.push('Añade al menos una línea con descripción.');
+      } else {
+        preparedItems.forEach((item, index) => {
+          if (item.quantity <= 0) errors.push(`Línea ${index + 1}: La cantidad debe ser mayor que 0.`);
+          if (item.unitPrice < 0) errors.push(`Línea ${index + 1}: El precio no puede ser negativo.`);
+          if (item.vatPercentage < 0 || item.vatPercentage > 100) errors.push(`Línea ${index + 1}: IVA inválido.`);
+        });
       }
+    }
 
+    if (errors.length > 0) {
+      showNotification(errors.join('<br>'), 'warning');
+      return;
+    }
+    // --- FIN VALIDACIONES ---
+
+    updates.changeReason = changeReason;
+
+    if (preparedItems) {
       const totals = calculateInvoiceTotals(preparedItems, editorState.irpfPercentage);
       updates.items = preparedItems;
       updates.subtotal = totals.subtotal;
@@ -2446,17 +2627,21 @@ function renderInvoiceRows() {
     );
   }
 
-  if (filteredInvoices.length === 0) {
+  const total = filteredInvoices.length;
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const pagedInvoices = filteredInvoices.slice(startIdx, startIdx + PAGE_SIZE);
+
+  if (pagedInvoices.length === 0) {
     return `
       <tr>
         <td colspan="9" style="text-align: center; padding: 3rem;">
-          <p style="color: #718096;">No hay facturas que coincidan con los filtros</p>
+          <p style="color: #718096;">No hay facturas que coincidan con los filtros o la página seleccionada</p>
         </td>
       </tr>
     `;
   }
 
-  return filteredInvoices.map(invoice => {
+  return pagedInvoices.map(invoice => {
     const statusInfo = statusMap[invoice.status] || statusMap.draft;
     const verifactuInfo = verifactuStatusMap[invoice.verifactuStatus] || verifactuStatusMap.not_registered;
 
@@ -2494,50 +2679,45 @@ function renderInvoiceRows() {
 
     const isSelected = String(invoice.id) === String(selectedInvoiceId);
     return `
-      <tr data-invoice-id="${invoice.id}" class="invoices-table__row${isSelected ? ' is-selected' : ''}">
-        <td data-column="Factura">
+      <tr data-invoice-id="${invoice.id}" 
+          class="invoices-table__row table-row-clickable ${isSelected ? ' is-selected' : ''}"
+          onclick="handleRowClick(event, '${invoice.id}')">
+        <td data-label="Nº Factura" ${visibleColumns.number ? '' : 'hidden'}>
           <span class="invoices-table__number">${invoice.number}</span>
         </td>
-        <td data-column="Cliente">
+        <td data-label="Cliente" ${visibleColumns.client ? '' : 'hidden'}>
           <span class="invoices-table__client">${invoice.client}</span>
         </td>
-        <td data-column="Emision">
+        <td data-label="F. Emisión" class="hide-mobile" ${visibleColumns.issueDate ? '' : 'hidden'}>
           <time datetime="${invoice.issueDate}">${formatDate(invoice.issueDate)}</time>
         </td>
-        <td data-column="Vencimiento">
+        <td data-label="F. Vencimiento" class="hide-mobile" ${visibleColumns.dueDate ? '' : 'hidden'}>
           <time datetime="${invoice.dueDate}">${formatDate(invoice.dueDate)}</time>
         </td>
-        <td data-column="Importe">
+        <td data-label="Importe" ${visibleColumns.total ? '' : 'hidden'}>
           <span class="invoices-table__amount">${formatCurrency(invoice.total)}</span>
         </td>
-        <td data-column="Estado">
+        <td data-label="Estado" ${visibleColumns.status ? '' : 'hidden'}>
           <span class="status-pill status-pill--${statusInfo.tone}">
             <span class="status-pill__dot"></span>
             ${statusInfo.label}
           </span>
         </td>
-        <td data-column="Verifactu">
-          <span class="status-pill status-pill--${verifactuInfo.tone}" title="${verifactuInfo.label}">
-            <span>${verifactuInfo.icon}</span>
-            ${verifactuInfo.label}
-          </span>
-        </td>
-        <td data-column="Dias">
-          <span class="invoices-table__days">${invoice.daysLate || "-"}</span>
-        </td>
-        <td data-column="Acciones">
-          <div class="invoices-table__actions">
-            <button type="button" class="table-action" title="Ver factura" onclick="viewInvoice('${invoice.id}')">
-              <span>👁️</span>
-            </button>
-            <button type="button" class="table-action" title="Editar factura" onclick="editInvoice('${invoice.id}')">
-              <span>✏️</span>
-            </button>
-            <button type="button" class="table-action" title="Descargar PDF" onclick="downloadInvoicePDF('${invoice.id}')">
-              <span>📄</span>
-            </button>
+        <td data-label="Verifactu" class="hide-mobile" ${visibleColumns.verifactu ? '' : 'hidden'}>
+          <div style="display: flex; gap: 0.25rem;">
+            <span class="status-pill status-pill--${verifactuInfo.tone}" title="${verifactuInfo.label}">
+              ${verifactuInfo.label}
+            </span>
             ${verifactuActions}
           </div>
+        </td>
+        <td data-label="Días" class="hide-mobile" ${visibleColumns.days ? '' : 'hidden'}>
+          <span class="invoices-table__days ${invoice.daysLate.includes('tarde') ? 'text-danger' : ''}">${invoice.daysLate}</span>
+        </td>
+        <td data-label="ACCIONES" class="invoices-table__actions">
+          <button type="button" class="btn-ghost btn-sm" onclick="viewInvoice('${invoice.id}')" title="Ver Detalles">👁️</button>
+          <button type="button" class="btn-ghost btn-sm" onclick="editInvoice('${invoice.id}')" title="Editar Factura" ${invoice.status !== 'draft' ? 'disabled' : ''}>✏️</button>
+          <button type="button" class="btn-ghost btn-sm" onclick="openAddPaymentModal('${invoice.id}')" title="Registrar Pago" ${invoice.status === 'paid' ? 'disabled' : ''}>💰</button>
         </td>
       </tr>
     `;
@@ -2545,13 +2725,124 @@ function renderInvoiceRows() {
 }
 
 function renderInvoicesTable() {
-  const tbody = document.querySelector('.invoices-table tbody');
-  if (tbody) {
-    tbody.innerHTML = renderInvoiceRows();
-  }
+  const container = document.querySelector('.invoices-table-container');
+  if (!container) return;
 
-  // Actualizar contador
-  updateResultCount();
+  // 1. TOOLBAR (Fase 4)
+  const toolbarHTML = `
+    <div class="table-toolbar">
+      <button class="btn-config-columns" onclick="openColumnConfigModal()" title="Configurar qué columnas mostrar">
+        ⚙️ Columnas
+      </button>
+      <input 
+        type="text" 
+        id="table-search"
+        class="search-input" 
+        placeholder="Buscar por número o cliente..."
+        value="${currentFilters.search || ''}"
+        oninput="handleTableSearch(this.value)"
+      >
+      <div style="flex: 1;"></div>
+    </div>
+  `;
+
+  // 2. TABLA (Refactorizada para Phase 4)
+  const tableHTML = `
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th data-column="number" ${visibleColumns.number ? '' : 'hidden'}>Número</th>
+            <th data-column="client" ${visibleColumns.client ? '' : 'hidden'}>Cliente</th>
+            <th data-column="issueDate" class="hide-mobile" ${visibleColumns.issueDate ? '' : 'hidden'}>Emisión</th>
+            <th data-column="dueDate" class="hide-mobile" ${visibleColumns.dueDate ? '' : 'hidden'}>Vencimiento</th>
+            <th data-column="total" ${visibleColumns.total ? '' : 'hidden'}>Importe</th>
+            <th data-column="status" ${visibleColumns.status ? '' : 'hidden'}>Estado</th>
+            <th data-column="verifactu" class="hide-mobile" ${visibleColumns.verifactu ? '' : 'hidden'}>Verifactu</th>
+            <th data-column="days" class="hide-mobile" ${visibleColumns.days ? '' : 'hidden'}>Días</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${renderInvoiceRows()}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // 3. PAGINACIÓN (Fase 4)
+  const filteredCount = getFilteredInvoicesCount();
+  const totalPages = Math.ceil(filteredCount / PAGE_SIZE) || 1;
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, filteredCount);
+
+  const paginationHTML = filteredCount > PAGE_SIZE ? `
+    <div class="pagination">
+      <button class="btn-paginate" onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+        ← Anterior
+      </button>
+      <div class="page-numbers">
+        ${renderPageNumbers(totalPages)}
+      </div>
+      <button class="btn-paginate" onclick="changePage(1)" ${currentPage === totalPages ? 'disabled' : ''}>
+        Siguiente →
+      </button>
+      <span class="pagination-info">
+        Mostrando ${start}-${end} de ${filteredCount} registros
+      </span>
+    </div>
+  ` : `
+    <div class="pagination">
+      <span class="pagination-info" style="margin-left: auto;">
+        Mostrando ${filteredCount} registros
+      </span>
+    </div>
+  `;
+
+  container.innerHTML = toolbarHTML + tableHTML + paginationHTML;
+}
+
+function renderPageNumbers(totalPages) {
+  let html = '';
+  for (let i = 1; i <= totalPages; i++) {
+    html += `
+      <button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">
+        ${i}
+      </button>
+    `;
+  }
+  return html;
+}
+
+function getFilteredInvoicesCount() {
+  let filtered = invoicesData;
+  if (currentFilters.search) {
+    const search = currentFilters.search.toLowerCase();
+    filtered = filtered.filter(inv =>
+      inv.number.toLowerCase().includes(search) ||
+      inv.client.toLowerCase().includes(search)
+    );
+  }
+  if (currentFilters.status !== 'all') {
+    filtered = filtered.filter(inv => inv.status === currentFilters.status);
+  }
+  return filtered.length;
+}
+
+function handleTableSearch(value) {
+  currentFilters.search = value;
+  currentPage = 1;
+  renderInvoicesTable();
+}
+
+function changePage(delta) {
+  currentPage += delta;
+  renderInvoicesTable();
+}
+
+function goToPage(page) {
+  currentPage = page;
+  renderInvoicesTable();
 }
 
 function updateResultCount() {
@@ -2561,29 +2852,167 @@ function updateResultCount() {
   }
 }
 
-function updateSummaryCards() {
-  // Calcular estadísticas reales
-  const totalThisMonth = invoicesData
-    .filter(inv => {
-      const issueDate = new Date(inv.issueDate);
-      const now = new Date();
-      return issueDate.getMonth() === now.getMonth() &&
-             issueDate.getFullYear() === now.getFullYear();
-    })
-    .reduce((sum, inv) => sum + inv.total, 0);
+function handleRowClick(event, invoiceId) {
+  // Evitar abrir drawer si se hace clic en botones de acción
+  if (event.target.closest('button')) return;
 
-  const pendingTotal = invoicesData
-    .filter(inv => inv.status === 'pending' || inv.status === 'sent')
-    .reduce((sum, inv) => sum + inv.total, 0);
+  const invoice = invoicesData.find(inv => String(inv.id) === String(invoiceId));
+  if (!invoice) return;
 
-  const pendingCount = invoicesData.filter(inv => inv.status === 'pending' || inv.status === 'sent').length;
+  openInvoiceDrawer(invoice);
+}
 
-  const paidCount = invoicesData.filter(inv => inv.status === 'paid').length;
-  const totalCount = invoicesData.length;
-  const paymentRatio = totalCount > 0 ? ((paidCount / totalCount) * 100).toFixed(1) : 0;
+function openInvoiceDrawer(invoice) {
+  let drawer = document.getElementById('details-drawer');
+  let overlay = document.getElementById('drawer-overlay');
 
-  // Puedes actualizar las tarjetas resumen aquí si quieres
-  // Por ahora mantienen sus valores estáticos
+  if (!drawer) {
+    const drawerHTML = `
+      <div class="drawer-overlay" id="drawer-overlay" onclick="closeInvoiceDrawer()"></div>
+      <div class="drawer" id="details-drawer">
+        <header class="drawer__header">
+          <h2 class="drawer__title">Detalles rápidos</h2>
+          <button class="drawer__close" onclick="closeInvoiceDrawer()">&times;</button>
+        </header>
+        <div class="drawer__body" id="drawer-body"></div>
+        <footer class="drawer__footer">
+          <button class="btn-primary" id="drawer-view-full">Ver detalle completo</button>
+          <button class="btn-secondary" onclick="closeInvoiceDrawer()">Cerrar</button>
+        </footer>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', drawerHTML);
+    drawer = document.getElementById('details-drawer');
+    overlay = document.getElementById('drawer-overlay');
+  }
+
+  const body = document.getElementById('drawer-body');
+  const statusInfo = statusMap[invoice.status] || statusMap.draft;
+
+  body.innerHTML = `
+    <div class="field-group">
+      <label class="field-label">Nº Factura</label>
+      <span class="field-value" style="font-size: 1.25rem; font-weight: 700;">${invoice.number}</span>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Cliente</label>
+      <span class="field-value">${invoice.client}</span>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Estado</label>
+      <span class="status-pill status-pill--${statusInfo.tone}">
+        <span class="status-pill__dot"></span>
+        ${statusInfo.label}
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="field-group">
+        <label class="field-label">Fecha Emisión</label>
+        <span class="field-value">${formatDate(invoice.issueDate)}</span>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Vencimiento</label>
+        <span class="field-value">${formatDate(invoice.dueDate)}</span>
+      </div>
+    </div>
+    <div class="field-group" style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px;">
+      <label class="field-label">Importe Total</label>
+      <span class="field-value" style="font-size: 1.5rem; color: var(--primary-color); font-weight: 700;">${formatCurrency(invoice.total)}</span>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Notas</label>
+      <span class="field-value">${invoice.notes || 'Sin notas'}</span>
+    </div>
+  `;
+
+  document.getElementById('drawer-view-full').onclick = () => {
+    closeInvoiceDrawer();
+    viewInvoice(invoice.id);
+  };
+
+  requestAnimationFrame(() => {
+    overlay.classList.add('is-open');
+    drawer.classList.add('is-open');
+  });
+}
+
+function closeInvoiceDrawer() {
+  const drawer = document.getElementById('details-drawer');
+  const overlay = document.getElementById('drawer-overlay');
+  if (drawer) drawer.classList.remove('is-open');
+  if (overlay) overlay.classList.remove('is-open');
+}
+
+function openColumnConfigModal() {
+  let modal = document.getElementById('column-config-modal');
+  if (!modal) {
+    const modalHTML = `
+      <div class="modal is-open" id="column-config-modal">
+        <div class="modal__backdrop" onclick="closeColumnConfigModal()"></div>
+        <div class="modal__panel modal__panel--sm" style="max-height: 80vh;">
+          <header class="modal__head">
+            <div>
+              <h2 class="modal__title">Configurar Columnas</h2>
+              <p class="modal__subtitle">Selecciona qué columnas ver en la tabla</p>
+            </div>
+            <button class="modal__close" onclick="closeColumnConfigModal()">&times;</button>
+          </header>
+          <div class="modal__body">
+            <div class="column-options" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              ${Object.keys(visibleColumns).map(key => {
+                const labels = {
+                  number: 'Número (Fijo)',
+                  client: 'Cliente',
+                  issueDate: 'F. Emisión',
+                  dueDate: 'F. Vencimiento',
+                  total: 'Importe',
+                  status: 'Estado',
+                  verifactu: 'Verifactu',
+                  days: 'Días'
+                };
+                const isFixed = key === 'number' || key === 'total';
+                return `
+                  <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; cursor: ${isFixed ? 'not-allowed' : 'pointer'};">
+                    <input type="checkbox" id="col-${key}" ${visibleColumns[key] ? 'checked' : ''} ${isFixed ? 'disabled' : ''}>
+                    <span>${labels[key]}</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <footer class="modal__footer">
+            <button class="btn-secondary" onclick="closeColumnConfigModal()">Cancelar</button>
+            <button class="btn-primary" onclick="applyColumnConfig()">Aplicar cambios</button>
+          </footer>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    modal = document.getElementById('column-config-modal');
+  } else {
+    modal.classList.add('is-open');
+    modal.style.display = 'flex';
+  }
+}
+
+function closeColumnConfigModal() {
+  const modal = document.getElementById('column-config-modal');
+  if (modal) {
+    modal.classList.remove('is-open');
+    modal.style.display = 'none';
+  }
+}
+
+function applyColumnConfig() {
+  Object.keys(visibleColumns).forEach(key => {
+    const input = document.getElementById(`col-${key}`);
+    if (input) {
+      visibleColumns[key] = input.checked;
+    }
+  });
+  renderInvoicesTable();
+  closeColumnConfigModal();
+  showNotification('Columnas actualizadas correctamente', 'success');
 }
 
 // === INICIALIZACIÓN ===
@@ -2701,8 +3130,8 @@ async function openAddPaymentModal(invoiceId = null) {
 
     // Calcular el importe pendiente (total - pagos ya registrados)
     const totalInvoice = sanitizeNumber(invoice.total, 0);
-    const alreadyPaid = 0; // TODO: Calcular de la suma de pagos existentes cuando tengamos la API
-    const remainingAmount = totalInvoice - alreadyPaid;
+    const alreadyPaid = sanitizeNumber(invoice.paidAmount || invoice.paid_amount, 0);
+    const remainingAmount = Math.max(0, totalInvoice - alreadyPaid);
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -2730,8 +3159,8 @@ async function openAddPaymentModal(invoiceId = null) {
               <!-- Info Banner Inline -->
               <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Total</div>
-                  <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${formatCurrency(totalInvoice)}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pagado</div>
+                  <div style="font-size: 1.1rem; font-weight: 700; color: #047857;">${formatCurrency(alreadyPaid)}</div>
                 </div>
                 <div style="text-align: right;">
                   <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pendiente</div>
@@ -2887,14 +3316,15 @@ async function submitAddPayment() {
   try {
     showNotification('Registrando pago...', 'info');
 
-    // TODO: Llamar a la API cuando esté disponible
-    // const response = await window.api.createPayment(paymentData);
+    // Llamar a la API real
+    await window.api.addInvoicePayment(paymentData.invoice_id, {
+      amount: paymentData.amount,
+      paymentDate: paymentData.payment_date,
+      paymentMethod: paymentData.payment_method,
+      transactionId: paymentData.transaction_id,
+      notes: paymentData.notes
+    });
     
-    // TEMPORAL: Simular respuesta exitosa
-    console.log('Datos del pago a registrar:', paymentData);
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     showNotification('✅ Pago registrado correctamente', 'success');
     closeAddPaymentModal();
     
@@ -2904,7 +3334,7 @@ async function submitAddPayment() {
   } catch (error) {
     console.error('Error al registrar pago:', error);
     showNotification(
-      error?.message || 'Error al registrar el pago. Por favor, inténtalo de nuevo.',
+      `Error al registrar pago: ${error.message || 'Error desconocido'}`,
       'error'
     );
   }

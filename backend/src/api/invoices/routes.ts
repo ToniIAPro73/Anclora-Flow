@@ -42,6 +42,9 @@ router.get('/monthly',
   invoiceController.getMonthlyIncome
 );
 
+// GET /api/invoices/check-number/:invoiceNumber - Check invoice number uniqueness
+router.get('/check-number/:invoiceNumber', invoiceController.checkNumberUniqueness);
+
 // GET /api/invoices/:id - Get invoice by ID
 router.get('/:id', invoiceController.getInvoiceById);
 
@@ -106,6 +109,25 @@ router.post('/:id/mark-paid',
   invoiceController.validate,
   invoiceController.markAsPaid
 );
+
+// GET /api/invoices/:id/payments - Get payments for an invoice
+router.get('/:id/payments', invoiceController.getInvoicePayments);
+
+// POST /api/invoices/:id/payments - Add a payment to an invoice
+router.post('/:id/payments',
+  [
+    body('amount').notEmpty().isFloat({ min: 0.01 }),
+    body('paymentDate').notEmpty().isISO8601(),
+    body('paymentMethod').optional().isString(),
+    body('transactionId').optional().isString(),
+    body('notes').optional().isString()
+  ],
+  invoiceController.validate,
+  invoiceController.addInvoicePayment
+);
+
+// GET /api/invoices/:id/audit-log - Get audit log for an invoice
+router.get('/:id/audit-log', invoiceController.getInvoiceAuditLog);
 
 // DELETE /api/invoices/:id - Delete invoice
 router.delete('/:id', invoiceController.deleteInvoice);
