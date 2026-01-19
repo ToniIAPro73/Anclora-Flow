@@ -27,7 +27,7 @@ export class ClientRepository extends BaseRepository<IClient> {
       ) p ON p.client_id = c.id
       LEFT JOIN (
         SELECT client_id, COUNT(*) AS subscription_count
-        FROM subscriptions
+        FROM customer_subscriptions
         GROUP BY client_id
       ) s ON s.client_id = c.id
       LEFT JOIN (

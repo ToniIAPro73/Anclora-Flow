@@ -127,6 +127,11 @@ class APIService {
     return this.get(`/invoices/${id}`);
   }
 
+  // Alias para compatibilidad con modales
+  async getInvoiceById(id) {
+    return this.getInvoice(id);
+  }
+
   async createInvoice(data) {
     return this.post('/invoices', data);
   }

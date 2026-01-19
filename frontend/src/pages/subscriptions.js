@@ -493,4 +493,7 @@ function initSubscriptionsPage() {
   loadMySubscriptions();
 }
 
+// Exportar con el nombre esperado por main.js
+export const initSubscriptions = initSubscriptionsPage;
+
 export default renderSubscriptions;

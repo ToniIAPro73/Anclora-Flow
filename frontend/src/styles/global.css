@@ -145,7 +145,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
   width: 100%;
   max-width: 600px;
-  max-height: 90vh; /* Límite de altura */
+  /* REMOVED: max-height: 90vh - Let modals adapt to content */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -193,7 +193,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .modal__body {
   padding: 1.5rem;
-  overflow-y: auto; /* Scroll solo aquí si es necesario */
+  /* REMOVED: overflow-y: auto - No scroll by default, let content flow naturally */
 }
 
 .modal__footer {

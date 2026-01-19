@@ -1,27 +1,21 @@
-export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
-export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'pending';
+export type BillingFrequency = 'monthly' | 'quarterly' | 'yearly';
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'trial' | 'expired';
 
 export interface ISubscription {
   id: string;
   userId: string;
-  clientId?: string | null;
-  projectId?: string | null;
-  name: string;
+  serviceName: string;
+  provider: string;
   description?: string | null;
   amount: number;
   currency: string;
-  billingCycle: BillingCycle;
-  startDate: Date;
-  endDate?: Date | null;
-  nextBillingDate: Date;
+  billingFrequency: BillingFrequency;
+  nextBillingDate?: Date | null;
+  startDate?: Date;
   status: SubscriptionStatus;
-  autoInvoice: boolean;
+  category?: string | null;
   createdAt: Date;
   updatedAt: Date;
-
-  // Joined fields
-  clientName?: string;
-  projectName?: string;
 }
 
 export interface ISubscriptionSummary {
@@ -46,18 +40,15 @@ export interface IRevenueForecast {
 }
 
 export interface ISubscriptionCreate {
-  clientId?: string | null;
-  projectId?: string | null;
-  name: string;
+  serviceName: string;
+  provider: string;
   description?: string | null;
   amount: number;
   currency?: string;
-  billingCycle: BillingCycle;
-  startDate: Date | string;
-  endDate?: Date | string | null;
-  nextBillingDate: Date | string;
+  billingFrequency: BillingFrequency;
+  nextBillingDate?: Date | string | null;
   status?: SubscriptionStatus;
-  autoInvoice?: boolean;
+  category?: string | null;
 }
 
 export interface ISubscriptionUpdate extends Partial<ISubscriptionCreate> {}

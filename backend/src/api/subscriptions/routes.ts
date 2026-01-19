@@ -1,5 +1,5 @@
 import express from 'express';
-// @ts-ignore
+//  @ts-ignore
 import { body, query, param } from 'express-validator';
 import { authenticateToken } from '../../middleware/auth.js';
 import * as subscriptionController from './controller.js';
@@ -10,13 +10,9 @@ router.use(authenticateToken);
 
 router.get('/',
   [
-    query('status').optional().isIn(['active', 'paused', 'cancelled', 'pending']),
+    query('status').optional().isIn(['active', 'paused', 'cancelled', 'trial', 'expired']),
     query('billingCycle').optional().isIn(['monthly', 'quarterly', 'yearly']),
-    query('clientId').optional().isInt(),
-    query('projectId').optional().isInt(),
-    query('autoInvoice').optional().isBoolean(),
-    query('dateFrom').optional().isISO8601(),
-    query('dateTo').optional().isISO8601(),
+    query('category').optional().isString(),
     query('search').optional().isString()
   ],
   subscriptionController.validate,
@@ -24,33 +20,21 @@ router.get('/',
 );
 
 router.get('/summary', subscriptionController.getSummary);
-router.get('/status-breakdown', subscriptionController.getStatusBreakdown);
-router.get('/forecast',
-  [query('months').optional().isInt({ min: 1, max: 24 })],
-  subscriptionController.validate,
-  subscriptionController.getRevenueForecast
-);
-router.get('/upcoming',
-  [query('limit').optional().isInt({ min: 1, max: 20 })],
-  subscriptionController.validate,
-  subscriptionController.getUpcoming
-);
 
 router.get('/:id',
-  [param('id').isInt()],
+  [param('id').isUUID()],
   subscriptionController.validate,
   subscriptionController.getSubscriptionById
 );
 
 router.post('/',
   [
-    body('name').notEmpty().isString().trim(),
+    body('serviceName').notEmpty().isString().trim(),
+    body('provider').notEmpty().isString().trim(),
     body('amount').notEmpty().isFloat({ min: 0 }),
-    body('billingCycle').notEmpty().isIn(['monthly', 'quarterly', 'yearly']),
-    body('startDate').notEmpty().isISO8601(),
-    body('nextBillingDate').notEmpty().isISO8601(),
-    body('clientId').optional().isInt(),
-    body('projectId').optional().isInt()
+    body('billingFrequency').notEmpty().isIn(['monthly', 'quarterly', 'yearly']),
+    body('nextBillingDate').optional().isISO8601(),
+    body('category').optional().isString()
   ],
   subscriptionController.validate,
   subscriptionController.createSubscription
@@ -58,16 +42,16 @@ router.post('/',
 
 router.put('/:id',
   [
-    param('id').isInt(),
+    param('id').isUUID(),
     body('amount').optional().isFloat({ min: 0 }),
-    body('status').optional().isIn(['active', 'paused', 'cancelled', 'pending'])
+    body('status').optional().isIn(['active', 'paused', 'cancelled', 'trial', 'expired'])
   ],
   subscriptionController.validate,
   subscriptionController.updateSubscription
 );
 
 router.delete('/:id',
-  [param('id').isInt()],
+  [param('id').isUUID()],
   subscriptionController.validate,
   subscriptionController.deleteSubscription
 );

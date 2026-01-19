@@ -1,11 +1,4 @@
-import {
-  ISubscription,
-  ISubscriptionCreate,
-  ISubscriptionUpdate,
-  ISubscriptionSummary,
-  ISubscriptionStatusBreakdown,
-  IRevenueForecast
-} from '../types/subscription.js';
+import { ISubscription, ISubscriptionCreate, ISubscriptionUpdate, ISubscriptionSummary } from '../types/subscription.js';
 import { subscriptionRepository } from '../repositories/subscription.repository.js';
 
 class Subscription {
@@ -32,26 +25,6 @@ class Subscription {
 
   static async getSummary(userId: string): Promise<ISubscriptionSummary | null> {
     return subscriptionRepository.getSummary(userId);
-  }
-
-  static async getStatusBreakdown(userId: string): Promise<ISubscriptionStatusBreakdown[]> {
-    return subscriptionRepository.getStatusBreakdown(userId);
-  }
-
-  static async getRevenueForecast(userId: string, months: number = 6): Promise<IRevenueForecast[]> {
-    return subscriptionRepository.getRevenueForecast(userId, months);
-  }
-
-  static async getUpcoming(userId: string, limit: number = 8): Promise<any[]> {
-    return subscriptionRepository.getUpcoming(userId, limit);
-  }
-
-  static async getForProject(userId: string, projectId: string): Promise<any[]> {
-    return subscriptionRepository.getForProject(userId, projectId);
-  }
-
-  static async getForClient(userId: string, clientId: string): Promise<any[]> {
-    return subscriptionRepository.getForClient(userId, clientId);
   }
 }
 

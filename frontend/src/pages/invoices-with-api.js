@@ -1107,25 +1107,26 @@ async function loadInvoices() {
     invoicesData = response.invoices || response || [];
 
     // Mapear datos de API a formato del componente
+    // Backend devuelve camelCase después de mapToCamel()
     invoicesData = invoicesData.map(invoice => ({
       id: invoice.id,
-      number: invoice.invoice_number,
-      client: invoice.client_name,
-      clientEmail: invoice.client_email,
-      clientNif: invoice.client_nif,
-      issueDate: invoice.issue_date,
-      dueDate: invoice.due_date,
+      number: invoice.invoiceNumber || invoice.invoice_number,
+      client: invoice.clientName || invoice.client_name,
+      clientEmail: invoice.clientEmail || invoice.client_email,
+      clientNif: invoice.clientNif || invoice.client_nif,
+      issueDate: invoice.issueDate || invoice.issue_date,
+      dueDate: invoice.dueDate || invoice.due_date,
       total: invoice.total,
       subtotal: invoice.subtotal,
-      tax: invoice.tax,
+      tax: invoice.tax || invoice.vatAmount,
       status: invoice.status,
-      daysLate: calculateDaysLate(invoice.due_date, invoice.status),
-      verifactuStatus: invoice.verifactu_status || 'not_registered',
-      verifactuCsv: invoice.verifactu_csv,
-      verifactuQrCode: invoice.verifactu_qr_code,
-      verifactuUrl: invoice.verifactu_url,
-      verifactuHash: invoice.verifactu_hash,
-      verifactuError: invoice.verifactu_error_message
+      daysLate: calculateDaysLate(invoice.dueDate || invoice.due_date, invoice.status),
+      verifactuStatus: invoice.verifactuStatus || invoice.verifactu_status || 'not_registered',
+      verifactuCsv: invoice.verifactuCsv || invoice.verifactu_csv,
+      verifactuQrCode: invoice.verifactuQrCode || invoice.verifactu_qr_code,
+      verifactuUrl: invoice.verifactuUrl || invoice.verifactu_url,
+      verifactuHash: invoice.verifactuHash || invoice.verifactu_hash,
+      verifactuError: invoice.verifactuErrorMessage || invoice.verifactu_error_message
     }));
 
     // Asegurar que la primera factura esté seleccionada

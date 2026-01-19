@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     
     -- Fechas y estado
     start_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    next_billing_date DATE NOT NULL,
+    next_billing_date DATE,                           -- NULL cuando está pausada o cancelada
     end_date DATE,                                    -- NULL si es indefinida
     status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('trial', 'active', 'paused', 'cancelled', 'expired')),
     

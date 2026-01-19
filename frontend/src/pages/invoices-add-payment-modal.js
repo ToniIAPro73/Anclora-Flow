@@ -1,12 +1,11 @@
 // ==========================================
-// MODAL: AÑADIR COBRO
+// MODAL: AÑADIR COBRO - SIN CLASES CSS
 // ==========================================
 
 async function openAddPaymentModal(invoiceId = null) {
   try {
     showNotification('Preparando formulario de pago...', 'info');
 
-    // Si no se proporciona invoiceId, buscar la factura seleccionada
     const targetInvoiceId = invoiceId || selectedInvoiceId;
     
     if (!targetInvoiceId) {
@@ -14,7 +13,6 @@ async function openAddPaymentModal(invoiceId = null) {
       return;
     }
 
-    // Obtener datos de la factura
     let invoice = null;
     try {
       invoice = await window.api.getInvoiceById(targetInvoiceId);
@@ -28,51 +26,51 @@ async function openAddPaymentModal(invoiceId = null) {
       return;
     }
 
-    // Calcular el importe pendiente (total - pagos ya registrados)
     const totalInvoice = sanitizeNumber(invoice.total, 0);
-    const alreadyPaid = 0; // TODO: Calcular de la suma de pagos existentes cuando tengamos la API
+    const alreadyPaid = 0;
     const remainingAmount = totalInvoice - alreadyPaid;
-
     const today = formatDateForInput(new Date());
 
+    // MODAL SIN CLASES CSS - SOLO INLINE STYLES
     const modalHTML = `
-      <div class="modal is-open" id="add-payment-modal">
-        <div class="modal__backdrop" onclick="closeAddPaymentModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 700px); max-width: 700px; max-height: 85vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="flex-shrink: 0; padding: 1.25rem 1.5rem;">
+      <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 1; pointer-events: auto;" id="add-payment-modal">
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);" onclick="closeAddPaymentModal()"></div>
+        
+        <div style="position: relative; background: #0f172a; border: 1px solid #334155; border-radius: 16px; width: 100%; max-width: 650px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+          <!-- Header -->
+          <div style="padding: 1.5rem 2rem; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <h2 class="modal__title" style="margin: 0; font-size: 1.4rem; font-weight: 700;">💰 Registrar Pago</h2>
-              <p class="modal__subtitle" style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
-                Factura: <strong>${escapeHtml(invoice.invoice_number || invoice.invoiceNumber)}</strong> 
-                ${invoice.client_name || invoice.clientName ? `• Cliente: ${escapeHtml(invoice.client_name || invoice.clientName)}` : ''}
+              <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #f8fafc;">💰 Registrar Pago</h2>
+              <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #94a3b8;">
+                Factura: <strong style="color: #e0e7ff;">${escapeHtml(invoice.invoice_number || invoice.invoiceNumber)}</strong>
+                ${invoice.client_name || invoice.clientName ? `• Cliente: <strong style="color: #e0e7ff;">${escapeHtml(invoice.client_name || invoice.clientName)}</strong>` : ''}
               </p>
             </div>
-            <button type="button" class="modal__close" onclick="closeAddPaymentModal()">&times;</button>
-          </header>
+            <button type="button" onclick="closeAddPaymentModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.75rem; line-height: 1; cursor: pointer; padding: 0.25rem; margin: -0.5rem -0.5rem 0 0;">&times;</button>
+          </div>
           
-          <div class="modal__body" style="flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem;">
+          <!-- Body -->
+          <div style="padding: 1.5rem 2rem;">
             <form id="add-payment-form">
-              <!-- Información de la factura -->
-              <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+              <!-- Info Banner -->
+              <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                   <div>
-                    <div style="opacity: 0.9; margin-bottom: 0.25rem; font-size: 0.8rem;">Total factura</div>
+                    <div style="opacity: 0.9; margin-bottom: 0.5rem; font-size: 0.875rem;">Total factura</div>
                     <div style="font-size: 1.75rem; font-weight: 700;">${formatCurrency(totalInvoice)}</div>
                   </div>
                   <div>
-                    <div style="opacity: 0.9; margin-bottom: 0.25rem; font-size: 0.8rem;">Pendiente de pago</div>
-                    <div style="font-size: 1.75rem; font-weight: 700; color: ${remainingAmount > 0 ? '#fbbf24' : '#34d399'};">
-                      ${formatCurrency(remainingAmount)}
-                    </div>
+                    <div style="opacity: 0.9; margin-bottom: 0.5rem; font-size: 0.875rem;">Pendiente de pago</div>
+                    <div style="font-size: 1.75rem; font-weight: 700; color: ${remainingAmount > 0 ? '#fbbf24' : '#34d399'};">${formatCurrency(remainingAmount)}</div>
                   </div>
                 </div>
               </div>
 
-              <!-- Campos del formulario -->
+              <!-- Form Fields -->
               <div style="display: grid; gap: 1.25rem;">
                 <!-- Importe -->
                 <div>
-                  <label for="payment-amount" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
+                  <label for="payment-amount" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: #f8fafc;">
                     Importe del pago <span style="color: #ef4444;">*</span>
                   </label>
                   <div style="position: relative;">
@@ -80,52 +78,46 @@ async function openAddPaymentModal(invoiceId = null) {
                       type="number" 
                       id="payment-amount" 
                       name="amount" 
-                      class="form-input" 
                       value="${remainingAmount.toFixed(2)}"
                       step="0.01" 
                       min="0.01"
                       max="${remainingAmount}"
                       required 
-                      style="width: 100%; padding: 0.75rem; font-size: 1.1rem; font-weight: 600; padding-right: 3rem;" 
+                      style="width: 100%; padding: 0.75rem; font-size: 1.1rem; font-weight: 600; padding-right: 3rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #f8fafc;" 
                       placeholder="0.00"
                     />
-                    <span style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 1.1rem; font-weight: 600;">€</span>
+                    <span style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 1.1rem; font-weight: 600;">€</span>
                   </div>
-                  <p style="margin: 0.4rem 0 0 0; font-size: 0.8rem; color: var(--text-secondary);">
+                  <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #94a3b8;">
                     💡 Importe máximo disponible: <strong>${formatCurrency(remainingAmount)}</strong>
                   </p>
                 </div>
 
-                <!-- Fecha y Método de pago en dos columnas -->
+                <!-- Fecha y Método -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                  <!-- Fecha de pago -->
                   <div>
-                    <label for="payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
+                    <label for="payment-date" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: #f8fafc;">
                       Fecha del pago <span style="color: #ef4444;">*</span>
                     </label>
                     <input 
                       type="date" 
                       id="payment-date" 
                       name="payment_date" 
-                      class="form-input" 
                       value="${today}" 
                       max="${today}"
                       required 
-                      style="width: 100%; padding: 0.75rem; font-size: 0.95rem;" 
+                      style="width: 100%; padding: 0.75rem; font-size: 0.95rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #f8fafc;" 
                     />
                   </div>
-
-                  <!-- Método de pago -->
                   <div>
-                    <label for="payment-method" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
+                    <label for="payment-method" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: #f8fafc;">
                       Método de pago <span style="color: #ef4444;">*</span>
                     </label>
                     <select 
                       id="payment-method" 
                       name="payment_method" 
-                      class="form-input" 
                       required 
-                      style="width: 100%; padding: 0.75rem; font-size: 0.95rem;"
+                      style="width: 100%; padding: 0.75rem; font-size: 0.95rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #f8fafc;"
                     >
                       <option value="">Seleccionar...</option>
                       <option value="bank_transfer" selected>🏦 Transferencia Bancaria</option>
@@ -139,35 +131,33 @@ async function openAddPaymentModal(invoiceId = null) {
                   </div>
                 </div>
 
-                <!-- ID de transacción (opcional) -->
+                <!-- ID Transacción -->
                 <div>
-                  <label for="payment-transaction-id" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
-                    ID de Transacción <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.85rem;">(opcional)</span>
+                  <label for="payment-transaction-id" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: #f8fafc;">
+                    ID de Transacción <span style="font-weight: 400; color: #94a3b8; font-size: 0.875rem;">(opcional)</span>
                   </label>
                   <input 
                     type="text" 
                     id="payment-transaction-id" 
                     name="transaction_id" 
-                    class="form-input" 
                     placeholder="Ej: TRX-2024-001234" 
                     maxlength="255"
-                    style="width: 100%; padding: 0.75rem; font-size: 0.95rem;" 
+                    style="width: 100%; padding: 0.75rem; font-size: 0.95rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #f8fafc;" 
                   />
                 </div>
 
-                <!-- Notas (opcional) -->
+                <!-- Notas -->
                 <div>
-                  <label for="payment-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-primary);">
-                    Notas <span style="font-weight: 400; color: var(--text-secondary); font-size: 0.85rem;">(opcional)</span>
+                  <label for="payment-notes" style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; color: #f8fafc;">
+                    Notas <span style="font-weight: 400; color: #94a3b8; font-size: 0.875rem;">(opcional)</span>
                   </label>
                   <textarea 
                     id="payment-notes" 
                     name="notes" 
-                    rows="3" 
-                    class="form-input" 
+                    rows="2" 
                     placeholder="Observaciones sobre el pago..."
                     maxlength="500"
-                    style="resize: vertical; width: 100%; padding: 0.75rem; font-size: 0.95rem;"
+                    style="resize: none; width: 100%; padding: 0.75rem; font-size: 0.95rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #f8fafc;"
                   ></textarea>
                 </div>
               </div>
@@ -176,21 +166,22 @@ async function openAddPaymentModal(invoiceId = null) {
             </form>
           </div>
           
-          <footer class="modal__footer modal-form__footer" style="flex-shrink: 0; padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
-            <button type="button" class="btn-secondary" onclick="closeAddPaymentModal()" style="padding: 0.75rem 1.5rem;">
+          <!-- Footer -->
+          <div style="padding: 1.25rem 2rem; border-top: 1px solid #334155; display: flex; justify-content: flex-end; gap: 1rem; background: #0f172a;">
+            <button type="button" onclick="closeAddPaymentModal()" style="padding: 0.75rem 2rem; font-size: 1rem; background: transparent; border: 1px solid #334155; color: #f8fafc; border-radius: 8px; cursor: pointer; font-weight: 500;">
               Cancelar
             </button>
-            <button type="button" class="btn-primary" onclick="submitAddPayment()" style="padding: 0.75rem 1.5rem; font-weight: 600;">
+            <button type="button" onclick="submit()" style="padding: 0.75rem 2rem; font-weight: 600; font-size: 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
               💾 Registrar Pago
             </button>
-          </footer>
+          </div>
         </div>
       </div>
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Validación de importe en tiempo real
+    // Validaciones
     const amountInput = document.getElementById('payment-amount');
     if (amountInput) {
       amountInput.addEventListener('input', () => {
@@ -205,7 +196,6 @@ async function openAddPaymentModal(invoiceId = null) {
       });
     }
 
-    // Validación de fecha (no puede ser futura)
     const dateInput = document.getElementById('payment-date');
     if (dateInput) {
       dateInput.addEventListener('change', () => {
@@ -241,7 +231,6 @@ async function submitAddPayment() {
 
   const formData = new FormData(form);
   
-  // Validar formulario HTML5
   const amountInput = document.getElementById('payment-amount');
   const dateInput = document.getElementById('payment-date');
   const methodSelect = document.getElementById('payment-method');
@@ -260,7 +249,6 @@ async function submitAddPayment() {
     notes: formData.get('notes') || null
   };
 
-  // Validaciones adicionales
   if (paymentData.amount <= 0) {
     showNotification('El importe del pago debe ser mayor que 0', 'error');
     return;
@@ -273,11 +261,7 @@ async function submitAddPayment() {
 
   try {
     showNotification('Registrando pago...', 'info');
-
-    // TODO: Llamar a la API cuando esté disponible
-    // const response = await window.api.createPayment(paymentData);
     
-    // TEMPORAL: Simular respuesta exitosa
     console.log('Datos del pago a registrar:', paymentData);
     
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -285,7 +269,6 @@ async function submitAddPayment() {
     showNotification('✅ Pago registrado correctamente', 'success');
     closeAddPaymentModal();
     
-    // Recargar la lista de facturas para reflejar el cambio
     await loadInvoices();
 
   } catch (error) {
@@ -297,7 +280,6 @@ async function submitAddPayment() {
   }
 }
 
-// Exportar funciones para uso global
 window.openAddPaymentModal = openAddPaymentModal;
 window.closeAddPaymentModal = closeAddPaymentModal;
 window.submitAddPayment = submitAddPayment;
