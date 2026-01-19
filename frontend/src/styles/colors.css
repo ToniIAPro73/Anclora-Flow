@@ -2404,11 +2404,85 @@ table tr[hidden] {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  max-height: calc(100vh - 40px); /* VIEWPORT: Limita altura al viewport */
+  overflow: hidden; /* VIEWPORT: Recorta contenido excedente */
 }
+
+/* Invoice modal compact layout - VIEWPORT COMPLIANT */
+.invoice-modal .modal__panel {
+  padding: 1.7rem 2rem;
+  max-height: calc(100vh - 40px); /* VIEWPORT: Limita altura */
+  overflow: hidden; /* VIEWPORT: Estructura flex maneja overflow */
+}
+
+.invoice-modal .modal__head {
+  margin-bottom: 1.1rem;
+}
+
+.invoice-modal .modal-form {
+  gap: 1.2rem;
+}
+
+.invoice-modal .modal-form__body--split {
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 320px);
+  gap: 1.25rem;
+}
+
+.invoice-modal .modal-form__column,
+.invoice-modal .modal-form__column--side {
+  gap: 1.1rem;
+}
+
+.invoice-modal .modal-section--card {
+  padding: 1.1rem 1.2rem;
+}
+
+.invoice-modal .modal-section + .modal-section {
+  margin-top: 1rem;
+}
+
+.invoice-modal .modal-tabs {
+  gap: 0.75rem;
+}
+
+.invoice-modal .modal-tabs__panel {
+  padding: 1rem;
+}
+
+.invoice-modal .modal-tab__footer {
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.invoice-modal .modal-totals {
+  width: 100%;
+}
+
+@media (max-height: 900px) {
+  .invoice-modal .modal__panel {
+    padding: 1.4rem 1.6rem;
+  }
+
+  .invoice-modal .modal-form__body--split {
+    gap: 1rem;
+  }
+
+  .invoice-modal .modal-section--card {
+    padding: 0.95rem 1rem;
+  }
+
+  .invoice-modal .modal-tabs__panel {
+    padding: 0.85rem;
+  }
+}
+
+
 
 .modal__body {
   flex: 1;
-  /* REMOVED: overflow-y: auto; - No scroll directive */
+  overflow-y: auto; /* VIEWPORT: Scroll interno si contenido excede */
+  overflow-x: hidden;
+  min-height: 0; /* VIEWPORT: Permite que flex-shrink funcione */
 }
 
 [data-theme="dark"] .modal__panel {
@@ -2428,6 +2502,7 @@ table tr[hidden] {
   justify-content: space-between;
   gap: 1.5rem;
   margin-bottom: 1.8rem;
+  flex-shrink: 0; /* VIEWPORT: Header permanece fijo, no se comprime */
 }
 
 .modal__head h2 {
@@ -2615,6 +2690,7 @@ table tr[hidden] {
   gap: 0.9rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(51, 102, 255, 0.18);
+  flex-shrink: 0; /* VIEWPORT: Footer permanece fijo, no se comprime */
 }
 
 [data-theme="dark"] .modal-form__footer {
@@ -2799,9 +2875,9 @@ table tr[hidden] {
 }
 
 .modal-tabs__scroller {
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  background: rgba(248, 250, 252, 0.85);
-  color: var(--text-secondary);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
   border-radius: 999px;
   width: 34px;
   height: 34px;
@@ -2811,16 +2887,37 @@ table tr[hidden] {
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
 }
 
 .modal-tabs__scroller:hover {
-  border-color: rgba(59, 130, 246, 0.45);
-  color: var(--primary-700);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+  transform: translateY(-1px);
 }
 
 .modal-tabs__scroller:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: default;
+  background: rgba(100, 116, 139, 0.3);
+  color: rgba(148, 163, 184, 0.6);
+  box-shadow: none;
+  transform: none;
+}
+
+[data-theme="dark"] .modal-tabs__scroller {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .modal-tabs__scroller:hover {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+[data-theme="dark"] .modal-tabs__scroller:disabled {
+  background: rgba(71, 85, 105, 0.4);
+  color: rgba(148, 163, 184, 0.5);
 }
 
 [data-theme="dark"] .modal-tabs__panel {
@@ -2979,6 +3076,69 @@ table tr[hidden] {
 
 .invoice-modal__field--full {
   flex: 1 1 100%;
+}
+
+/* Campo de solo lectura con contenido personalizado */
+.form-input--readonly {
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(51, 102, 255, 0.15);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.6);
+  min-height: 42px;
+}
+
+[data-theme="dark"] .form-input--readonly {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+/* Meta información bajo campos (email, etc) */
+.form-field__meta {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .form-field__meta {
+  color: rgba(148, 163, 184, 0.75);
+}
+
+/* Estilos para campos de fecha en modales de factura */
+.invoice-modal__field input[type="date"] {
+  color-scheme: light;
+  color: var(--text-primary);
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(51, 102, 255, 0.2);
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.invoice-modal__field input[type="date"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="dark"] .invoice-modal__field input[type="date"] {
+  color-scheme: dark;
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="dark"] .invoice-modal__field input[type="date"]:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+/* Icono del calendario en modo oscuro */
+[data-theme="dark"] .invoice-modal__field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
 }
 
 .modal-tab__grid {
