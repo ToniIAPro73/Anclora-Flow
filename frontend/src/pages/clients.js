@@ -38,16 +38,14 @@ const PAGE_SIZE = 10;
 let clientsPage = 1;
 let projectsPage = 1;
 
-const money = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 2,
-});
-
+// Custom formatter that FORCES thousands separator with dot
 function formatCurrency(value) {
-  const parsed = Number.parseFloat(value);
-  if (Number.isNaN(parsed)) return money.format(0);
-  return money.format(parsed);
+  const parsed = parseFloat(value);
+  if (isNaN(parsed)) return '0,00 €';
+  const fixed = parsed.toFixed(2);
+  const [integer, decimal] = fixed.split('.');
+  const withSeparator = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${withSeparator},${decimal} €`;
 }
 
 function formatDate(value) {

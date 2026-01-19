@@ -1,7 +1,12 @@
-const numberFormatter = new Intl.NumberFormat("es-ES", {
-  style: "currency",
-  currency: "EUR"
-});
+// Custom formatter that FORCES thousands separator with dot
+function formatCurrency(value) {
+  const parsed = parseFloat(value);
+  if (isNaN(parsed)) return '0,00 €';
+  const fixed = parsed.toFixed(2);
+  const [integer, decimal] = fixed.split('.');
+  const withSeparator = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${withSeparator},${decimal} €`;
+}
 
 export function renderDashboard(user = {}) {
   const { name = "Demo" } = user;
@@ -20,7 +25,7 @@ export function renderDashboard(user = {}) {
       id: "iva",
       icon: "\uD83D\uDCB0",
       title: "Proximo pago IVA",
-      value: numberFormatter.format(6600),
+      value: formatCurrency(6600),
       helper: "Corresponde al T3 2025",
       tone: "info"
     },
@@ -28,7 +33,7 @@ export function renderDashboard(user = {}) {
       id: "forecast",
       icon: "\uD83D\uDCCA",
       title: "Estimacion anual",
-      value: numberFormatter.format(40050),
+      value: formatCurrency(40050),
       helper: "Objetivo al 72%",
       tone: "success"
     },

@@ -70,16 +70,14 @@ function normalizeExpense(expense) {
 }
 
 // === FORMATTERS ===
-const currencyFormatter = new Intl.NumberFormat("es-ES", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 2,
-});
-
+// Custom formatter that FORCES thousands separator with dot
 function formatCurrency(value) {
-  const parsed = Number.parseFloat(value);
-  if (Number.isNaN(parsed)) return currencyFormatter.format(0);
-  return currencyFormatter.format(parsed);
+  const parsed = parseFloat(value);
+  if (isNaN(parsed)) return '0,00 €';
+  const fixed = parsed.toFixed(2);
+  const [integer, decimal] = fixed.split('.');
+  const withSeparator = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${withSeparator},${decimal} €`;
 }
 
 function formatDate(value) {

@@ -72,6 +72,23 @@ export const registerInvoice = async (req: Request, res: Response) => {
     const { invoiceId } = req.params;
     const invoiceIdStr = invoiceId as string;
 
+    // Verificar que la configuración de Verifactu existe
+    const config = await VerifactuService.getConfig(userId);
+    
+    if (!config) {
+      return res.status(400).json({ 
+        error: 'Verifactu no está configurado para este usuario',
+        message: 'Debes configurar Verifactu antes de poder registrar facturas'
+      });
+    }
+    
+    if (!config.enabled) {
+      return res.status(400).json({ 
+        error: 'Verifactu está deshabilitado',
+        message: 'Habilita Verifactu en la configuración antes de registrar facturas'
+      });
+    }
+
     // Verificar que la factura existe y pertenece al usuario
     const invoice = await Invoice.findById(invoiceIdStr, userId);
 

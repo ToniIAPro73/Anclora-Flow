@@ -16,6 +16,7 @@ import expensesRoutes from './api/expenses/routes.js';
 import invoicesRoutes from './api/invoices/routes.js';
 import projectsRoutes from './api/projects/routes.js';
 import subscriptionsRoutes from './api/subscriptions/routes.js';
+import customerSubscriptionsRoutes from './api/customer-subscriptions/routes.js';
 import verifactuRoutes from './api/verifactu/routes.js';
 
 import './config/passport.js';
@@ -87,6 +88,7 @@ app.use('/api/expenses', expensesRoutes);
 app.use('/api/invoices', invoicesRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
+app.use('/api/customer-subscriptions', customerSubscriptionsRoutes);
 app.use('/api/verifactu', verifactuRoutes);
 
 app.use((_req: Request, res: Response) => {

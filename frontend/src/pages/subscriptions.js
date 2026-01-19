@@ -44,16 +44,14 @@ const subscriptionState = {
 // ==========================================
 // UTILIDADES
 // ==========================================
-const currencyFormatter = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 2
-});
-
+// Custom formatter that FORCES thousands separator with dot
 function formatCurrency(value) {
-  const parsed = Number.parseFloat(value);
-  if (Number.isNaN(parsed)) return currencyFormatter.format(0);
-  return currencyFormatter.format(parsed);
+  const parsed = parseFloat(value);
+  if (isNaN(parsed)) return '0,00 €';
+  const fixed = parsed.toFixed(2);
+  const [integer, decimal] = fixed.split('.');
+  const withSeparator = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${withSeparator},${decimal} €`;
 }
 
 function formatDate(value) {
@@ -214,70 +212,64 @@ function switchTab(tab) {
 // RENDERIZADO - TAB DE GASTOS
 // ==========================================
 function renderExpensesTab() {
-  const container = document.querySelector('[data-tab-content="expenses"]');
-  if (!container) return;
-  
   const summary = subscriptionState.mySubscriptionsSummary;
   const subscriptions = subscriptionState.mySubscriptions;
   
+  // Update summary cards
+  const totalCount = document.getElementById('expenses-total-count');
+  const activeCount = document.getElementById('expenses-active-count');
+  const monthlyCost = document.getElementById('expenses-monthly-cost');
+  const approxCost = document.getElementById('expenses-approx-cost');
+  
+  if (totalCount) totalCount.textContent = summary.total || '0';
+  if (activeCount) activeCount.textContent = summary.active || '0';
+  if (monthlyCost) monthlyCost.textContent = formatCurrency(summary.monthly_cost || 0);
+  if (approxCost) approxCost.textContent = formatCurrency(summary.monthly_cost || 0);
+  
+  // Update badge counts
+  const expensesBadge = document.querySelector('[data-expenses-count]');
+  if (expensesBadge) expensesBadge.textContent = summary.total || '0';
+  
+  // Render table
+  const container = document.querySelector('[data-tab-content="expenses"] .table-container');
+  if (!container) return;
+  
+  if (subscriptions.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 3rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📊</div>
+        <p style="color: var(--text-secondary); margin: 0 0 1rem 0;">No tienes suscripciones de gastos registradas</p>
+        <button type="button" class="btn btn-primary" onclick="openAddExpenseSubscriptionModal()">
+          + Añadir suscripción
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
   container.innerHTML = `
-    <!-- Métricas de gastos -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-      <div class="stat-card">
-        <div class="stat-card__label">Total suscripciones</div>
-        <div class="stat-card__value">${summary.total}</div>
-        <div class="stat-card__sublabel">${summary.active} activas · ${summary.trial} en prueba</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-card__label">Gasto mensual</div>
-        <div class="stat-card__value">${formatCurrency(summary.monthly_cost)}</div>
-        <div class="stat-card__sublabel">Coste recurrente aproximado</div>
-      </div>
-      
-      ${summary.trials_expiring_soon > 0 ? `
-        <div class="stat-card stat-card--warning">
-          <div class="stat-card__label">⚠️ Trials por expirar</div>
-          <div class="stat-card__value">${summary.trials_expiring_soon}</div>
-          <div class="stat-card__sublabel">En los próximos 7 días</div>
-        </div>
-      ` : ''}
-    </div>
-    
-    <!-- Tabla de suscripciones de gastos -->
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Servicio</th>
-            <th>Proveedor</th>
-            <th>Categoría</th>
-            <th>Importe</th>
-            <th>Frecuencia</th>
-            <th>Próximo cargo</th>
-            <th>Estado</th>
-            <th>Trial</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${subscriptions.length === 0 ? `
-            <tr>
-              <td colspan="9" style="text-align: center; padding: 3rem;">
-                <p style="color: var(--text-secondary); margin: 0;">No tienes suscripciones de gastos registradas</p>
-                <button type="button" class="btn-primary" style="margin-top: 1rem;" onclick="openAddExpenseSubscriptionModal()">
-                  + Añadir suscripción
-                </button>
-              </td>
-            </tr>
-          ` :subscriptions.map(sub => renderExpenseSubscriptionRow(sub)).join('')}
-        </tbody>
-      </table>
-    </div>
+    <table class="data-table" style="width: 100%;">
+      <thead>
+        <tr>
+          <th style="text-align: left; padding: 1rem;">Servicio</th>
+          <th style="text-align: left; padding: 1rem;">Proveedor</th>
+          <th style="text-align: left; padding: 1rem;">Categoría</th>
+          <th style="text-align: right; padding: 1rem;">Importe</th>
+          <th style="text-align: center; padding: 1rem;">Frecuencia</th>
+          <th style="text-align: center; padding: 1rem;">Próximo cargo</th>
+          <th style="text-align: center; padding: 1rem;">Estado</th>
+          <th style="text-align: center; padding: 1rem;">Trial</th>
+          <th style="text-align: right; padding: 1rem;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${subscriptions.map((sub, index) => renderExpenseSubscriptionRow(sub, index === 0)).join('')}
+      </tbody>
+    </table>
   `;
 }
 
-function renderExpenseSubscriptionRow(sub) {
+function renderExpenseSubscriptionRow(sub, isFirst = false) {
   const statusBadge = {
     trial: { label: 'Prueba', class: 'badge--warning' },
     active: { label: 'Activa', class: 'badge--success' },
@@ -289,18 +281,20 @@ function renderExpenseSubscriptionRow(sub) {
     ? `${sub.trial_days} días${sub.trial_requires_card ? ' (tarjeta req.)' : ' (sin tarjeta)'}`
     : '—';
   
+  const rowStyle = isFirst ? 'background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6;' : '';
+  
   return `
-    <tr>
-      <td><strong>${escapeHtml(sub.service_name)}</strong></td>
-      <td>${escapeHtml(sub.provider)}</td>
-      <td><span class="category-badge">${escapeHtml(sub.category || '—')}</span></td>
-      <td>${formatCurrency(sub.amount)}</td>
-      <td>${sub.billing_frequency}</td>
-      <td>${formatDate(sub.next_billing_date)}</td>
-      <td><span class="badge ${statusBadge.class}">${statusBadge.label}</span></td>
-      <td>${trialInfo}</td>
-      <td>
-        <button type="button" class="btn-icon" title="Editar">✏️</button>
+    <tr style="${rowStyle} ${isFirst ? 'font-weight: 500;' : ''}">
+      <td style="padding: 1rem;"><strong>${escapeHtml(sub.service_name)}</strong></td>
+      <td style="padding: 1rem;">${escapeHtml(sub.provider)}</td>
+      <td style="padding: 1rem;"><span class="category-badge">${escapeHtml(sub.category || '—')}</span></td>
+      <td style="padding: 1rem; text-align: right;">${formatCurrency(sub.amount)}</td>
+      <td style="padding: 1rem; text-align: center;">${sub.billing_frequency}</td>
+      <td style="padding: 1rem; text-align: center;">${sub.next_billing_date ? formatDate(sub.next_billing_date) : '—'}</td>
+      <td style="padding: 1rem; text-align: center;"><span class="badge ${statusBadge.class}">${statusBadge.label}</span></td>
+      <td style="padding: 1rem; text-align: center;">${trialInfo}</td>
+      <td style="padding: 1rem; text-align: right;">
+        <button type="button" class="btn-icon" title="Editar" style="margin-right: 0.5rem;">✏️</button>
         <button type="button" class="btn-icon" title="Eliminar">🗑️</button>
       </td>
     </tr>
@@ -311,76 +305,64 @@ function renderExpenseSubscriptionRow(sub) {
 // RENDERIZADO - TAB DE INGRESOS
 // ==========================================
 function renderRevenueTab() {
-  const container = document.querySelector('[data-tab-content="revenue"]');
-  if (!container) return;
-  
   const summary = subscriptionState.customerSubscriptionsSummary;
   const subscriptions = subscriptionState.customerSubscriptions;
   
+  // Update summary cards
+  const totalCount = document.getElementById('revenue-total-count');
+  const activeCount = document.getElementById('revenue-active-count');
+  const mrr = document.getElementById('revenue-mrr');
+  const arr = document.getElementById('revenue-arr');
+  
+  if (totalCount) totalCount.textContent = summary.total || '0';
+  if (activeCount) activeCount.textContent = summary.active || '0';
+  if (mrr) mrr.textContent = formatCurrency(summary.mrr || 0);
+  if (arr) arr.textContent = formatCurrency(summary.arr || 0);
+  
+  // Update badge counts
+  const revenueBadge = document.querySelector('[data-revenue-count]');
+  if (revenueBadge) revenueBadge.textContent = summary.total || '0';
+  
+  // Render table
+  const container = document.querySelector('[data-tab-content="revenue"] .table-container');
+  if (!container) return;
+  
+  if (subscriptions.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 3rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">💰</div>
+        <p style="color: var(--text-secondary); margin: 0 0 1rem 0;">No tienes clientes suscritos aún</p>
+        <button type="button" class="btn btn-primary" onclick="openAddCustomerSubscriptionModal()">
+          + Añadir cliente
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
   container.innerHTML = `
-    <!-- Métricas de ingresos -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-      <div class="stat-card stat-card--success">
-        <div class="stat-card__label">MRR (Mensual)</div>
-        <div class="stat-card__value">${formatCurrency(summary.mrr)}</div>
-        <div class="stat-card__sublabel">Ingresos recurrentes mensuales</div>
-      </div>
-      
-      <div class="stat-card stat-card--success">
-        <div class="stat-card__label">ARR (Anual)</div>
-        <div class="stat-card__value">${formatCurrency(summary.arr)}</div>
-        <div class="stat-card__sublabel">Proyección anual</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-card__label">Clientes suscritos</div>
-        <div class="stat-card__value">${summary.total}</div>
-        <div class="stat-card__sublabel">${summary.active} activos · ${summary.trial} en prueba</div>
-      </div>
-      
-      ${summary.trials_expiring_soon > 0 ? `
-        <div class="stat-card stat-card--warning">
-          <div class="stat-card__label">⚠️ Trials por expirar</div>
-          <div class="stat-card__value">${summary.trials_expiring_soon}</div>
-          <div class="stat-card__sublabel">Oportunidades de conversión</div>
-        </div>
-      ` : ''}
-    </div>
-    
-    <!-- Tabla de suscripciones de clientes -->
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Plan</th>
-            <th>Importe</th>
-            <th>Frecuencia</th>
-            <th>Próx. factura</th>
-            <th>Estado</th>
-            <th>Trial</th>
-            <th>Revenue total</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${subscriptions.length === 0 ? `
-            <tr>
-              <td colspan="9" style="text-align: center; padding: 3rem;">
-                <p style="color: var(--text-secondary); margin: 0;">No tienes clientes suscritos aún</p>
-                <button type="button" class="btn-primary" style="margin-top: 1rem;" onclick="openAddCustomerSubscriptionModal()">
-                  + Añadir cliente suscrito
-                </button>
-              </td>
-            </tr>
-          ` : subscriptions.map(sub => renderCustomerSubscriptionRow(sub)).join('')}
-        </tbody>
-      </table>
-    </div>
+    <table class="data-table" style="width: 100%;">
+      <thead>
+        <tr>
+          <th style="text-align: left; padding: 1rem;">Cliente</th>
+          <th style="text-align: left; padding: 1rem;">Plan</th>
+          <th style="text-align: right; padding: 1rem;">Importe</th>
+          <th style="text-align: center; padding: 1rem;">Frecuencia</th>
+          <th style="text-align: center; padding: 1rem;">Próx. factura</th>
+          <th style="text-align: center; padding: 1rem;">Estado</th>
+          <th style="text-align: center; padding: 1rem;">Trial</th>
+          <th style="text-align: right; padding: 1rem;">Revenue total</th>
+          <th style="text-align: right; padding: 1rem;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${subscriptions.map((sub, index) => renderCustomerSubscriptionRow(sub, index === 0)).join('')}
+      </tbody>
+    </table>
   `;
 }
 
-function renderCustomerSubscriptionRow(sub) {
+function renderCustomerSubscriptionRow(sub, isFirst = false) {
   const statusBadge = {
     trial: { label: 'Prueba', class: 'badge--warning' },
     active: { label: 'Activa', class: 'badge--success' },
@@ -392,21 +374,23 @@ function renderCustomerSubscriptionRow(sub) {
     ? `${sub.trial_days} días (expira: ${formatDate(sub.trial_end_date)})`
     : '—';
   
+  const rowStyle = isFirst ? 'background: rgba(99, 102, 241, 0.1); border-left: 3px solid #6366f1;' : '';
+  
   return `
-    <tr>
-      <td><strong>${escapeHtml(sub.client_name || 'Cliente')}</strong></td>
-      <td>
+    <tr style="${rowStyle} ${isFirst ? 'font-weight: 500;' : ''}">
+      <td style="padding: 1rem;"><strong>${escapeHtml(sub.client_name || 'Cliente')}</strong></td>
+      <td style="padding: 1rem;">
         <span class="plan-badge plan-badge--${sub.plan_code}">${escapeHtml(sub.plan_name)}</span>
       </td>
-      <td>${formatCurrency(sub.amount)}</td>
-      <td>${sub.billing_frequency}</td>
-      <td>${formatDate(sub.next_billing_date)}</td>
-      <td><span class="badge ${statusBadge.class}">${statusBadge.label}</span></td>
-      <td>${trialInfo}</td>
-      <td>${formatCurrency(sub.total_revenue || 0)}</td>
-      <td>
-        <button type="button" class="btn-icon" title="Ver detalles">👁️</button>
-        <button type="button" class="btn-icon" title="Editar">✏️</button>
+      <td style="padding: 1rem; text-align: right;">${formatCurrency(sub.amount)}</td>
+      <td style="padding: 1rem; text-align: center;">${sub.billing_frequency}</td>
+      <td style="padding: 1rem; text-align: center;">${sub.next_billing_date ? formatDate(sub.next_billing_date) : '—'}</td>
+      <td style="padding: 1rem; text-align: center;"><span class="badge ${statusBadge.class}">${statusBadge.label}</span></td>
+      <td style="padding: 1rem; text-align: center;">${trialInfo}</td>
+      <td style="padding: 1rem; text-align: right;">${formatCurrency(sub.total_revenue || 0)}</td>
+      <td style="padding: 1rem; text-align: right;">
+        <button type="button" class="btn-icon" title="Ver detalles" style="margin-right: 0.5rem;">👁️</button>
+        <button type="button" class="btn-icon" title="Editar" style="margin-right: 0.5rem;">✏️</button>
         ${sub.status === 'trial' ? '<button type="button" class="btn-icon" title="Convertir">✅</button>' : ''}
       </td>
     </tr>
@@ -419,57 +403,149 @@ function renderCustomerSubscriptionRow(sub) {
 export function renderSubscriptions() {
   const html = `
     <section class="subscriptions-module">
-      <!-- Header -->
-      <header class="module-header">
-        <div>
-          <h1 style="margin: 0; font-size: 1.75rem;">Gestión de Suscripciones</h1>
-          <p style="margin: 0.5rem 0 0; color: var(--text-secondary);">
+      <!-- Hero Banner -->
+      <div class="subscriptions__hero module-banner" style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div class="subscriptions__hero-copy">
+          <h1 style="margin: 0 0 0.5rem 0; font-size: 1.75rem; color: white;">Gestión de Suscripciones</h1>
+          <p style="margin: 0; color: rgba(255, 255, 255, 0.9); font-size: 1rem;">
             Controla tus gastos recurrentes y los ingresos de tus clientes
           </p>
         </div>
-      </header>
+      </div>
       
-      <!-- Tabs -->
-      <div class="tabs-container" style="margin: 2rem 0 1.5rem;">
-        <div class="tabs">
+      <!-- Tabs with modern styling -->
+      <div class="tabs-container" style="margin-bottom: 2rem; border-bottom: 2px solid var(--border-color);">
+        <div style="display: flex; gap: 1rem;">
           <button 
             type="button" 
-            class="tab active" 
+            class="tab-button active" 
             data-tab="expenses" 
             onclick="switchTab('expenses')"
-            style="padding: 0.75rem 1.5rem; font-size: 1rem; border-bottom: 3px solid var(--primary-color);"
+            style="padding: 1rem 2rem; background: none; border: none; border-bottom: 3px solid #8b5cf6; color: #8b5cf6; font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;"
           >
             💸 Mis Gastos
-            <span class="tab-badge" data-expenses-count>0</span>
+            <span class="badge" data-expenses-count style="background: #8b5cf6; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">0</span>
           </button>
           
           <button 
             type="button" 
-            class="tab" 
+            class="tab-button" 
             data-tab="revenue" 
             onclick="switchTab('revenue')"
-            style="padding: 0.75rem 1.5rem; font-size: 1rem;"
+            style="padding: 1rem 2rem; background: none; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;"
           >
             💰 Mis Ingresos (Clientes)
-            <span class="tab-badge" data-revenue-count>0</span>
+            <span class="badge" data-revenue-count style="background: var(--text-secondary); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">0</span>
           </button>
         </div>
       </div>
       
       <!-- Tab Content: Mis Gastos -->
       <div data-tab-content="expenses" style="display: block;">
-        <div style="text-align: center; padding: 3rem;">
-          <div class="spinner"></div>
-          <p>Cargando suscripciones...</p>
+        <!-- Summary Cards -->
+        <div class="summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+          <div class="stat-card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="card-icon" style="width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(139, 92, 246, 0.2); color: #8b5cf6; font-size: 1.5rem;">📊</div>
+              <div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Total suscripciones</div>
+                <div id="expenses-total-count" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">0</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stat-card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="card-icon" style="width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 1.5rem;">📈</div>
+              <div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Activas</div>
+                <div id="expenses-active-count" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">0</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stat-card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="card-icon" style="width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(245, 158, 11, 0.2); color: #f59e0b; font-size: 1.5rem;">💰</div>
+              <div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Gasto mensual</div>
+                <div id="expenses-monthly-cost" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">0,00 €</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stat-card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="card-icon" style="width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(236, 72, 153, 0.2); color: #ec4899; font-size: 1.5rem;">⏰</div>
+              <div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Coste recurrente aproximado</div>
+                <div id="expenses-approx-cost" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">0,00 €</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Table -->
+        <div class="table-container" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+          <div style="text-align: center; padding: 3rem;">
+            <div class="spinner"></div>
+            <p>Cargando suscripciones...</p>
+          </div>
         </div>
       </div>
       
       <!-- Tab Content: Mis Ingresos -->
       <div data-tab-content="revenue" style="display: none;">
-        <div style="text-align: center; padding: 3rem;">
-          <p style="color: var(--text-secondary);">
-            Cambia a esta pestaña para ver los clientes suscritos a tus servicios
-          </p>
+       <!-- Summary Cards -->
+        <div class="summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+          <div class="stat-card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="card-icon" style="width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.2); color: #3b82f6; font-size: 1.5rem;">👥</div>
+              <div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Total clientes</div>
+                <div id="revenue-total-count" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">0</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stat-card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="card-icon" style="width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 1.5rem;">✅</div>
+              <div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Activos</div>
+                <div id="revenue-active-count" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">0</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stat-card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="card-icon" style="width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.2); color: #22c55e; font-size: 1.5rem;">💵</div>
+              <div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">MRR (mensual)</div>
+                <div id="revenue-mrr" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">0,00 €</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stat-card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="card-icon" style="width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(99, 102, 241, 0.2); color: #6366f1; font-size: 1.5rem;">📅</div>
+              <div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">ARR (anual)</div>
+                <div id="revenue-arr" style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">0,00 €</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Table -->
+        <div class="table-container" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+          <div style="text-align: center; padding: 3rem;">
+            <p style="color: var(--text-secondary);">
+              Cargando clientes...
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -492,6 +568,7 @@ function initSubscriptionsPage() {
   // Cargar datos iniciales
   loadMySubscriptions();
 }
+
 
 // Exportar con el nombre esperado por main.js
 export const initSubscriptions = initSubscriptionsPage;

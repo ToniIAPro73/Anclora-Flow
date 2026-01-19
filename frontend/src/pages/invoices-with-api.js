@@ -19,11 +19,23 @@ const invoiceItemEditors = {
 };
 
 // Formatters
-const currencyFormatter = new Intl.NumberFormat("es-ES", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 2
-});
+// Custom formatter that FORCES thousands separator with dot
+function formatCurrency(value) {
+  const parsed = parseFloat(value);
+  if (isNaN(parsed)) return '0,00 €';
+  
+  // Force 2 decimals
+  const fixed = parsed.toFixed(2);
+  
+  // Split integer and decimal parts
+  const [integer, decimal] = fixed.split('.');
+  
+  // Add thousands separator (dot) manually
+  const withSeparator = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  
+  // Return with comma as decimal separator
+  return `${withSeparator},${decimal} €`;
+}
 
 // Mapeo de estados de factura
 const statusMap = {
@@ -65,10 +77,6 @@ function escapeHtml(value = '') {
 function sanitizeNumber(value, fallback = 0) {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function formatCurrency(value) {
-  return currencyFormatter.format(sanitizeNumber(value, 0));
 }
 
 function calculateLineTotals(item = {}) {
@@ -376,15 +384,15 @@ function getSingleItemFormMarkup(item, index, editable, showDelete) {
     <div style="margin-top: 0.4rem; padding: 0.4rem 0.6rem; background: var(--bg-primary); border-radius: 4px; display: flex; gap: 1.5rem; font-size: 0.7rem; align-items: center; border-left: 3px solid #3b82f6;">
       <div style="display: flex; align-items: center; gap: 0.4rem;">
         <span style="color: var(--text-secondary); font-weight: 500;">Subtotal:</span>
-        <strong style="color: var(--text-primary);">${currencyFormatter.format(calculateLineSubtotal(item))}</strong>
+        <strong style="color: var(--text-primary);">${formatCurrency(calculateLineSubtotal(item))}</strong>
       </div>
       <div style="display: flex; align-items: center; gap: 0.4rem;">
         <span style="color: var(--text-secondary); font-weight: 500;">IVA:</span>
-        <strong style="color: var(--text-primary);">${currencyFormatter.format(calculateLineVat(item))}</strong>
+        <strong style="color: var(--text-primary);">${formatCurrency(calculateLineVat(item))}</strong>
       </div>
       <div style="display: flex; align-items: center; gap: 0.35rem;">
         <span style="color: var(--text-secondary); font-weight: 500;">Total:</span>
-        <strong style="color: #3b82f6;">${currencyFormatter.format(calculateLineTotal(item))}</strong>
+        <strong style="color: #3b82f6;">${formatCurrency(calculateLineTotal(item))}</strong>
       </div>
     </div>
   `;
@@ -559,9 +567,9 @@ function handleItemEditorTabInput(e) {
     const vatEl = totalsDiv.querySelector('div:nth-child(2) strong');
     const totalEl = totalsDiv.querySelector('div:nth-child(3) strong');
     
-    if (subtotalEl) subtotalEl.textContent = currencyFormatter.format(lineTotals.base);
-    if (vatEl) vatEl.textContent = currencyFormatter.format(lineTotals.vatAmount);
-    if (totalEl) totalEl.textContent = currencyFormatter.format(lineTotals.total);
+    if (subtotalEl) subtotalEl.textContent = formatCurrency(lineTotals.base);
+    if (vatEl) vatEl.textContent = formatCurrency(lineTotals.vatAmount);
+    if (totalEl) totalEl.textContent = formatCurrency(lineTotals.total);
   }
 }
 
@@ -1186,15 +1194,18 @@ async function registerInvoiceVerifactu(invoiceId) {
   } catch (error) {
     console.error('Error registrando en Verifactu:', error);
 
+    // Extraer mensaje de error del backend
+    const errorMessage = error.data?.message || error.data?.error || error.message || 'Error desconocido al registrar factura';
+
     // Actualizar estado a error
     const invoice = invoicesData.find(inv => inv.id === invoiceId);
     if (invoice) {
       invoice.verifactuStatus = 'error';
-      invoice.verifactuError = error.message;
+      invoice.verifactuError = errorMessage;
       renderInvoicesTable();
     }
 
-    showNotification(`Error: ${error.message}`, 'error');
+    showNotification(`Error: ${errorMessage}`, 'error');
   }
 }
 
@@ -2126,8 +2137,8 @@ function generateInvoicePDFHTML(invoice) {
               <tr>
                 <td>${item.description}</td>
                 <td class="text-center">${item.quantity} ${item.unit_type || ''}</td>
-                <td class="text-right">${currencyFormatter.format(item.unit_price)}</td>
-                <td class="text-right">${currencyFormatter.format(item.amount)}</td>
+                <td class="text-right">${formatCurrency(item.unit_price)}</td>
+                <td class="text-right">${formatCurrency(item.amount)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -2137,21 +2148,21 @@ function generateInvoicePDFHTML(invoice) {
       <div class="totals">
         <div class="totals-row">
           <span>Subtotal:</span>
-          <span>${currencyFormatter.format(invoice.subtotal)}</span>
+          <span>${formatCurrency(invoice.subtotal)}</span>
         </div>
         <div class="totals-row">
           <span>IVA (${invoice.vat_percentage}%):</span>
-          <span>${currencyFormatter.format(invoice.vat_amount)}</span>
+          <span>${formatCurrency(invoice.vat_amount)}</span>
         </div>
         ${invoice.irpf_amount > 0 ? `
           <div class="totals-row">
             <span>IRPF (${invoice.irpf_percentage}%):</span>
-            <span style="color: #c53030;">-${currencyFormatter.format(invoice.irpf_amount)}</span>
+            <span style="color: #c53030;">-${formatCurrency(invoice.irpf_amount)}</span>
           </div>
         ` : ''}
         <div class="totals-row final">
           <span>TOTAL:</span>
-          <span>${currencyFormatter.format(invoice.total)}</span>
+          <span>${formatCurrency(invoice.total)}</span>
         </div>
       </div>
 
@@ -2305,7 +2316,7 @@ function renderInvoiceRows() {
           <time datetime="${invoice.dueDate}">${formatDate(invoice.dueDate)}</time>
         </td>
         <td data-column="Importe">
-          <span class="invoices-table__amount">${currencyFormatter.format(invoice.total)}</span>
+          <span class="invoices-table__amount">${formatCurrency(invoice.total)}</span>
         </td>
         <td data-column="Estado">
           <span class="status-pill status-pill--${statusInfo.tone}">

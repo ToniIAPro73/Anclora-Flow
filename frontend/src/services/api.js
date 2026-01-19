@@ -144,6 +144,10 @@ class APIService {
     return this.delete(`/invoices/${id}`);
   }
 
+  async registerInvoiceVerifactu(id) {
+    return this.post(`/verifactu/register/${id}`);
+  }
+
   async generateInvoicePdf(id) {
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/invoices/${id}/pdf`, {
