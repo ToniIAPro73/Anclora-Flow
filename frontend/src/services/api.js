@@ -214,6 +214,10 @@ class APIService {
     const query = this._buildQuery(filters);
     return this.get(`/expenses?${query}`);
   }
+
+  async getExpense(id) {
+    return this.get(`/expenses/${id}`);
+  }
   
   async createExpense(data) { return this.post('/expenses', data); }
   async updateExpense(id, data) { return this.put(`/expenses/${id}`, data); }

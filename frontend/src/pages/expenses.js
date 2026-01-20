@@ -17,6 +17,26 @@ const PAGE_SIZE = 10;
 let currentPage = 1;
 let selectedExpenseId = null;
 
+let visibleColumns = {
+  date: true,
+  category: true,
+  description: true,
+  amount: true,
+  isDeductible: true,
+  paymentMethod: false,
+  projectName: false
+};
+
+const EXPENSE_COLUMNS = {
+  date: 'Fecha',
+  category: 'Categoría',
+  description: 'Descripción',
+  amount: 'Importe',
+  isDeductible: 'Deducible',
+  paymentMethod: 'Pago',
+  projectName: 'Proyecto'
+};
+
 // === CONSTANTES ===
 const EXPENSE_CATEGORIES = {
   office: "Oficina",
@@ -230,31 +250,32 @@ function showNotification(message, type = "info") {
 
 // === RENDERIZADO DE ESTADOS ===
 function renderLoadingState() {
-  const loadingEl = document.querySelector("[data-expenses-loading]");
-  if (loadingEl) loadingEl.hidden = !isLoading;
+  const tbody = document.querySelector('[data-expenses-tbody]');
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 3rem;">
+          <div class="spinner" style="display: inline-block;"></div>
+          <p style="margin-top: 1rem; color: var(--text-secondary);">Cargando gastos...</p>
+        </td>
+      </tr>
+    `;
+  }
 }
 
 function renderErrorState(message) {
-  const errorEl = document.querySelector("[data-expenses-error]");
-  if (!errorEl) return;
-  if (!message) {
-    errorEl.hidden = true;
-    errorEl.innerHTML = "";
-    return;
+  const tbody = document.querySelector('[data-expenses-tbody]');
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 3rem;">
+          <p style="color: var(--color-error); font-size: 1.1rem; margin-bottom: 1rem;">⚠️ Error al cargar gastos</p>
+          <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">${message}</p>
+          <button onclick="loadExpenses()" class="btn-primary">Reintentar</button>
+        </td>
+      </tr>
+    `;
   }
-  errorEl.hidden = false;
-  errorEl.innerHTML = `
-    <div class="module-error__content">
-      <span class="module-error__icon">⚠️</span>
-      <div>
-        <p class="module-error__title">No se pudieron cargar los gastos</p>
-        <p class="module-error__message">${escapeHtml(message)}</p>
-      </div>
-      <button type="button" class="btn btn-secondary" data-expenses-retry>Reintentar</button>
-    </div>
-  `;
-  const retryBtn = errorEl.querySelector("[data-expenses-retry]");
-  if (retryBtn) retryBtn.addEventListener("click", () => loadExpenses());
 }
 
 // === CARGA DE DATOS ===
@@ -308,7 +329,7 @@ async function loadExpenses() {
     showNotification(message, "error");
   } finally {
     isLoading = false;
-    renderLoadingState();
+    // renderLoadingState(); // No need to hide loading state explicitly, renderExpensesTable will overwrite
   }
 }
 
@@ -323,217 +344,416 @@ function buildFiltersQuery() {
   return query;
 }
 
-// === TABLA ===
+// === RENDERIZADO ===
+
 function renderExpensesTable() {
-  const tbody = document.querySelector("[data-expenses-tbody]");
-  if (!tbody) return;
+  const container = document.querySelector('.expenses-table-container');
+  if (!container) return;
 
-  filteredExpenses = Array.isArray(expensesData) ? [...expensesData] : [];
-
-  const total = filteredExpenses.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  if (currentPage > totalPages) currentPage = totalPages;
-  if (currentPage < 1) currentPage = 1;
-
-  const start = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-  const end = Math.min(currentPage * PAGE_SIZE, total);
-  updateFilterCount(total, start, end);
-
-  if (!filteredExpenses.length) {
-    selectedExpenseId = null;
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" class="empty-state">
-          No se encontraron gastos. Añade tu primer gasto para empezar.
-        </td>
-      </tr>
-    `;
-    renderExpensesPagination(totalPages);
-    return;
-  }
-
-  const pageItems = filteredExpenses.slice(start - 1, start - 1 + PAGE_SIZE);
-
-  if (filteredExpenses.length) {
-    const selectionExists = filteredExpenses.some(
-      (expense) => String(expense.id) === String(selectedExpenseId)
-    );
-    if (!selectionExists) {
-      selectedExpenseId = String(filteredExpenses[0].id);
-    }
-  }
-
-  if (pageItems.length) {
-    const pageSelectionExists = pageItems.some(
-      (expense) => String(expense.id) === String(selectedExpenseId)
-    );
-    if (!pageSelectionExists) {
-      selectedExpenseId = String(pageItems[0].id);
-    }
-  }
-
-  tbody.innerHTML = pageItems
-    .map((expense) => {
-      const categoryLabel =
-        EXPENSE_CATEGORIES[expense.category] ||
-        expense.category ||
-        "Sin categoría";
-      const paymentLabel =
-        PAYMENT_METHODS[expense.paymentMethod] ||
-        expense.paymentMethod ||
-        "N/A";
-      const isSelected = String(expense.id) === String(selectedExpenseId);
-      return `
-      <tr class="expenses-table__row${
-        isSelected ? " is-selected expenses-table__row--highlight" : ""
-      }" data-expense-id="${expense.id}">
-        <td>
-          <time datetime="${escapeHtml(expense.expenseDate || "")}">
-            ${formatDate(expense.expenseDate)}
-          </time>
-        </td>
-        <td>
-          <span class="category-badge">
-            ${escapeHtml(categoryLabel)}
-          </span>
-          ${
-            expense.subcategory
-              ? `<small>${escapeHtml(expense.subcategory)}</small>`
-              : ""
-          }
-        </td>
-        <td>
-          <div class="expense-description">
-            <strong>${escapeHtml(
-              expense.description || "Sin descripción"
-            )}</strong>
-            ${
-              expense.vendor
-                ? `<small>${escapeHtml(expense.vendor)}</small>`
-                : ""
-            }
-          </div>
-        </td>
-        <td class="expenses-table__amount">
-          ${formatCurrency(expense.amount)}
-          <small class="vat-indicator">IVA ${expense.vatPercentage.toFixed(
-            2
-          )}% (${formatCurrency(expense.vatAmount)})</small>
-        </td>
-        <td>
-          <span class="status-pill status-pill--${
-            expense.isDeductible ? "success" : "neutral"
-          }">
-            ${
-              expense.isDeductible
-                ? `Deducible ${expense.deductiblePercentage}%`
-                : "No deducible"
-            }
-          </span>
-        </td>
-        <td class="expenses-table__client">${escapeHtml(paymentLabel)}</td>
-        <td class="expenses-table__client">${
-          expense.projectName ? escapeHtml(expense.projectName) : "-"
-        }</td>
-        <td>
-          <div class="expenses-table__actions">
-            <button type="button" class="table-action" title="Ver gasto" onclick="viewExpense('${
-              expense.id
-            }')">👁️</button>
-            <button type="button" class="table-action" title="Editar gasto" onclick="openExpenseModal('edit', '${
-              expense.id
-            }')">✏️</button>
-            <button type="button" class="table-action" title="Eliminar gasto" onclick="confirmDeleteExpense('${
-              expense.id
-            }')">🗑️</button>
-          </div>
-        </td>
-      </tr>
-    `;
-    })
-    .join("");
-
-  tbody.querySelectorAll(".expenses-table__row").forEach((row) => {
-    row.addEventListener("click", (event) => {
-      if (event.target.closest("button") || event.target.closest("a")) return;
-      const expenseId = String(row.dataset.expenseId);
-      if (selectedExpenseId !== expenseId) {
-        selectedExpenseId = expenseId;
-        renderExpensesTable();
-      }
-    });
-  });
-
-  renderExpensesPagination(totalPages);
-}
-
-function updateFilterCount(total, start = 0, end = 0) {
-  const counter = document.querySelector("[data-expenses-count]");
-  if (!counter) return;
-  if (!total) {
-    counter.textContent = "Sin gastos disponibles";
-    return;
-  }
-  const label = total === 1 ? "gasto" : "gastos";
-  counter.textContent = `Mostrando ${start}-${end} de ${total} ${label}`;
-}
-
-function renderExpensesPagination(totalPages) {
-  const pager = document.querySelector('[data-pagination="expenses"]');
-  if (!pager) return;
-
-  if (filteredExpenses.length <= PAGE_SIZE) {
-    pager.innerHTML = "";
-    return;
-  }
-
-  pager.innerHTML = `
-    <button type="button" class="pager-btn" onclick="window.changeExpensesPage(-1)" ${
-      currentPage === 1 ? "disabled" : ""
-    }>
-      Anterior
-    </button>
-    <span class="pager-status">Página ${currentPage} de ${totalPages}</span>
-    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeExpensesPage(1)" ${
-      currentPage === totalPages ? "disabled" : ""
-    }>
-      Siguiente
-    </button>
+  // 1. TOOLBAR
+  const toolbarHTML = `
+    <div class="table-toolbar">
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn-config-columns" onclick="openExpenseColumnConfigModal()" title="Configurar qué columnas mostrar">
+          ⚙️ Columnas
+        </button>
+      </div>
+      <input 
+        type="text" 
+        id="expense-table-search"
+        class="search-input" 
+        placeholder="Buscar por descripción o proveedor..."
+        value="${currentFilters.search || ''}"
+        oninput="handleExpenseSearch(this.value)"
+      >
+      <div style="flex: 1;"></div>
+    </div>
   `;
+
+  // 2. TABLA
+  const tableHTML = `
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th data-column="date" ${visibleColumns.date ? '' : 'hidden'}>Fecha</th>
+            <th data-column="category" ${visibleColumns.category ? '' : 'hidden'}>Categoría</th>
+            <th data-column="description" ${visibleColumns.description ? '' : 'hidden'}>Descripción</th>
+            <th data-column="amount" ${visibleColumns.amount ? '' : 'hidden'}>Importe</th>
+            <th data-column="isDeductible" ${visibleColumns.isDeductible ? '' : 'hidden'}>Deducible</th>
+            <th data-column="paymentMethod" class="hide-mobile" ${visibleColumns.paymentMethod ? '' : 'hidden'}>Pago</th>
+            <th data-column="projectName" class="hide-mobile" ${visibleColumns.projectName ? '' : 'hidden'}>Proyecto</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody data-expenses-tbody>
+          ${renderExpenseRows()}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  // 3. PAGINACIÓN
+  const filteredCount = getFilteredExpensesCount();
+  const totalPages = Math.ceil(filteredCount / PAGE_SIZE) || 1;
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, filteredCount);
+
+  const paginationHTML = filteredCount > PAGE_SIZE ? `
+    <div class="pagination">
+      <button class="btn-paginate" onclick="window.changeExpensesPage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+        ← Anterior
+      </button>
+      <div class="page-numbers">
+        ${renderExpensePageNumbers(totalPages)}
+      </div>
+      <button class="btn-paginate" onclick="window.changeExpensesPage(1)" ${currentPage === totalPages ? 'disabled' : ''}>
+        Siguiente →
+      </button>
+      <span class="pagination-info">
+        Mostrando ${start}-${end} de ${filteredCount} registros
+      </span>
+    </div>
+  ` : `
+    <div class="pagination">
+      <span class="pagination-info" style="margin-left: auto;">
+        Mostrando ${filteredCount} registros
+      </span>
+    </div>
+  `;
+
+  container.innerHTML = toolbarHTML + tableHTML + paginationHTML;
 }
 
-// === TARJETAS RESUMEN ===
-function updateSummaryCards() {
-  const total = expensesData.reduce(
-    (sum, expense) => sum + sanitizeNumber(expense.amount, 0),
-    0
-  );
-  const deductible = expensesData
-    .filter((expense) => expense.isDeductible)
-    .reduce(
-      (sum, expense) =>
-        sum +
-        sanitizeNumber(expense.amount, 0) *
-          (sanitizeNumber(expense.deductiblePercentage, 0) / 100),
-      0
-    );
-  const vatRecoverable = expensesData.reduce(
-    (sum, expense) => sum + sanitizeNumber(expense.vatAmount, 0),
-    0
-  );
-  const average = expensesData.length ? total / expensesData.length : 0;
+function renderExpenseRows() {
+  if (!expensesData || expensesData.length === 0) {
+    return `
+      <tr>
+        <td colspan="8" class="empty-state">No hay gastos todavía</td>
+      </tr>
+    `;
+  }
 
-  const map = {
-    total: document.getElementById("total-expenses"),
-    deductible: document.getElementById("deductible-expenses"),
-    vat: document.getElementById("recoverable-vat"),
-    average: document.getElementById("average-expense"),
+  // Filtrar y Paginar
+  let filtered = expensesData;
+  if (currentFilters.search) {
+    const search = currentFilters.search.toLowerCase();
+    filtered = filtered.filter(ex => 
+      ex.description?.toLowerCase().includes(search) || 
+      ex.vendor?.toLowerCase().includes(search)
+    );
+  }
+  if (currentFilters.category) {
+    filtered = filtered.filter(ex => ex.category === currentFilters.category);
+  }
+  if (currentFilters.isDeductible !== "") {
+    const isDeductible = currentFilters.isDeductible === "true";
+    filtered = filtered.filter(ex => ex.isDeductible === isDeductible || ex.is_deductible === isDeductible);
+  }
+
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const pagedExpenses = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+  if (pagedExpenses.length === 0 && currentPage > 1) {
+    currentPage = 1;
+    return renderExpenseRows();
+  }
+
+  return pagedExpenses.map(expense => {
+    const isDeductible = expense.isDeductible ?? expense.is_deductible;
+    const isSelected = String(expense.id) === String(selectedExpenseId);
+    
+    return `
+      <tr data-expense-id="${expense.id}" 
+          class="table-row-clickable ${isSelected ? 'is-selected' : ''}"
+          onclick="handleExpenseRowClick(event, '${expense.id}')">
+        <td data-label="Fecha" ${visibleColumns.date ? '' : 'hidden'}>
+          <time datetime="${expense.expenseDate || expense.expense_date}">${formatDate(expense.expenseDate || expense.expense_date)}</time>
+        </td>
+        <td data-label="Categoría" ${visibleColumns.category ? '' : 'hidden'}>
+          <span class="category-pill">${EXPENSE_CATEGORIES[expense.category] || expense.category}</span>
+        </td>
+        <td data-label="Descripción" ${visibleColumns.description ? '' : 'hidden'}>
+          <div class="table-description">
+            <strong>${escapeHtml(expense.description)}</strong>
+            ${expense.vendor ? `<span class="table-vendor">${escapeHtml(expense.vendor)}</span>` : ''}
+          </div>
+        </td>
+        <td data-label="Importe" ${visibleColumns.amount ? '' : 'hidden'}>
+          <span class="table-amount">${formatCurrency(expense.amount)}</span>
+        </td>
+        <td data-label="Deducible" ${visibleColumns.isDeductible ? '' : 'hidden'}>
+          <span class="status-pill status-pill--${isDeductible ? 'success' : 'neutral'}">
+            <span class="status-pill__dot"></span>
+            ${isDeductible ? 'SÍ' : 'NO'}
+          </span>
+        </td>
+        <td data-label="Pago" class="hide-mobile" ${visibleColumns.paymentMethod ? '' : 'hidden'}>
+          ${PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || '-'}
+        </td>
+        <td data-label="Proyecto" class="hide-mobile" ${visibleColumns.projectName ? '' : 'hidden'}>
+          ${expense.projectName || '-'}
+        </td>
+        <td data-label="ACCIONES" class="table-actions">
+           <div style="display: flex; gap: 0.25rem; justify-content: flex-end;">
+            <button type="button" class="btn-ghost btn-sm" onclick="viewExpense('${expense.id}')" title="Ver detalle">👁️</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="openExpenseModal('edit', '${expense.id}')" title="Editar">✏️</button>
+            <button type="button" class="btn-ghost btn-sm btn-ghost--danger" onclick="confirmDeleteExpense('${expense.id}')" title="Eliminar">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// === AYUDANTES DE TABLA ===
+
+function getFilteredExpensesCount() {
+  let filtered = expensesData;
+  if (currentFilters.search) {
+    const search = currentFilters.search.toLowerCase();
+    filtered = filtered.filter(ex => 
+      ex.description?.toLowerCase().includes(search) || 
+      ex.vendor?.toLowerCase().includes(search)
+    );
+  }
+  if (currentFilters.category) {
+    filtered = filtered.filter(ex => ex.category === currentFilters.category);
+  }
+  if (currentFilters.isDeductible !== "") {
+    const isDeductibleValue = currentFilters.isDeductible === "true";
+    filtered = filtered.filter(ex => (ex.isDeductible ?? ex.is_deductible) === isDeductibleValue);
+  }
+  return filtered.length;
+}
+
+function handleExpenseSearch(value) {
+  currentFilters.search = value;
+  currentPage = 1;
+  renderExpensesTable();
+}
+
+function changeExpensesPage(delta) {
+  const filteredCount = getFilteredExpensesCount();
+  const totalPages = Math.ceil(filteredCount / PAGE_SIZE) || 1;
+  const newPage = currentPage + delta;
+  if (newPage >= 1 && newPage <= totalPages) {
+    currentPage = newPage;
+    renderExpensesTable();
+  }
+}
+
+function goToExpensePage(page) {
+  currentPage = page;
+  renderExpensesTable();
+}
+
+function handleExpenseRowClick(event, expenseId) {
+  if (event.target.closest('button')) return;
+  selectedExpenseId = expenseId;
+  const expense = expensesData.find(ex => String(ex.id) === String(expenseId));
+  if (expense) {
+    openExpenseDrawer(expense);
+  }
+  renderExpensesTable();
+}
+
+function renderExpensePageNumbers(totalPages) {
+  let html = '';
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    html += `
+      <button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="window.goToExpensePage(${i})">
+        ${i}
+      </button>
+    `;
+  }
+  return html;
+}
+
+// === DRAWER Y CONFIGURACIÓN ===
+
+async function openExpenseDrawer(expense) {
+  let drawer = document.getElementById('expense-drawer');
+  let overlay = document.getElementById('expense-drawer-overlay');
+
+  if (!drawer) {
+    const drawerHTML = `
+      <div class="drawer-overlay" id="expense-drawer-overlay" onclick="window.closeExpenseDrawer()"></div>
+      <div class="drawer" id="expense-drawer">
+        <header class="drawer__header">
+          <h2 class="drawer__title">Detalles del Gasto</h2>
+          <button class="drawer__close" onclick="window.closeExpenseDrawer()">&times;</button>
+        </header>
+        <div class="drawer__body" id="expense-drawer-body"></div>
+        <footer class="drawer__footer">
+          <button class="btn btn-primary" id="drawer-expense-edit-btn">Editar Gasto</button>
+          <button class="btn btn-secondary" onclick="window.closeExpenseDrawer()">Cerrar</button>
+        </footer>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', drawerHTML);
+    drawer = document.getElementById('expense-drawer');
+    overlay = document.getElementById('expense-drawer-overlay');
+  }
+
+  const body = document.getElementById('expense-drawer-body');
+  const isDeductible = expense.isDeductible ?? expense.is_deductible;
+  const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category;
+
+  body.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+       <div style="font-size: 2rem; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-color);">
+          ${getCategoryIcon(expense.category)}
+       </div>
+       <div>
+          <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.05em;">${categoryLabel}</span>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--text-primary);">${formatCurrency(expense.amount)}</div>
+       </div>
+    </div>
+
+    <div style="display: grid; gap: 1.25rem;">
+      <div class="drawer-field">
+        <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.4rem;">Descripción</label>
+        <div style="font-size: 1rem; font-weight: 500;">${escapeHtml(expense.description)}</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+        <div class="drawer-field">
+          <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.4rem;">Fecha</label>
+          <div style="font-size: 0.95rem;">${formatDate(expense.expenseDate || expense.expense_date)}</div>
+        </div>
+        <div class="drawer-field">
+          <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.4rem;">Proveedor</label>
+          <div style="font-size: 0.95rem;">${escapeHtml(expense.vendor || '-')}</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+        <div class="drawer-field">
+          <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.4rem;">Deducible</label>
+          <span class="status-pill status-pill--${isDeductible ? 'success' : 'neutral'}">
+            <span class="status-pill__dot"></span>
+            ${isDeductible ? 'SÍ' : 'NO'}
+          </span>
+        </div>
+        <div class="drawer-field">
+          <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.4rem;">Método Pago</label>
+          <div style="font-size: 0.95rem;">${PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || '-'}</div>
+        </div>
+      </div>
+
+      ${expense.notes ? `
+        <div class="drawer-field">
+          <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.4rem;">Notas</label>
+          <div style="font-size: 0.9rem; background: var(--bg-secondary); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); white-space: pre-wrap;">${escapeHtml(expense.notes)}</div>
+        </div>
+      ` : ''}
+
+       ${expense.receiptUrl || expense.receipt_url ? `
+        <div class="drawer-field">
+          <label style="display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; margin-bottom: 0.4rem;">Justificante</label>
+          <div style="background: var(--bg-secondary); border-radius: 8px; border: 1px dashed var(--border-color); padding: 1rem; text-align: center;">
+             <a href="${expense.receiptUrl || expense.receipt_url}" target="_blank" class="btn btn-secondary btn-sm">👁️ Ver adjunto</a>
+          </div>
+        </div>
+      ` : ''}
+
+      <div style="margin-top: 1rem; pt: 1rem; border-top: 1px solid var(--border-color);">
+         <button class="btn btn-ghost btn-sm" style="width: 100%;" onclick="window.viewExpenseAuditLog('${expense.id}')">📜 Ver historial de cambios</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('drawer-expense-edit-btn').onclick = () => {
+    window.closeExpenseDrawer();
+    window.openExpenseModal('edit', expense.id);
   };
 
-  if (map.total) map.total.textContent = formatCurrency(total);
-  if (map.deductible) map.deductible.textContent = formatCurrency(deductible);
-  if (map.vat) map.vat.textContent = formatCurrency(vatRecoverable);
-  if (map.average) map.average.textContent = formatCurrency(average);
+  requestAnimationFrame(() => {
+    overlay.classList.add('is-open');
+    drawer.classList.add('is-open');
+  });
+}
+
+function closeExpenseDrawer() {
+  const drawer = document.getElementById('expense-drawer');
+  const overlay = document.getElementById('expense-drawer-overlay');
+  if (drawer) drawer.classList.remove('is-open');
+  if (overlay) overlay.classList.remove('is-open');
+}
+
+function openExpenseColumnConfigModal() {
+  let modal = document.getElementById('expense-column-config-modal');
+  if (!modal) {
+    const modalHTML = `
+      <div class="modal is-open" id="expense-column-config-modal">
+        <div class="modal__backdrop" onclick="window.closeExpenseColumnConfigModal()"></div>
+        <div class="modal__panel" style="width: min(95vw, 500px);">
+          <header class="modal__head">
+            <div>
+              <h2 class="modal__title">Configurar Columnas</h2>
+              <p class="modal__subtitle">Selecciona qué columnas ver en la tabla</p>
+            </div>
+            <button class="modal__close" onclick="window.closeExpenseColumnConfigModal()">&times;</button>
+          </header>
+          <div class="modal__body">
+            <div style="display: grid; gap: 0.75rem;">
+              ${Object.keys(EXPENSE_COLUMNS).map(key => {
+                const label = EXPENSE_COLUMNS[key];
+                const isFixed = key === 'date' || key === 'amount' || key === 'description';
+                return `
+                  <label style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; cursor: ${isFixed ? 'not-allowed' : 'pointer'};">
+                    <input type="checkbox" id="exp-col-${key}" ${visibleColumns[key] ? 'checked' : ''} ${isFixed ? 'disabled' : ''}>
+                    <span style="font-weight: 500; font-size: 0.9rem;">${label} ${isFixed ? '(Fijo)' : ''}</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <footer class="modal__footer">
+            <button type="button" class="btn btn-secondary" onclick="window.closeExpenseColumnConfigModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="window.applyExpenseColumnConfig()">Aplicar</button>
+          </footer>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+  } else {
+    modal.classList.add('is-open');
+  }
+}
+
+function closeExpenseColumnConfigModal() {
+  const modal = document.getElementById('expense-column-config-modal');
+  if (modal) modal.classList.remove('is-open');
+}
+
+function applyExpenseColumnConfig() {
+  Object.keys(visibleColumns).forEach(key => {
+    const input = document.getElementById(`exp-col-${key}`);
+    if (input) {
+      visibleColumns[key] = input.checked;
+    }
+  });
+  renderExpensesTable();
+  closeExpenseColumnConfigModal();
+  showNotification('Columnas actualizadas', 'success');
+}
+
+function getCategoryIcon(category) {
+  const icons = {
+    office: '🏢', software: '💻', hardware: '⌨️', marketing: '📣',
+    travel: '✈️', meals: '🍕', professional_services: '🤝', other: '📦'
+  };
+  return icons[category] || '💰';
 }
 
 // === FILTROS ===
@@ -610,16 +830,6 @@ function scheduleExpenseReload() {
   }, 250);
 }
 
-function changeExpensesPage(delta) {
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredExpenses.length / PAGE_SIZE)
-  );
-  const next = Math.min(Math.max(1, currentPage + delta), totalPages);
-  if (next === currentPage) return;
-  currentPage = next;
-  renderExpensesTable();
-}
 
 // === MODALES ===
 async function openExpenseModal(mode = "create", expenseId = null) {
@@ -679,7 +889,7 @@ function buildExpenseModalHtml(mode, expense) {
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(95vw, 850px); max-width: 850px; padding: 0;">
+      <div class="modal__panel" style="width: min(calc(100vw - 40px), 850px); max-height: calc(100vh - 40px); display: flex; flex-direction: column;">
         <header class="modal__head" style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
@@ -1097,116 +1307,13 @@ async function buildReceiptPreviewHtml(receiptUrl) {
 
 async function viewExpense(expenseId) {
   try {
-    const expense = await window.api.getExpense(expenseId);
+    const expense = expensesData.find(ex => String(ex.id) === String(expenseId)) || 
+                   await window.api.getExpense(expenseId);
     if (!expense) {
       showNotification("No se encontró el gasto", "error");
       return;
     }
-
-    const formattedDate = formatDate(expense.expense_date || expense.expenseDate);
-    const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || "Sin categoría";
-    const paymentMethodLabel = PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || "-";
-    const receiptHtml = await buildReceiptPreviewHtml(expense.receiptUrl || expense.receipt_url);
-
-    const modalHtml = `
-      <div class="modal is-open" id="expense-view-modal" role="dialog" aria-modal="true">
-        <div class="modal__backdrop"></div>
-        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px; padding: 0;">
-          <header class="modal__head" style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
-            <div>
-              <h2 class="modal__title">Detalle del Gasto</h2>
-              <p class="modal__subtitle">${formattedDate} • ${escapeHtml(categoryLabel)}</p>
-            </div>
-            <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
-          </header>
-          
-          <div class="modal__body" style="padding: 1.5rem;">
-            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem;">
-              
-              <!-- Detalles -->
-              <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <div>
-                  <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Información</h3>
-                  <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div>
-                      <small style="display: block; color: var(--text-secondary); font-size: 0.7rem;">Descripción</small>
-                      <span style="font-weight: 500;">${escapeHtml(expense.description)}</span>
-                    </div>
-                    <div>
-                      <small style="display: block; color: var(--text-secondary); font-size: 0.7rem;">Proveedor</small>
-                      <span>${escapeHtml(expense.vendor || "-")}</span>
-                    </div>
-                    <div>
-                      <small style="display: block; color: var(--text-secondary); font-size: 0.7rem;">Método de Pago</small>
-                      <span>${escapeHtml(paymentMethodLabel)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Contabilidad</h3>
-                  <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <small style="color: var(--text-secondary); font-size: 0.7rem;">Importe Base</small>
-                      <span style="font-weight: 600;">${formatCurrency(expense.amount)}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <small style="color: var(--text-secondary); font-size: 0.7rem;">IVA (${expense.vatPercentage}%)</small>
-                      <span>${formatCurrency(expense.vatAmount)}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); pt: 0.5rem; mt: 0.25rem;">
-                      <small style="font-weight: 600;">Total</small>
-                      <span style="font-weight: 700; color: var(--color-primary);">${formatCurrency(sanitizeNumber(expense.amount, 0) + sanitizeNumber(expense.vatAmount, 0))}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button type="button" class="btn-ghost" style="justify-content: center; width: 100%; border: 1px solid var(--border-color);" onclick="viewExpenseAuditLog('${expense.id}')">
-                   📜 Ver historial de cambios
-                </button>
-              </div>
-
-              <!-- Justificante y Notas -->
-              <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <div>
-                   <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Justificante</h3>
-                   <div style="background: var(--bg-secondary); border-radius: 12px; border: 1px dashed var(--border-color); overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 200px;">
-                      ${receiptHtml || '<p style="color: var(--text-secondary); font-size: 0.85rem;">No hay archivo adjunto</p>'}
-                   </div>
-                </div>
-
-                ${expense.notes ? `
-                  <div>
-                    <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Notas</h3>
-                    <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
-                      <p style="margin: 0; font-size: 0.85rem; white-space: pre-wrap;">${escapeHtml(expense.notes)}</p>
-                    </div>
-                  </div>
-                ` : ''}
-              </div>
-
-            </div>
-          </div>
-
-          <footer class="modal__footer" style="padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 1rem; background: var(--bg-secondary);">
-            <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-            <button type="button" class="btn-primary" data-expense-edit="${expense.id}">Editar gasto</button>
-          </footer>
-        </div>
-      </div>
-    `;
-
-    document.body.insertAdjacentHTML("beforeend", modalHtml);
-    const modal = document.getElementById("expense-view-modal");
-    modal?.querySelectorAll("[data-modal-close]").forEach((btn) => {
-      btn.addEventListener("click", () => modal.remove());
-    });
-    modal?.querySelector(".modal__backdrop")?.addEventListener("click", () => modal.remove());
-    modal?.querySelector("[data-expense-edit]")?.addEventListener("click", () => {
-      modal.remove();
-      openExpenseModal("edit", String(expense.id));
-    });
-
+    openExpenseDrawer(expense);
   } catch (error) {
     console.error("Error mostrando gasto:", error);
     showNotification("No se pudo mostrar el detalle del gasto", "error");
@@ -1376,36 +1483,13 @@ export default function renderExpenses() {
       </section>
 
       <section class="expenses-table" aria-label="Listado de gastos">
-        <div class="expenses-table__surface">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Fecha</th>
-                <th scope="col">Categoría</th>
-                <th scope="col">Descripción</th>
-                <th scope="col">Importe</th>
-                <th scope="col">Deducible</th>
-                <th scope="col">Pago</th>
-                <th scope="col">Proyecto</th>
-                <th scope="col">ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody data-expenses-tbody>
-              <tr>
-                <td colspan="8" class="empty-state">Cargando gastos...</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="expenses-table-container">
+          <!-- El contenido se genera dinámicamente en renderExpensesTable -->
+          <div class="module-loading">
+            <span class="spinner"></span>
+            <p>Sincronizando gastos...</p>
+          </div>
         </div>
-        <footer class="invoices-table__footer">
-          <p data-expenses-count>Sin gastos disponibles</p>
-          <div class="invoices-table__pager" data-pagination="expenses"></div>
-        </footer>
-        <div class="module-loading" data-expenses-loading hidden>
-          <span class="spinner"></span>
-          <p>Sincronizando gastos...</p>
-        </div>
-        <div class="module-error" data-expenses-error hidden></div>
       </section>
     </section>
   `;
@@ -1417,11 +1501,21 @@ export function initExpenses() {
   window.closeExpenseModal = closeExpenseModal;
   window.viewExpense = viewExpense;
   window.confirmDeleteExpense = confirmDeleteExpense;
+  window.viewExpenseAuditLog = viewExpenseAuditLog;
 
+  // Funciones de Tabla Responsiva
+  window.handleExpenseRowClick = handleExpenseRowClick;
+  window.openExpenseColumnConfigModal = openExpenseColumnConfigModal;
+  window.closeExpenseColumnConfigModal = closeExpenseColumnConfigModal;
+  window.applyExpenseColumnConfig = applyExpenseColumnConfig;
+  window.handleExpenseSearch = handleExpenseSearch;
+  window.changeExpensesPage = changeExpensesPage;
+  window.goToExpensePage = goToExpensePage;
+  window.closeExpenseDrawer = closeExpenseDrawer;
+  
   const newExpenseBtn = document.getElementById("new-expense-btn");
   newExpenseBtn?.addEventListener("click", () => openExpenseModal("create"));
 
   setupFilters();
   loadExpenses();
-  window.changeExpensesPage = changeExpensesPage;
 }
