@@ -60,7 +60,7 @@ router.get('/top-vendors',
 );
 
 router.get('/:id',
-  [param('id').isInt()],
+  [param('id').notEmpty()],
   expenseController.validate,
   expenseController.getExpenseById
 );
@@ -80,7 +80,7 @@ router.post('/',
 
 router.put('/:id',
   [
-    param('id').isInt(),
+    param('id').notEmpty(),
     body('amount').optional().isFloat({ min: 0 }),
     body('expenseDate').optional().isISO8601()
   ],
@@ -89,7 +89,7 @@ router.put('/:id',
 );
 
 router.delete('/:id',
-  [param('id').isInt()],
+  [param('id').notEmpty()],
   expenseController.validate,
   expenseController.deleteExpense
 );
@@ -100,7 +100,7 @@ router.post('/:id/receipt',
 );
 
 router.get('/:id/audit-log',
-  [param('id').isInt()],
+  [param('id').notEmpty()],
   expenseController.validate,
   expenseController.getAuditLog
 );

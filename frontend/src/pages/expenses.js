@@ -52,7 +52,7 @@ const EXPENSE_CATEGORIES = {
 };
 
 const PAYMENT_METHODS = {
-  bank_transfer: "Transferencia bancaria",
+  bank_transfer: "Transferencia",
   card: "Tarjeta",
   cash: "Efectivo",
   other: "Otro",
@@ -305,14 +305,8 @@ async function loadExpenses() {
       .filter((expense) => expense !== null);
 
     if (expensesData.length > 0) {
-      const hasSelection = expensesData.some(
-        (expense) => String(expense.id) === String(selectedExpenseId)
-      );
-      if (!hasSelection) {
-        selectedExpenseId = String(expensesData[0].id);
-      }
-    } else {
-      selectedExpenseId = null;
+      // Remover selección por defecto para evitar "aspecto extraño" detectado por usuario
+      // selectedExpenseId = null; 
     }
 
     currentPage = 1;
@@ -321,7 +315,8 @@ async function loadExpenses() {
   } catch (error) {
     console.error("Error cargando gastos:", error);
     let message = error?.message || "Se produjo un error al cargar los gastos";
-    if (error instanceof window.APIError && error.status === 0) {
+    // Usar window.api.APIError si está definido, o simplemente comprobar status 0
+    if (error.status === 0 || (window.api?.APIError && error instanceof window.api.APIError && error.status === 0)) {
       message =
         "No se pudo conectar con el backend (http://localhost:8020). Comprueba que el servicio esté activo.";
     }
@@ -329,8 +324,25 @@ async function loadExpenses() {
     showNotification(message, "error");
   } finally {
     isLoading = false;
-    // renderLoadingState(); // No need to hide loading state explicitly, renderExpensesTable will overwrite
   }
+}
+
+function updateSummaryCards() {
+  const total = expensesData.reduce((sum, ex) => sum + (parseFloat(ex.amount) || 0), 0);
+  const deductible = expensesData.reduce((sum, ex) => {
+    if (ex.isDeductible || ex.is_deductible) {
+      const percentage = (parseFloat(ex.deductible_percentage || ex.deductiblePercentage) || 100) / 100;
+      return sum + (parseFloat(ex.amount) * percentage);
+    }
+    return sum;
+  }, 0);
+  const vat = expensesData.reduce((sum, ex) => sum + (parseFloat(ex.vat_amount || ex.vatAmount) || 0), 0);
+  const avg = expensesData.length > 0 ? total / expensesData.length : 0;
+
+  document.getElementById("total-expenses").textContent = formatCurrency(total);
+  document.getElementById("deductible-expenses").textContent = formatCurrency(deductible);
+  document.getElementById("recoverable-vat").textContent = formatCurrency(vat);
+  document.getElementById("average-expense").textContent = formatCurrency(avg);
 }
 
 function buildFiltersQuery() {
@@ -587,7 +599,7 @@ async function openExpenseDrawer(expense) {
   if (!drawer) {
     const drawerHTML = `
       <div class="drawer-overlay" id="expense-drawer-overlay" onclick="window.closeExpenseDrawer()"></div>
-      <div class="drawer" id="expense-drawer">
+      <div class="expense-drawer" id="expense-drawer">
         <header class="drawer__header">
           <h2 class="drawer__title">Detalles del Gasto</h2>
           <button class="drawer__close" onclick="window.closeExpenseDrawer()">&times;</button>
@@ -696,7 +708,7 @@ function openExpenseColumnConfigModal() {
     const modalHTML = `
       <div class="modal is-open" id="expense-column-config-modal">
         <div class="modal__backdrop" onclick="window.closeExpenseColumnConfigModal()"></div>
-        <div class="modal__panel" style="width: min(95vw, 500px);">
+        <div class="modal__panel modal__panel--md modal__panel--flex">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Configurar Columnas</h2>
@@ -705,22 +717,22 @@ function openExpenseColumnConfigModal() {
             <button class="modal__close" onclick="window.closeExpenseColumnConfigModal()">&times;</button>
           </header>
           <div class="modal__body">
-            <div style="display: grid; gap: 0.75rem;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; padding: 0.5rem;">
               ${Object.keys(EXPENSE_COLUMNS).map(key => {
                 const label = EXPENSE_COLUMNS[key];
                 const isFixed = key === 'date' || key === 'amount' || key === 'description';
                 return `
-                  <label style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; cursor: ${isFixed ? 'not-allowed' : 'pointer'};">
-                    <input type="checkbox" id="exp-col-${key}" ${visibleColumns[key] ? 'checked' : ''} ${isFixed ? 'disabled' : ''}>
-                    <span style="font-weight: 500; font-size: 0.9rem;">${label} ${isFixed ? '(Fijo)' : ''}</span>
+                  <label style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: rgba(51, 102, 255, 0.05); border: 1px solid rgba(51, 102, 255, 0.15); border-radius: 12px; cursor: ${isFixed ? 'not-allowed' : 'pointer'}; transition: all 0.2s;">
+                    <input type="checkbox" id="exp-col-${key}" ${visibleColumns[key] ? 'checked' : ''} ${isFixed ? 'disabled' : ''} style="width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6;">
+                    <span style="font-weight: 500; font-size: 0.95rem;">${label} ${isFixed ? '(Fijo)' : ''}</span>
                   </label>
                 `;
               }).join('')}
             </div>
           </div>
-          <footer class="modal__footer">
+          <footer class="modal-form__footer" style="padding-top: 1.5rem; margin-top: auto;">
             <button type="button" class="btn btn-secondary" onclick="window.closeExpenseColumnConfigModal()">Cancelar</button>
-            <button type="button" class="btn btn-primary" onclick="window.applyExpenseColumnConfig()">Aplicar</button>
+            <button type="button" class="btn btn-primary" onclick="window.applyExpenseColumnConfig()">Aplicar cambios</button>
           </footer>
         </div>
       </div>
@@ -887,35 +899,39 @@ function buildExpenseModalHtml(mode, expense) {
   const isDeductibleChecked = expense ? (expense.is_deductible ?? expense.isDeductible ?? true ? "checked" : "") : "checked";
 
   return `
-    <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
-      <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(calc(100vw - 40px), 850px); max-height: calc(100vh - 40px); display: flex; flex-direction: column;">
-        <header class="modal__head" style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+    <div class="modal is-open expense-modal" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
+      <div class="modal__backdrop" data-modal-close></div>
+      <div class="modal__panel modal__panel--xl modal__panel--flex">
+        <header class="modal__head" style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-color);">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
-            ${isLocked ? '<p style="color: #e53e3e; font-size: 0.8rem; margin: 0;">⚠️ Este gasto pertenece a un periodo cerrado y tiene edición limitada.</p>' : ''}
+            <p class="modal__subtitle">${isEdit ? 'Actualiza los datos del gasto seleccionado' : 'Completa los datos para registrar un gasto'}</p>
+            ${isLocked ? '<p style="color: #e53e3e; font-size: 0.8rem; margin-top: 0.25rem;">⚠️ Este gasto pertenece a un periodo cerrado y tiene edición limitada.</p>' : ''}
           </div>
-          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
+          <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal" style="font-size: 1.5rem;">&times;</button>
         </header>
         
         <form id="expense-form" data-mode="${mode}" class="modal-form" novalidate>
-          <div class="modal__body" style="padding:1.5rem; max-height: 70vh; overflow-y: auto;">
+          <div class="modal-form__body modal-form__body--split">
             
-            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem;">
-              <!-- Columna Izquierda: Datos principales -->
-              <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Columna Izquierda: Datos principales -->
+            <div class="modal-form__column">
+              <section class="modal-section modal-section--card">
+                <div class="modal-section__header">
+                  <h3 class="modal-section__title">Datos del gasto</h3>
+                </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                  <label class="form-field" id="field-date">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                  <label class="form-field">
                     <span>Fecha *</span>
-                    <input type="date" id="expense-date" name="expenseDate" 
+                    <input type="date" id="expense-date" name="expenseDate" class="form-input"
                       value="${formatDateForInput(expense?.expense_date || expense?.expenseDate)}" 
                       ${isLocked ? 'readonly' : 'required'} />
                   </label>
                   
-                  <label class="form-field" id="field-category">
+                  <label class="form-field">
                     <span>Categoría *</span>
-                    <select id="expense-category" name="category" required ${isLocked ? 'disabled' : ''}>
+                    <select id="expense-category" name="category" class="form-input" required ${isLocked ? 'disabled' : ''}>
                       <option value="" disabled ${!expense ? "selected" : ""}>Elegir...</option>
                       ${Object.entries(EXPENSE_CATEGORIES)
                         .map(([key, label]) => `<option value="${key}" ${selectedCategory === key ? "selected" : ""}>${label}</option>`)
@@ -924,24 +940,26 @@ function buildExpenseModalHtml(mode, expense) {
                   </label>
                 </div>
 
-                <label class="form-field" id="field-description">
-                  <span>Descripción *</span>
-                  <input type="text" id="expense-description" name="description" 
-                    placeholder="Ej: Suscripción mensual software CRM" 
-                    value="${escapeHtml(expense?.description || "")}" 
-                    required maxlength="500" />
-                </label>
+                <div style="margin-bottom: 1.5rem;">
+                  <label class="form-field">
+                    <span>Descripción *</span>
+                    <input type="text" id="expense-description" name="description" class="form-input"
+                      placeholder="Ej: Suscripción mensual software CRM" 
+                      value="${escapeHtml(expense?.description || "")}" 
+                      required maxlength="500" />
+                  </label>
+                </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                  <label class="form-field" id="field-amount">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                  <label class="form-field">
                     <span>Importe Base (€) *</span>
-                    <input type="number" step="0.01" min="0.01" id="expense-amount" name="amount" 
+                    <input type="number" step="0.01" min="0.01" id="expense-amount" name="amount" class="form-input"
                       value="${amountValue}" ${isLocked ? 'readonly' : 'required'} />
                   </label>
                   
-                  <label class="form-field" id="field-payment-method">
+                  <label class="form-field">
                     <span>Método de Pago</span>
-                    <select id="expense-payment-method" name="paymentMethod">
+                    <select id="expense-payment-method" name="paymentMethod" class="form-input">
                       <option value="" disabled ${!paymentMethodValue ? "selected" : ""}>Elegir...</option>
                       ${Object.entries(PAYMENT_METHODS)
                         .map(([key, label]) => `<option value="${key}" ${paymentMethodValue === key ? "selected" : ""}>${label}</option>`)
@@ -950,73 +968,99 @@ function buildExpenseModalHtml(mode, expense) {
                   </label>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                  <label class="form-field" id="field-vat-percentage">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                  <label class="form-field">
                     <span>IVA (%)</span>
-                    <input type="number" step="1" min="0" max="100" id="expense-vat-percentage" name="vatPercentage" 
+                    <input type="number" step="1" min="0" max="100" id="expense-vat-percentage" name="vatPercentage" class="form-input"
                       value="${vatPercentageValue}" />
                   </label>
                   
-                  <label class="form-field" id="field-vat-amount">
+                  <label class="form-field">
                     <span>Cuota IVA (€)</span>
-                    <input type="number" step="0.01" id="expense-vat-amount" name="vatAmount" 
-                      value="${vatAmountValue}" readonly style="background: var(--bg-secondary);" />
+                    <input type="number" step="0.01" id="expense-vat-amount" name="vatAmount" class="form-input"
+                      value="${vatAmountValue}" readonly style="background: var(--bg-secondary); border-color: var(--border-color);" />
                   </label>
                 </div>
 
-                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <div style="padding: 1.25rem; background: rgba(51, 102, 255, 0.05); border-radius: 12px; border: 1px solid rgba(51, 102, 255, 0.15);">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
                     <label class="toggle" style="margin:0;">
                       <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} />
                       <span class="toggle__slider"></span>
                       <span class="toggle__label" style="font-weight: 600;">Gasto Deducible</span>
                     </label>
                   </div>
-                  <div id="deductible-percentage-group" style="${isDeductibleChecked ? 'display: flex;' : 'display: none;'} flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
-                    <label class="form-field" id="field-deductible-percentage">
+                  <div id="deductible-percentage-group" style="${isDeductibleChecked ? 'display: flex;' : 'display: none;'} flex-direction: column; gap: 0.5rem; margin-top: 1.25rem;">
+                    <label class="form-field">
                       <span>% de Deducibilidad</span>
-                      <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" value="${deductiblePercentageValue}" />
-                      <small style="color: var(--text-secondary); font-size: 0.7rem;">Depende de la categoría y uso profesional.</small>
+                      <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" class="form-input" value="${deductiblePercentageValue}" />
+                      <small style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.25rem;">Depende de la categoría y uso profesional.</small>
                     </label>
                   </div>
                 </div>
+              </section>
 
-              </div>
-
-              <!-- Columna Derecha: Archivo y Extras -->
-              <div style="display: flex; flex-direction: column; gap: 1rem;">
-                
-                <div class="form-field" id="field-receipt">
-                  <span>Comprobante / Justificante</span>
-                  <div id="receipt-dropzone" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem 1rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg-secondary);">
-                    <div id="dropzone-empty">
-                      <span style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">📄</span>
-                      <p style="margin: 0; font-size: 0.85rem; font-weight: 500;">Arrastra aquí o haz clic para subir</p>
-                      <p style="margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--text-secondary);">PDF, JPG o PNG (máx. 10MB)</p>
-                    </div>
-                    <div id="dropzone-preview" style="display: none;">
-                      <p id="file-info" style="margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--color-primary);"></p>
-                      <button type="button" id="remove-file" style="background: none; border: none; color: #e53e3e; font-size: 0.75rem; text-decoration: underline; margin-top: 0.5rem; cursor: pointer;">Quitar archivo</button>
-                    </div>
-                    <input type="file" id="expense-receipt-file" style="display: none;" accept=".pdf,.jpg,.jpeg,.png" />
-                  </div>
+              <section class="modal-section modal-section--card">
+                <div class="modal-section__header">
+                  <h3 class="modal-section__title">Extras</h3>
                 </div>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                   <label class="form-field">
+                    <span>Proveedor / Establecimiento</span>
+                    <input type="text" id="expense-vendor" name="vendor" class="form-input" placeholder="Ej: Amazon, Gasolinera Repsol..." value="${escapeHtml(expense?.vendor || "")}" />
+                  </label>
 
-                <label class="form-field" id="field-vendor">
-                  <span>Proveedor / Establecimiento</span>
-                  <input type="text" id="expense-vendor" name="vendor" placeholder="Ej: Amazon, Gasolinera Repsol..." value="${escapeHtml(expense?.vendor || "")}" />
-                </label>
+                  <label class="form-field">
+                    <span>Notas adicionales</span>
+                    <textarea id="expense-notes" name="notes" class="form-input" rows="3" placeholder="Cualquier aclaración relevante..." style="resize: vertical;">${escapeHtml(expense?.notes || "")}</textarea>
+                  </label>
+                </div>
+              </section>
 
-                <label class="form-field" id="field-notes">
-                  <span>Notas adicionales</span>
-                  <textarea id="expense-notes" name="notes" rows="4" placeholder="Cualquier aclaración relevante..." style="resize: vertical; min-height: 100px;">${escapeHtml(expense?.notes || "")}</textarea>
-                </label>
-
-              </div>
+              <!-- Nueva Sección: Comprobante (Movida aquí para evitar solapamiento) -->
+              <section class="modal-section modal-section--card">
+                <div class="modal-section__header">
+                  <h3 class="modal-section__title">Comprobante / Justificante</h3>
+                </div>
+                <div id="receipt-dropzone" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg-secondary); margin-bottom: 0.5rem;">
+                  <div id="dropzone-empty">
+                    <span style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem;">🧾</span>
+                    <p style="margin: 0; font-size: 0.9rem; font-weight: 600;">Haz clic o arrastra para cargar justificante</p>
+                    <p style="margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--text-secondary);">PDF, JPG o PNG (máx. 10MB)</p>
+                  </div>
+                  <div id="dropzone-preview" style="display: none;">
+                    <p id="file-info" style="margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--color-primary);"></p>
+                    <button type="button" id="remove-file" style="background: none; border: none; color: #e53e3e; font-size: 0.8rem; text-decoration: underline; margin-top: 0.5rem; cursor: pointer; font-weight: 500;">Quitar archivo</button>
+                  </div>
+                  <input type="file" id="expense-receipt-file" style="display: none;" accept=".pdf,.jpg,.jpeg,.png" />
+                </div>
+              </section>
             </div>
 
+            <div class="modal-form__column modal-form__column--side">
+              <section class="modal-section modal-section--card modal-section--totals">
+                <div class="modal-section__header">
+                  <h3 class="modal-section__title">Resumen del registro</h3>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 1rem; padding: 0.5rem 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">Subtotal</span>
+                    <span id="modal-summary-subtotal" style="font-weight: 600;">€0,00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">IVA</span>
+                    <span id="modal-summary-vat" style="font-weight: 600;">€0,00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                    <span style="font-weight: 700; font-size: 1rem;">Total Gasto</span>
+                    <span id="modal-summary-total" style="font-weight: 800; font-size: 1.25rem; color: var(--color-primary);">€0,00</span>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
-          <footer class="modal__footer" style="padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 1rem; background: var(--bg-secondary);">
+          
+          <footer class="modal-form__footer" style="padding: 1.5rem 2rem; background: var(--bg-surface); border-top: 1px solid var(--border-color);">
             <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
             <button type="submit" class="btn-primary">${actionLabel}</button>
           </footer>
@@ -1083,19 +1127,34 @@ function setupExpenseForm(form, expense) {
   const fileInfo = form.querySelector("#file-info");
   const removeFileBtn = form.querySelector("#remove-file");
 
-  // ✅ Sincronizar IVA automático
-  const syncVatAmount = () => {
+  // ✅ Sincronizar IVA y Resumen de Totales
+  const syncTotals = () => {
     const amount = sanitizeNumber(amountInput?.value, 0);
     const vatPercentage = sanitizeNumber(vatPercentageInput?.value, 0);
-    const calculated = calculateVatAmount(amount, vatPercentage);
+    const vatAmount = calculateVatAmount(amount, vatPercentage);
+    const total = amount + vatAmount;
+
     if (vatAmountInput) {
-      vatAmountInput.value = calculated.toFixed(2);
+      vatAmountInput.value = vatAmount.toFixed(2);
     }
+
+    // Actualizar Resumen Lateral
+    const summarySubtotal = form.querySelector("#modal-summary-subtotal");
+    const summaryVat = form.querySelector("#modal-summary-vat");
+    const summaryTotal = form.querySelector("#modal-summary-total");
+
+    if (summarySubtotal) summarySubtotal.textContent = formatCurrency(amount);
+    if (summaryVat) summaryVat.textContent = formatCurrency(vatAmount);
+    if (summaryTotal) summaryTotal.textContent = formatCurrency(total);
+
     removeFieldError("expense-amount");
   };
 
-  amountInput?.addEventListener("input", syncVatAmount);
-  vatPercentageInput?.addEventListener("input", syncVatAmount);
+  amountInput?.addEventListener("input", syncTotals);
+  vatPercentageInput?.addEventListener("input", syncTotals);
+  
+  // Ejecutar inicial
+  syncTotals();
 
   // ✅ Toggle deducible
   const toggleDeductibleFields = () => {
@@ -1400,6 +1459,150 @@ async function confirmDeleteExpense(expenseId) {
 // === MARKUP PRINCIPAL ===
 export default function renderExpenses() {
   return `
+    <style>
+      /* Fix para tabla y toolbar */
+      .expenses {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+      
+      .expenses-table-container {
+        width: 100%;
+        overflow-x: auto;
+        border-radius: 12px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        margin-top: 1rem;
+      }
+
+      .table-toolbar {
+        padding: 1.25rem 1.5rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 1.5rem !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        background: var(--bg-surface) !important;
+      }
+      
+      .table-toolbar .search-input {
+        max-width: 400px !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0.6rem 1rem !important;
+        background: var(--bg-secondary) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px !important;
+      }
+
+      /* Fix para que quepan las columnas */
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      
+      .data-table th {
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        padding: 1rem 0.75rem !important;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+      }
+      
+      .data-table td {
+        padding: 1rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .table-description {
+        max-width: 250px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Estilo para Drawer */
+      .expense-drawer {
+        position: fixed;
+        top: 0;
+        right: -500px;
+        width: min(500px, 100vw);
+        height: 100vh;
+        background-color: var(--bg-surface) !important;
+        box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+        z-index: 11000;
+        transition: right 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--border-color);
+      }
+      
+      .expense-drawer.is-open {
+        right: 0;
+      }
+
+      .drawer-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        visibility: hidden;
+        z-index: 10999;
+        transition: all 0.3s;
+      }
+
+      .drawer-overlay.is-open {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      /* Selección de fila (Match Invoices color) */
+      .data-table tr.is-selected {
+        background-color: rgba(37, 99, 235, 0.12) !important;
+        border-left: 4px solid var(--color-primary) !important;
+      }
+      
+      .data-table tr:hover:not(.is-selected) {
+        background-color: var(--bg-secondary);
+      }
+
+      /* Modal Layout Fixes */
+      .expense-modal .modal__panel--xl {
+        width: min(calc(100vw - 40px), 1100px);
+        max-height: calc(100vh - 40px);
+      }
+      
+      .modal-form__body--split {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 2rem;
+        padding: 2rem;
+        overflow-y: auto;
+      }
+      
+      /* Fix solapamiento Side Column */
+      .modal-form__column--side {
+        display: block !important; /* Force block flow */
+        width: 100% !important;
+      }
+      
+      .modal-section--totals {
+        position: relative !important;
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+      }
+
+      @media (max-width: 1024px) {
+        .modal-form__body--split {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+
     <section class="expenses" aria-labelledby="expenses-title">
       <header class="expenses__hero">
         <div class="expenses__hero-copy">
@@ -1498,20 +1701,24 @@ export default function renderExpenses() {
 // === INICIALIZACIÓN ===
 export function initExpenses() {
   window.openExpenseModal = openExpenseModal;
-  window.closeExpenseModal = closeExpenseModal;
+  window.closeExpenseModal = () => {
+    const modal = document.getElementById("expense-modal");
+    if (modal) modal.remove();
+  };
   window.viewExpense = viewExpense;
   window.confirmDeleteExpense = confirmDeleteExpense;
   window.viewExpenseAuditLog = viewExpenseAuditLog;
-
-  // Funciones de Tabla Responsiva
-  window.handleExpenseRowClick = handleExpenseRowClick;
-  window.openExpenseColumnConfigModal = openExpenseColumnConfigModal;
-  window.closeExpenseColumnConfigModal = closeExpenseColumnConfigModal;
   window.applyExpenseColumnConfig = applyExpenseColumnConfig;
-  window.handleExpenseSearch = handleExpenseSearch;
+  window.closeExpenseColumnConfigModal = () => {
+    const modal = document.getElementById("expense-column-config-modal");
+    if (modal) modal.remove();
+  };
+  window.openExpenseColumnConfigModal = openExpenseColumnConfigModal;
   window.changeExpensesPage = changeExpensesPage;
   window.goToExpensePage = goToExpensePage;
+  window.handleExpenseSearch = handleExpenseSearch;
   window.closeExpenseDrawer = closeExpenseDrawer;
+  window.handleExpenseRowClick = handleExpenseRowClick;
   
   const newExpenseBtn = document.getElementById("new-expense-btn");
   newExpenseBtn?.addEventListener("click", () => openExpenseModal("create"));
