@@ -438,15 +438,7 @@ function renderExpensesTable() {
     </div>
   `;
 
-  container.innerHTML = `
-    <div class="table-toolbar-frame">
-      ${toolbarHTML}
-    </div>
-    <div class="table-card-frame">
-      ${tableHTML}
-      ${paginationHTML}
-    </div>
-  `;
+  container.innerHTML = toolbarHTML + tableHTML + paginationHTML;
 }
 
 function renderExpenseRows() {
@@ -575,10 +567,6 @@ function goToExpensePage(page) {
 function handleExpenseRowClick(event, expenseId) {
   if (event.target.closest('button')) return;
   selectedExpenseId = expenseId;
-  const expense = expensesData.find(ex => String(ex.id) === String(expenseId));
-  if (expense) {
-    openExpenseDrawer(expense);
-  }
   renderExpensesTable();
 }
 
@@ -618,8 +606,8 @@ async function openExpenseDrawer(expense) {
         </header>
         <div class="drawer__body" id="expense-drawer-body"></div>
         <footer class="drawer__footer">
-          <button class="btn btn-primary" id="drawer-expense-edit-btn">Editar Gasto</button>
-          <button class="btn btn-secondary" onclick="window.closeExpenseDrawer()">Cerrar</button>
+          <button class="btn-primary" id="drawer-expense-edit-btn">Editar Gasto</button>
+          <button class="btn-secondary" onclick="window.closeExpenseDrawer()">Cerrar</button>
         </footer>
       </div>
     `;
@@ -860,7 +848,7 @@ async function openExpenseModal(mode = "create", expenseId = null) {
   activeExpenseId = expenseId;
   let expense = null;
 
-  if (mode === "edit" && expenseId) {
+  if ((mode === "edit" || mode === "view") && expenseId) {
     try {
       expense = await window.api.getExpense(expenseId);
     } catch (error) {
@@ -885,6 +873,14 @@ async function openExpenseModal(mode = "create", expenseId = null) {
     .querySelector(".modal__backdrop")
     ?.addEventListener("click", closeExpenseModal);
 
+  if (mode === "view") {
+    const editBtn = modal.querySelector("[data-expense-edit]");
+    editBtn?.addEventListener("click", () => {
+      closeExpenseModal();
+      openExpenseModal("edit", expenseId);
+    });
+  }
+
   setupExpenseForm(form, expense);
 }
 
@@ -896,11 +892,13 @@ function closeExpenseModal() {
 
 function buildExpenseModalHtml(mode, expense) {
   const isEdit = mode === "edit" && expense;
+  const isView = mode === "view" && expense;
   const title = isEdit ? "Editar gasto" : "Registrar nuevo gasto";
   const actionLabel = isEdit ? "Guardar cambios" : "Crear gasto";
   
   // Detectar si el periodo está cerrado (simulado o desde backend)
   const isLocked = expense?.fiscal_period_closed || expense?.fiscalPeriodClosed || false;
+  const isReadOnly = isView || isLocked;
 
   const selectedCategory = expense?.category ?? "";
   const paymentMethodValue = expense?.payment_method ?? expense?.paymentMethod ?? "";
@@ -911,14 +909,14 @@ function buildExpenseModalHtml(mode, expense) {
   const isDeductibleChecked = expense ? (expense.is_deductible ?? expense.isDeductible ?? true ? "checked" : "") : "checked";
 
   return `
-    <div class="modal is-open expense-modal" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
+    <div class="modal is-open expense-modal invoice-modal" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop" data-modal-close></div>
       <div class="modal__panel modal__panel--xl modal__panel--flex">
         <header class="modal__head" style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-color);">
           <div>
-            <h2 class="modal__title" id="expense-modal-title">${title}</h2>
-            <p class="modal__subtitle">${isEdit ? 'Actualiza los datos del gasto seleccionado' : 'Completa los datos para registrar un gasto'}</p>
-            ${isLocked ? '<p style="color: #e53e3e; font-size: 0.8rem; margin-top: 0.25rem;">⚠️ Este gasto pertenece a un periodo cerrado y tiene edición limitada.</p>' : ''}
+            <h2 class="modal__title" id="expense-modal-title">${isView ? 'Detalles del gasto' : title}</h2>
+            <p class="modal__subtitle">${isEdit ? 'Actualiza los datos del gasto seleccionado' : isView ? 'Consulta la informaci¢n del gasto' : 'Completa los datos para registrar un gasto'}</p>
+            ${isLocked && !isView ? '<p style="color: #e53e3e; font-size: 0.8rem; margin-top: 0.25rem;">⚠️ Este gasto pertenece a un periodo cerrado y tiene edición limitada.</p>' : ''}
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal" style="font-size: 1.5rem;">&times;</button>
         </header>
@@ -938,12 +936,12 @@ function buildExpenseModalHtml(mode, expense) {
                     <span>Fecha *</span>
                     <input type="date" id="expense-date" name="expenseDate" class="form-input"
                       value="${formatDateForInput(expense?.expense_date || expense?.expenseDate)}" 
-                      ${isLocked ? 'readonly' : 'required'} />
+                      ${isReadOnly ? 'readonly' : 'required'} />
                   </label>
                   
                   <label class="form-field">
                     <span>Categoría *</span>
-                    <select id="expense-category" name="category" class="form-input" required ${isLocked ? 'disabled' : ''}>
+                    <select id="expense-category" name="category" class="form-input" ${isReadOnly ? 'disabled' : 'required'}>
                       <option value="" disabled ${!expense ? "selected" : ""}>Elegir...</option>
                       ${Object.entries(EXPENSE_CATEGORIES)
                         .map(([key, label]) => `<option value="${key}" ${selectedCategory === key ? "selected" : ""}>${label}</option>`)
@@ -958,7 +956,7 @@ function buildExpenseModalHtml(mode, expense) {
                     <input type="text" id="expense-description" name="description" class="form-input"
                       placeholder="Ej: Suscripción mensual software CRM" 
                       value="${escapeHtml(expense?.description || "")}" 
-                      required maxlength="500" />
+                      ${isReadOnly ? 'readonly' : 'required'} maxlength="500" />
                   </label>
                 </div>
 
@@ -966,12 +964,12 @@ function buildExpenseModalHtml(mode, expense) {
                   <label class="form-field">
                     <span>Importe Base (€) *</span>
                     <input type="number" step="0.01" min="0.01" id="expense-amount" name="amount" class="form-input"
-                      value="${amountValue}" ${isLocked ? 'readonly' : 'required'} />
+                      value="${amountValue}" ${isReadOnly ? 'readonly' : 'required'} />
                   </label>
                   
                   <label class="form-field">
                     <span>Método de Pago</span>
-                    <select id="expense-payment-method" name="paymentMethod" class="form-input">
+                    <select id="expense-payment-method" name="paymentMethod" class="form-input" ${isReadOnly ? 'disabled' : ''}>
                       <option value="" disabled ${!paymentMethodValue ? "selected" : ""}>Elegir...</option>
                       ${Object.entries(PAYMENT_METHODS)
                         .map(([key, label]) => `<option value="${key}" ${paymentMethodValue === key ? "selected" : ""}>${label}</option>`)
@@ -984,7 +982,7 @@ function buildExpenseModalHtml(mode, expense) {
                   <label class="form-field">
                     <span>IVA (%)</span>
                     <input type="number" step="1" min="0" max="100" id="expense-vat-percentage" name="vatPercentage" class="form-input"
-                      value="${vatPercentageValue}" />
+                      value="${vatPercentageValue}" ${isReadOnly ? 'readonly' : ''} />
                   </label>
                   
                   <label class="form-field">
@@ -997,7 +995,7 @@ function buildExpenseModalHtml(mode, expense) {
                 <div style="padding: 1.25rem; background: rgba(51, 102, 255, 0.05); border-radius: 12px; border: 1px solid rgba(51, 102, 255, 0.15);">
                   <div style="display: flex; align-items: center; justify-content: space-between;">
                     <label class="toggle" style="margin:0;">
-                      <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} />
+                      <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} ${isReadOnly ? 'disabled' : ''} />
                       <span class="toggle__slider"></span>
                       <span class="toggle__label" style="font-weight: 600;">Gasto Deducible</span>
                     </label>
@@ -1005,7 +1003,7 @@ function buildExpenseModalHtml(mode, expense) {
                   <div id="deductible-percentage-group" style="${isDeductibleChecked ? 'display: flex;' : 'display: none;'} flex-direction: column; gap: 0.5rem; margin-top: 1.25rem;">
                     <label class="form-field">
                       <span>% de Deducibilidad</span>
-                      <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" class="form-input" value="${deductiblePercentageValue}" />
+                      <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" class="form-input" value="${deductiblePercentageValue}" ${isReadOnly ? 'readonly' : ''} />
                       <small style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.25rem;">Depende de la categoría y uso profesional.</small>
                     </label>
                   </div>
@@ -1019,7 +1017,7 @@ function buildExpenseModalHtml(mode, expense) {
                 <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
                    <label class="form-field">
                     <span>Proveedor / Establecimiento</span>
-                    <input type="text" id="expense-vendor" name="vendor" class="form-input" placeholder="Ej: Amazon, Gasolinera Repsol..." value="${escapeHtml(expense?.vendor || "")}" />
+                    <input type="text" id="expense-vendor" name="vendor" class="form-input" placeholder="Ej: Amazon, Gasolinera Repsol..." value="${escapeHtml(expense?.vendor || "")}" ${isReadOnly ? 'readonly' : ''} />
                   </label>
 
                   <label class="form-field">
@@ -1073,8 +1071,13 @@ function buildExpenseModalHtml(mode, expense) {
           </div>
           
           <footer class="modal-form__footer" style="padding: 1.5rem 2rem; background: var(--bg-surface); border-top: 1px solid var(--border-color);">
-            <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
-            <button type="submit" class="btn-primary">${actionLabel}</button>
+            ${isView ? `
+              <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
+              <button type="button" class="btn-primary" data-expense-edit>Editar gasto</button>
+            ` : `
+              <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
+              <button type="submit" class="btn-primary">${actionLabel}</button>
+            `}
           </footer>
         </form>
       </div>
@@ -1124,6 +1127,7 @@ function removeFieldError(fieldId) {
 
 function setupExpenseForm(form, expense) {
   const mode = form.dataset.mode || 'create';
+  const isView = mode === 'view';
   const amountInput = form.querySelector("#expense-amount");
   const vatPercentageInput = form.querySelector("#expense-vat-percentage");
   const vatAmountInput = form.querySelector("#expense-vat-amount");
@@ -1139,6 +1143,20 @@ function setupExpenseForm(form, expense) {
   const dropzonePreview = form.querySelector("#dropzone-preview");
   const fileInfo = form.querySelector("#file-info");
   const removeFileBtn = form.querySelector("#remove-file");
+
+  if (isView) {
+    form.querySelectorAll("input, select, textarea").forEach((field) => {
+      if (field.tagName === "SELECT" || field.type === "checkbox" || field.type === "file") {
+        field.disabled = true;
+      } else {
+        field.readOnly = true;
+      }
+    });
+    if (fileDropzone) {
+      fileDropzone.style.pointerEvents = "none";
+      fileDropzone.style.opacity = "0.6";
+    }
+  }
 
   // ✅ Sincronizar IVA y Resumen de Totales
   const syncTotals = () => {
@@ -1175,6 +1193,10 @@ function setupExpenseForm(form, expense) {
     const isChecked = deductibleToggle?.checked;
     if (isChecked) {
       deductibleGroup.style.display = "flex";
+      if (isView && deductiblePercentageInput) {
+        deductiblePercentageInput.disabled = true;
+        return;
+      }
       if (deductiblePercentageInput) {
         deductiblePercentageInput.disabled = false;
         if (!deductiblePercentageInput.value || deductiblePercentageInput.value === "0") {
@@ -1183,6 +1205,10 @@ function setupExpenseForm(form, expense) {
       }
     } else {
       deductibleGroup.style.display = "none";
+      if (isView && deductiblePercentageInput) {
+        deductiblePercentageInput.disabled = true;
+        return;
+      }
       if (deductiblePercentageInput) {
         if (deductiblePercentageInput.value && deductiblePercentageInput.value !== "0") {
           lastDeductiblePercentage = deductiblePercentageInput.value;
@@ -1197,7 +1223,7 @@ function setupExpenseForm(form, expense) {
   toggleDeductibleFields();
 
   // ✅ GESTIÓN DE ARCHIVOS: Dropzone
-  if (fileDropzone) {
+  if (fileDropzone && !isView) {
     fileDropzone.addEventListener('click', () => fileInput?.click());
 
     fileDropzone.addEventListener('dragover', (e) => {
@@ -1234,11 +1260,13 @@ function setupExpenseForm(form, expense) {
     });
   }
 
-  fileInput?.addEventListener('change', (e) => {
-    if (e.target.files?.length > 0) {
-      updateFilePreview(e.target.files[0]);
-    }
-  });
+  if (!isView) {
+    fileInput?.addEventListener('change', (e) => {
+      if (e.target.files?.length > 0) {
+        updateFilePreview(e.target.files[0]);
+      }
+    });
+  }
 
   function updateFilePreview(file) {
     if (fileInfo) fileInfo.textContent = `📄 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
@@ -1247,16 +1275,18 @@ function setupExpenseForm(form, expense) {
   }
 
   // Validación en tiempo real
-  form.querySelectorAll("input, select, textarea").forEach((input) => {
-    input.addEventListener("blur", () => {
-      validateField(input.id, form);
+  if (!isView) {
+    form.querySelectorAll("input, select, textarea").forEach((input) => {
+      input.addEventListener("blur", () => {
+        validateField(input.id, form);
+      });
     });
-  });
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    await handleExpenseSubmitWithValidation(form);
-  });
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await handleExpenseSubmitWithValidation(form);
+    });
+  }
 }
 
 /**
@@ -1404,7 +1434,7 @@ async function viewExpense(expenseId) {
       showNotification("No se encontró el gasto", "error");
       return;
     }
-    openExpenseDrawer(expense);
+    openExpenseModal("view", expense.id);
   } catch (error) {
     console.error("Error mostrando gasto:", error);
     showNotification("No se pudo mostrar el detalle del gasto", "error");
@@ -1532,6 +1562,10 @@ export default function renderExpenses() {
         font-size: 0.95rem !important;
       }
 
+      .expenses-table table {
+        min-width: 0;
+      }
+
       .btn-config-columns {
         display: flex;
         align-items: center;
@@ -1586,6 +1620,11 @@ export default function renderExpenses() {
         white-space: nowrap;
       }
 
+      .data-table td[data-label="Categor¡a"],
+      .data-table td[data-label="Descripci¢n"] {
+        white-space: normal;
+      }
+
       .table-description {
         display: flex;
         flex-direction: column;
@@ -1593,6 +1632,7 @@ export default function renderExpenses() {
         font-weight: 600;
         color: var(--text-primary);
         white-space: normal;
+        overflow-wrap: anywhere;
       }
 
       /* --- SELECCIÓN DE FILA: ESTILO NAVY (MATCH INVOICES) --- */
@@ -1630,6 +1670,50 @@ export default function renderExpenses() {
 
       .data-table tr:hover:not(.is-selected) {
         background-color: var(--bg-secondary);
+      }
+
+      .table-toolbar-frame,
+      .table-card-frame {
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      /* --- AJUSTE SELECCION Y BORDES EN LIGHT --- */
+      .expenses .data-table tr.is-selected {
+        background: rgba(59, 130, 246, 0.15) !important;
+        position: static;
+      }
+
+      .expenses .data-table tr.is-selected td {
+        color: var(--text-primary) !important;
+        border-bottom-color: var(--border-color);
+      }
+
+      .expenses .data-table tr.is-selected::before {
+        display: none;
+      }
+
+      .expenses .data-table tr.is-selected .category-pill,
+      .expenses .data-table tr.is-selected .status-pill {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+      }
+
+      [data-theme="dark"] .expenses .data-table tr.is-selected {
+        background: rgba(37, 99, 235, 0.35) !important;
+      }
+
+      [data-theme="dark"] .expenses .data-table tr.is-selected td {
+        color: var(--text-primary) !important;
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .expense-modal .modal__panel {
+        background: var(--bg-surface);
       }
 
       /* --- MODAL SPLIT FIX --- */
