@@ -35,29 +35,29 @@ SET session_replication_role = 'origin';
 -- ===== CLIENTES ESPAÑOLES =====
 INSERT INTO clients (id, user_id, name, business_name, nif_cif, email, phone, address, city, postal_code, country, is_active, created_at, updated_at) VALUES
 -- Usuario actual (obtenemos el primer user_id disponible)
-((SELECT id FROM users LIMIT 1), (SELECT id FROM users LIMIT 1), 'María García López', 'García Consulting SL', 'B87654321', 'maria.garcia@garciaconsulting.es', '+34 915 234 567', 'Calle Serrano 45, 3º A', 'Madrid', '28001', 'España', true, NOW() - INTERVAL '180 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Carlos Rodríguez Martín', 'Rodríguez & Asociados', 'B12345678', 'carlos@rodriguezasociados.es', '+34 932 456 789', 'Passeig de Gràcia 88', 'Barcelona', '08008', 'España', true, NOW() - INTERVAL '150 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Ana Martínez Sánchez', 'Innovatech Solutions SL', 'B98765432', 'ana.martinez@innovatech.es', '+34 963 789 012', 'Calle Colón 23', 'Valencia', '46004', 'España', true, NOW() - INTERVAL '120 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Javier Fernández', 'Fernández Arquitectura SA', 'A56789123', 'javier@fernandezarq.com', '+34 944 567 890', 'Gran Vía 65', 'Bilbao', '48011', 'España', true, NOW() - INTERVAL '90 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Laura Pérez Gil', 'Digital Marketing PRO', 'B34567890', 'laura.perez@digitalmarketingpro.es', '+34 954 123 456', 'Avenida de la Constitución 12', 'Sevilla', '41001', 'España', true, NOW() - INTERVAL '60 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Miguel Ángel Torres', 'Torres Logística SL', 'B45678901', 'miguel@torreslogistica.es', '+34 952 345 678', 'Calle Larios 8', 'Málaga', '29015', 'España', true, NOW() - INTERVAL '45 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Isabel Moreno', 'Ecommerce Solutions España', 'B23456789', 'isabel@ecommerce-es.com', '+34 976 234 567', 'Paseo Independencia 34', 'Zaragoza', '50004', 'España', true, NOW() - INTERVAL '30 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Roberto Sánchez', 'Hostelería Premium SL', 'B67890123', 'roberto@hosteleriapremium.es', '+34 981 456 789', 'Rúa do Franco 15', 'Santiago de Compostela', '15705', 'España', true, NOW() - INTERVAL '20 days', NOW());
+((SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'María García López', 'García Consulting SL', 'B87654321', 'maria.garcia@garciaconsulting.es', '+34 915 234 567', 'Calle Serrano 45, 3º A', 'Madrid', '28001', 'España', true, NOW() - INTERVAL '180 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Carlos Rodríguez Martín', 'Rodríguez & Asociados', 'B12345678', 'carlos@rodriguezasociados.es', '+34 932 456 789', 'Passeig de Gràcia 88', 'Barcelona', '08008', 'España', true, NOW() - INTERVAL '150 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Ana Martínez Sánchez', 'Innovatech Solutions SL', 'B98765432', 'ana.martinez@innovatech.es', '+34 963 789 012', 'Calle Colón 23', 'Valencia', '46004', 'España', true, NOW() - INTERVAL '120 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Javier Fernández', 'Fernández Arquitectura SA', 'A56789123', 'javier@fernandezarq.com', '+34 944 567 890', 'Gran Vía 65', 'Bilbao', '48011', 'España', true, NOW() - INTERVAL '90 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Laura Pérez Gil', 'Digital Marketing PRO', 'B34567890', 'laura.perez@digitalmarketingpro.es', '+34 954 123 456', 'Avenida de la Constitución 12', 'Sevilla', '41001', 'España', true, NOW() - INTERVAL '60 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Miguel Ángel Torres', 'Torres Logística SL', 'B45678901', 'miguel@torreslogistica.es', '+34 952 345 678', 'Calle Larios 8', 'Málaga', '29015', 'España', true, NOW() - INTERVAL '45 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Isabel Moreno', 'Ecommerce Solutions España', 'B23456789', 'isabel@ecommerce-es.com', '+34 976 234 567', 'Paseo Independencia 34', 'Zaragoza', '50004', 'España', true, NOW() - INTERVAL '30 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Roberto Sánchez', 'Hostelería Premium SL', 'B67890123', 'roberto@hosteleriapremium.es', '+34 981 456 789', 'Rúa do Franco 15', 'Santiago de Compostela', '15705', 'España', true, NOW() - INTERVAL '20 days', NOW());
 
 -- ===== PROYECTOS =====
 INSERT INTO projects (id, user_id, client_id, name, description, status, start_date, end_date, budget, created_at, updated_at) VALUES
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'García Consulting SL'), 'Desarrollo Web Corporativa', 'Desarrollar sitio web corporativo con diseño responsive y panel de administración', 'completed', '2025-09-01', '2025-11-30', 8500.00, NOW() - INTERVAL '150 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'Rodríguez & Asociados'), 'Sistema CRM Personalizado', 'Implementación de CRM adaptado a las necesidades del despacho jurídico', 'in_progress', '2025-11-15', '2026-02-28', 15000.00, NOW() - INTERVAL '90 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'Innovatech Solutions SL'), 'App Móvil iOS/Android', 'Desarrollo de aplicación móvil nativa para gestión de inventario', 'in_progress', '2025-12-01', '2026-03-31', 22000.00, NOW() - INTERVAL '60 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'Fernández Arquitectura SA'), 'Portal de Clientes', 'Diseño e implementación de portal para gestión de proyectos arquitectónicos', 'planning', '2026-02-01', '2026-04-30', 12000.00, NOW() - INTERVAL '30 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'Digital Marketing PRO'), 'Automatización Marketing', 'Implementación de workflows automatizados con HubSpot', 'completed', '2025-10-01', '2025-12-15', 6500.00, NOW() - INTERVAL '120 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'Torres Logística SL'), 'Sistema de Tracking', 'Plataforma web para seguimiento de envíos en tiempo real', 'in_progress', '2025-12-15', '2026-02-28', 18000.00, NOW() - INTERVAL '45 days', NOW());
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'García Consulting SL'), 'Desarrollo Web Corporativa', 'Desarrollar sitio web corporativo con diseño responsive y panel de administración', 'completed', '2025-09-01', '2025-11-30', 8500.00, NOW() - INTERVAL '150 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'Rodríguez & Asociados'), 'Sistema CRM Personalizado', 'Implementación de CRM adaptado a las necesidades del despacho jurídico', 'in_progress', '2025-11-15', '2026-02-28', 15000.00, NOW() - INTERVAL '90 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'Innovatech Solutions SL'), 'App Móvil iOS/Android', 'Desarrollo de aplicación móvil nativa para gestión de inventario', 'in_progress', '2025-12-01', '2026-03-31', 22000.00, NOW() - INTERVAL '60 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'Fernández Arquitectura SA'), 'Portal de Clientes', 'Diseño e implementación de portal para gestión de proyectos arquitectónicos', 'planning', '2026-02-01', '2026-04-30', 12000.00, NOW() - INTERVAL '30 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'Digital Marketing PRO'), 'Automatización Marketing', 'Implementación de workflows automatizados con HubSpot', 'completed', '2025-10-01', '2025-12-15', 6500.00, NOW() - INTERVAL '120 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'Torres Logística SL'), 'Sistema de Tracking', 'Plataforma web para seguimiento de envíos en tiempo real', 'in_progress', '2025-12-15', '2026-02-28', 18000.00, NOW() - INTERVAL '45 days', NOW());
 
 -- ===== CUENTAS BANCARIAS =====
 INSERT INTO bank_accounts (id, user_id, bank_name, account_holder, iban, bic, account_type, currency, is_default, is_active, notes, created_at, updated_at) VALUES
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'BBVA', 'Tu Nombre Autónomo', 'ES91 0182 1234 5678 9012 3456', 'BBVAESMM', 'business', 'EUR', true, true, 'Cuenta principal para cobros', NOW() - INTERVAL '365 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Santander', 'Tu Nombre Autónomo', 'ES76 0049 9876 5432 1098 7654', 'BSCHESMM', 'business', 'EUR', false, true, 'Cuenta secundaria', NOW() - INTERVAL '200 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'CaixaBank', 'Tu Nombre Autónomo', 'ES12 2100 5678 1234 5678 9012', 'CAIXESBB', 'business', 'EUR', false, true, 'Cuenta para gastos', NOW() - INTERVAL '150 days', NOW());
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'BBVA', 'Tu Nombre Autónomo', 'ES91 0182 1234 5678 9012 3456', 'BBVAESMM', 'business', 'EUR', true, true, 'Cuenta principal para cobros', NOW() - INTERVAL '365 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Santander', 'Tu Nombre Autónomo', 'ES76 0049 9876 5432 1098 7654', 'BSCHESMM', 'business', 'EUR', false, true, 'Cuenta secundaria', NOW() - INTERVAL '200 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'CaixaBank', 'Tu Nombre Autónomo', 'ES12 2100 5678 1234 5678 9012', 'CAIXESBB', 'business', 'EUR', false, true, 'Cuenta para gastos', NOW() - INTERVAL '150 days', NOW());
 
 -- ===== FACTURAS =====
 -- Guardamos los IDs de clientes para usarlos en las facturas
@@ -78,7 +78,7 @@ DECLARE
     v_invoice_id UUID;
 BEGIN
     -- Obtener IDs
-    SELECT id INTO v_user_id FROM users LIMIT 1;
+    SELECT id INTO v_user_id FROM users WHERE email = 'pmi140979@gmail.com';
     SELECT id INTO v_client_garcia FROM clients WHERE business_name = 'García Consulting SL';
     SELECT id INTO v_client_rodriguez FROM clients WHERE business_name = 'Rodríguez & Asociados';
     SELECT id INTO v_client_innovatech FROM clients WHERE business_name = 'Innovatech Solutions SL';
@@ -191,7 +191,7 @@ DECLARE
     v_bank_bbva UUID;
     v_bank_santander UUID;
 BEGIN
-    SELECT id INTO v_user_id FROM users LIMIT 1;
+    SELECT id INTO v_user_id FROM users WHERE email = 'pmi140979@gmail.com';
     SELECT id INTO v_invoice_pagada_1 FROM invoices WHERE invoice_number = '2025-001';
     SELECT id INTO v_invoice_parcial FROM invoices WHERE invoice_number = '2025-003';
     SELECT id INTO v_invoice_pagada_2 FROM invoices WHERE invoice_number = '2025-007';
@@ -220,16 +220,16 @@ END $$;
 
 -- ===== GASTOS (EXPENSES) =====
 INSERT INTO expenses (id, user_id, category, description, amount, expense_date, payment_method, vendor, is_deductible, notes, created_at, updated_at) VALUES
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'software', 'Suscripción anual Adobe Creative Cloud', 654.11, '2025-11-15', 'card', 'Adobe Systems', true, 'Licencia completa para diseño', NOW() - INTERVAL '65 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'software', 'GitHub Team - Mes diciembre', 44.00, '2025-12-01', 'card', 'GitHub Inc.', true, 'Repositorios privados equipo', NOW() - INTERVAL '50 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'office', 'Dominio ancloraflow.es renovación anual', 12.99, '2025-10-20', 'card', 'GoDaddy', true, 'Dominio web portafolio', NOW() - INTERVAL '90 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'equipment', 'Monitor Dell UltraSharp 27"', 389.99, '2025-09-05', 'card', 'PC Componentes', true, 'Monitor adicional oficina', NOW() - INTERVAL '135 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'internet', 'Fibra óptica Movistar 600Mb - Diciembre', 45.90, '2025-12-01', 'bank_transfer', 'Movistar', true, 'Internet oficina - cuota mensual', NOW() - INTERVAL '50 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'supplies', 'Material oficina (papel, bolígrafos, carpetas)', 78.45, '2025-11-10', 'cash', 'Papelería Central', true, 'Compra trimestral', NOW() - INTERVAL '70 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'training', 'Curso Avanzado React y Next.js - Udemy', 94.99, '2025-10-15', 'card', 'Udemy', true, 'Formación continua', NOW() - INTERVAL '95 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'travel', 'Billete AVE Madrid-Barcelona ida/vuelta', 156.80, '2025-11-25', 'card', 'Renfe', true, 'Reunión cliente Rodríguez & Asociados', NOW() - INTERVAL '55 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'software', 'Hosting VPS Digital Ocean - Diciembre', 24.00, '2025-12-01', 'card', 'DigitalOcean', true, 'Servidor proyectos clientes', NOW() - INTERVAL '50 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'professional_services', 'Gestoría trimestral IVA y modelo 130', 150.00, '2025-12-20', 'bank_transfer', 'Gestoría López y Asociados', true, 'Asesoramiento fiscal trimestral', NOW() - INTERVAL '30 days', NOW());
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'software', 'Suscripción anual Adobe Creative Cloud', 654.11, '2025-11-15', 'card', 'Adobe Systems', true, 'Licencia completa para diseño', NOW() - INTERVAL '65 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'software', 'GitHub Team - Mes diciembre', 44.00, '2025-12-01', 'card', 'GitHub Inc.', true, 'Repositorios privados equipo', NOW() - INTERVAL '50 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'office', 'Dominio ancloraflow.es renovación anual', 12.99, '2025-10-20', 'card', 'GoDaddy', true, 'Dominio web portafolio', NOW() - INTERVAL '90 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'equipment', 'Monitor Dell UltraSharp 27"', 389.99, '2025-09-05', 'card', 'PC Componentes', true, 'Monitor adicional oficina', NOW() - INTERVAL '135 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'internet', 'Fibra óptica Movistar 600Mb - Diciembre', 45.90, '2025-12-01', 'bank_transfer', 'Movistar', true, 'Internet oficina - cuota mensual', NOW() - INTERVAL '50 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'supplies', 'Material oficina (papel, bolígrafos, carpetas)', 78.45, '2025-11-10', 'cash', 'Papelería Central', true, 'Compra trimestral', NOW() - INTERVAL '70 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'training', 'Curso Avanzado React y Next.js - Udemy', 94.99, '2025-10-15', 'card', 'Udemy', true, 'Formación continua', NOW() - INTERVAL '95 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'travel', 'Billete AVE Madrid-Barcelona ida/vuelta', 156.80, '2025-11-25', 'card', 'Renfe', true, 'Reunión cliente Rodríguez & Asociados', NOW() - INTERVAL '55 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'software', 'Hosting VPS Digital Ocean - Diciembre', 24.00, '2025-12-01', 'card', 'DigitalOcean', true, 'Servidor proyectos clientes', NOW() - INTERVAL '50 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'professional_services', 'Gestoría trimestral IVA y modelo 130', 150.00, '2025-12-20', 'bank_transfer', 'Gestoría López y Asociados', true, 'Asesoramiento fiscal trimestral', NOW() - INTERVAL '30 days', NOW());
 
 -- ===== SUSCRIPCIONES DE CLIENTES (CUSTOMER_SUBSCRIPTIONS) - Ingresos Recurrentes =====
 DO $$
@@ -242,7 +242,7 @@ DECLARE
     v_client_torres UUID;
     v_client_ecommerce UUID;
 BEGIN
-    SELECT id INTO v_user_id FROM users LIMIT 1;
+    SELECT id INTO v_user_id FROM users WHERE email = 'pmi140979@gmail.com';
     SELECT id INTO v_client_garcia FROM clients WHERE business_name = 'García Consulting SL';
     SELECT id INTO v_client_rodriguez FROM clients WHERE business_name = 'Rodríguez & Asociados';
     SELECT id INTO v_client_innovatech FROM clients WHERE business_name = 'Innovatech Solutions SL';
@@ -352,41 +352,41 @@ END $$;
 
 -- ===== PRESUPUESTOS (BUDGETS) =====
 INSERT INTO budgets (id, user_id, client_id, budget_number, title, description, subtotal, total, status, valid_until, created_at, updated_at) VALUES
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'Fernández Arquitectura SA'), 'PPTO-2026-001', 'Portal de Clientes Arquitectura', 'Desarrollo de portal web para gestión de proyectos arquitectónicos con visualización de planos', 12000.00, 12720.00, 'sent', NOW() + INTERVAL '30 days', NOW() - INTERVAL '15 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'Torres Logística SL'), 'PPTO-2026-002', 'App Móvil Tracking Avanzado', 'Aplicación móvil con geolocalización en tiempo real y notificaciones push', 18500.00, 19610.00, 'draft', NOW() + INTERVAL '45 days', NOW() - INTERVAL '5 days', NOW()),
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), (SELECT id FROM clients WHERE business_name = 'Ecommerce Solutions España'), 'PPTO-2025-003', 'Rediseño Completo Tienda Online', 'Renovación UI/UX completa con nueva arquitectura de información', 8900.00, 9434.00, 'accepted', NOW() + INTERVAL '60 days', NOW() - INTERVAL '20 days', NOW());
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'Fernández Arquitectura SA'), 'PPTO-2026-001', 'Portal de Clientes Arquitectura', 'Desarrollo de portal web para gestión de proyectos arquitectónicos con visualización de planos', 12000.00, 12720.00, 'sent', NOW() + INTERVAL '30 days', NOW() - INTERVAL '15 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'Torres Logística SL'), 'PPTO-2026-002', 'App Móvil Tracking Avanzado', 'Aplicación móvil con geolocalización en tiempo real y notificaciones push', 18500.00, 19610.00, 'draft', NOW() + INTERVAL '45 days', NOW() - INTERVAL '5 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), (SELECT id FROM clients WHERE business_name = 'Ecommerce Solutions España'), 'PPTO-2025-003', 'Rediseño Completo Tienda Online', 'Renovación UI/UX completa con nueva arquitectura de información', 8900.00, 9434.00, 'accepted', NOW() + INTERVAL '60 days', NOW() - INTERVAL '20 days', NOW());
 
 -- ===== SUSCRIPCIONES (SUBSCRIPTIONS) - Servicios que YO PAGO =====
 INSERT INTO subscriptions (id, user_id, service_name, provider, description, amount, billing_frequency, next_billing_date, status, has_trial, trial_days, trial_start_date, trial_end_date, trial_requires_card, trial_converted, trial_conversion_date, category, payment_method, card_last_four, auto_renew, url, notes, created_at, updated_at) VALUES
 -- Suscripción activa sin trial (pagando desde el inicio)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'GitHub Team', 'GitHub Inc.', 'Plan para repositorios privados ilimitados', 44.00, 'monthly', '2026-02-01', 'active', false, NULL, NULL, NULL, false, false, NULL, 'software', 'card', '4532', true, 'https://github.com/settings/billing', 'Plan para proyectos clientes', NOW() - INTERVAL '180 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'GitHub Team', 'GitHub Inc.', 'Plan para repositorios privados ilimitados', 44.00, 'monthly', '2026-02-01', 'active', false, NULL, NULL, NULL, false, false, NULL, 'software', 'card', '4532', true, 'https://github.com/settings/billing', 'Plan para proyectos clientes', NOW() - INTERVAL '180 days', NOW()),
 
 -- Suscripción activa que tuvo trial de 14 días con tarjeta (ya convertida)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Adobe Creative Cloud', 'Adobe Systems', 'Suite completa de diseño (Photoshop, Illustrator, XD)', 54.51, 'monthly', '2026-02-15', 'active', true, 14, NOW() - INTERVAL '379 days', NOW() - INTERVAL '365 days', true, true, NOW() - INTERVAL '365 days', 'software', 'card', '5123', true, 'https://account.adobe.com', 'Trial de 14 días convertido hace 1 año', NOW() - INTERVAL '379 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Adobe Creative Cloud', 'Adobe Systems', 'Suite completa de diseño (Photoshop, Illustrator, XD)', 54.51, 'monthly', '2026-02-15', 'active', true, 14, NOW() - INTERVAL '379 days', NOW() - INTERVAL '365 days', true, true, NOW() - INTERVAL '365 days', 'software', 'card', '5123', true, 'https://account.adobe.com', 'Trial de 14 días convertido hace 1 año', NOW() - INTERVAL '379 days', NOW()),
 
 -- Trial activo de 30 días SIN tarjeta requerida (expira pronto - decisión pendiente)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Notion Team', 'Notion Labs', 'Workspace colaborativo para documentación', 10.00, 'monthly', NOW() + INTERVAL '5 days', 'trial', true, 30, NOW() - INTERVAL '25 days', NOW() + INTERVAL '5 days', false, false, NULL, 'productivity', NULL, NULL, false, 'https://notion.so/settings', 'Trial sin tarjeta - decidir antes del día ' || TO_CHAR(NOW() + INTERVAL '5 days', 'DD/MM'), NOW() - INTERVAL '25 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Notion Team', 'Notion Labs', 'Workspace colaborativo para documentación', 10.00, 'monthly', NOW() + INTERVAL '5 days', 'trial', true, 30, NOW() - INTERVAL '25 days', NOW() + INTERVAL '5 days', false, false, NULL, 'productivity', NULL, NULL, false, 'https://notion.so/settings', 'Trial sin tarjeta - decidir antes del día ' || TO_CHAR(NOW() + INTERVAL '5 days', 'DD/MM'), NOW() - INTERVAL '25 days', NOW()),
 
 -- Trial activo de 7 días CON tarjeta requerida (crítico - expira en 2 días)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Claude Pro', 'Anthropic', 'Asistente AI avanzado para desarrollo', 20.00, 'monthly', NOW() + INTERVAL '2 days', 'trial', true, 7, NOW() - INTERVAL '5 days', NOW() + INTERVAL '2 days', true, false, NULL, 'software', 'card', '4111', true, 'https://console.anthropic.com', '⚠️ CRÍTICO: Cancelar antes de ' || TO_CHAR(NOW() + INTERVAL '2 days', 'DD/MM') || ' si no se quiere continuar', NOW() - INTERVAL '5 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Claude Pro', 'Anthropic', 'Asistente AI avanzado para desarrollo', 20.00, 'monthly', NOW() + INTERVAL '2 days', 'trial', true, 7, NOW() - INTERVAL '5 days', NOW() + INTERVAL '2 days', true, false, NULL, 'software', 'card', '4111', true, 'https://console.anthropic.com', '⚠️ CRÍTICO: Cancelar antes de ' || TO_CHAR(NOW() + INTERVAL '2 days', 'DD/MM') || ' si no se quiere continuar', NOW() - INTERVAL '5 days', NOW()),
 
 -- Suscripción activa mensual (sin trial original)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'DigitalOcean VPS', 'DigitalOcean', 'Servidor virtual para aplicaciones clientes', 24.00, 'monthly', '2026-02-01', 'active', false, NULL, NULL, NULL, false, false, NULL, 'hosting', 'card', '4242', true, 'https://cloud.digitalocean.com', 'Droplet 4GB RAM - Frankfurt', NOW() - INTERVAL '300 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'DigitalOcean VPS', 'DigitalOcean', 'Servidor virtual para aplicaciones clientes', 24.00, 'monthly', '2026-02-01', 'active', false, NULL, NULL, NULL, false, false, NULL, 'hosting', 'card', '4242', true, 'https://cloud.digitalocean.com', 'Droplet 4GB RAM - Frankfurt', NOW() - INTERVAL '300 days', NOW()),
 
 -- Suscripción activa con trial de 14 días que requería tarjeta (convertido)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Figma Professional', 'Figma Inc.', 'Diseño colaborativo de interfaces', 12.00, 'monthly', '2026-02-05', 'active', true, 14, NOW() - INTERVAL '164 days', NOW() - INTERVAL '150 days', true, true, NOW() - INTERVAL '150 days', 'software', 'card', '5555', true, 'https://figma.com/settings', 'Convertido tras trial satisfactorio', NOW() - INTERVAL '164 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Figma Professional', 'Figma Inc.', 'Diseño colaborativo de interfaces', 12.00, 'monthly', '2026-02-05', 'active', true, 14, NOW() - INTERVAL '164 days', NOW() - INTERVAL '150 days', true, true, NOW() - INTERVAL '150 days', 'software', 'card', '5555', true, 'https://figma.com/settings', 'Convertido tras trial satisfactorio', NOW() - INTERVAL '164 days', NOW()),
 
 -- Trial de 30 días activo SIN tarjeta (acaba de empezar, aún tiene tiempo)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Vercel Pro', 'Vercel Inc.', 'Hosting y deployment para aplicaciones Next.js', 20.00, 'monthly', NOW() + INTERVAL '27 days', 'trial', true, 30, NOW() - INTERVAL '3 days', NOW() + INTERVAL '27 days', false, false, NULL, 'hosting', NULL, NULL, false, 'https://vercel.com/account', 'Trial recién iniciado, evaluando para proyectos', NOW() - INTERVAL '3 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Vercel Pro', 'Vercel Inc.', 'Hosting y deployment para aplicaciones Next.js', 20.00, 'monthly', NOW() + INTERVAL '27 days', 'trial', true, 30, NOW() - INTERVAL '3 days', NOW() + INTERVAL '27 days', false, false, NULL, 'hosting', NULL, NULL, false, 'https://vercel.com/account', 'Trial recién iniciado, evaluando para proyectos', NOW() - INTERVAL '3 days', NOW()),
 
 -- Suscripción anual activa (sin trial, con descuento anual)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Grammarly Premium', 'Grammarly Inc.', 'Corrector ortográfico y gramatical avanzado', 144.00, 'yearly', '2026-11-15', 'active', false, NULL, NULL, NULL, false, false, NULL, 'productivity', 'card', '3782', true, 'https://account.grammarly.com', 'Pago anual (12€/mes con descuento)', NOW() - INTERVAL '60 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Grammarly Premium', 'Grammarly Inc.', 'Corrector ortográfico y gramatical avanzado', 144.00, 'yearly', '2026-11-15', 'active', false, NULL, NULL, NULL, false, false, NULL, 'productivity', 'card', '3782', true, 'https://account.grammarly.com', 'Pago anual (12€/mes con descuento)', NOW() - INTERVAL '60 days', NOW()),
 
 -- Trial de 14 días CON tarjeta requerida - en fase de evaluación
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'Linear Pro', 'Linear B.V.', 'Gestión de proyectos y tareas para equipos', 15.00, 'monthly', NOW() + INTERVAL '9 days', 'trial', true, 14, NOW() - INTERVAL '5 days', NOW() + INTERVAL '9 days', true, false, NULL, 'productivity', 'card', '6011', true, 'https://linear.app/settings', 'Probando como alternativa a Notion para proyectos', NOW() - INTERVAL '5 days', NOW()),
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'Linear Pro', 'Linear B.V.', 'Gestión de proyectos y tareas para equipos', 15.00, 'monthly', NOW() + INTERVAL '9 days', 'trial', true, 14, NOW() - INTERVAL '5 days', NOW() + INTERVAL '9 days', true, false, NULL, 'productivity', 'card', '6011', true, 'https://linear.app/settings', 'Probando como alternativa a Notion para proyectos', NOW() - INTERVAL '5 days', NOW()),
 
 -- Suscripción pausada (había convertido de trial pero ahora pausada temporalmente)
-((SELECT gen_random_uuid()), (SELECT id FROM users LIMIT 1), 'ChatGPT Plus', 'OpenAI', 'Acceso prioritario a GPT-4 y GPT-4 Turbo', 20.00, 'monthly', NULL, 'paused', true, 7, NOW() - INTERVAL '200 days', NOW() - INTERVAL '193 days', true, true, NOW() - INTERVAL '193 days', 'software', 'card', '4916', false, 'https://platform.openai.com', 'Pausada temporalmente (usando Claude), reactivar si es necesario', NOW() - INTERVAL '200 days', NOW());
+((SELECT gen_random_uuid()), (SELECT id FROM users WHERE email = 'pmi140979@gmail.com'), 'ChatGPT Plus', 'OpenAI', 'Acceso prioritario a GPT-4 y GPT-4 Turbo', 20.00, 'monthly', NULL, 'paused', true, 7, NOW() - INTERVAL '200 days', NOW() - INTERVAL '193 days', true, true, NOW() - INTERVAL '193 days', 'software', 'card', '4916', false, 'https://platform.openai.com', 'Pausada temporalmente (usando Claude), reactivar si es necesario', NOW() - INTERVAL '200 days', NOW());
 
 -- ================================================
 -- RESUMEN DE DATOS INSERTADOS

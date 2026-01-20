@@ -2395,6 +2395,14 @@ table tr[hidden] {
   overflow-x: hidden;
 }
 
+.modal__panel--md {
+  width: min(720px, 96vw);
+}
+
+.modal__panel--sm {
+  width: min(500px, 96vw);
+}
+
 .modal__panel--tall {
   /* REMOVED: max-height: min(94vh, 980px); - No scroll directive */
   overflow-x: hidden;
@@ -2480,9 +2488,11 @@ table tr[hidden] {
 
 .modal__body {
   flex: 1;
-  overflow-y: auto; /* VIEWPORT: Scroll interno si contenido excede */
+  overflow-y: auto;
   overflow-x: hidden;
-  min-height: 0; /* VIEWPORT: Permite que flex-shrink funcione */
+  min-height: 0;
+  padding-right: 2rem; /* Separación generosa para el scrollbar */
+  margin-right: 0.75rem; /* Separación del frame derecho */
 }
 
 [data-theme="dark"] .modal__panel {
@@ -2685,16 +2695,27 @@ table tr[hidden] {
 }
 
 .modal-form__footer {
+  position: relative;
   display: flex;
   justify-content: flex-end;
   gap: 0.9rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(51, 102, 255, 0.18);
-  flex-shrink: 0; /* VIEWPORT: Footer permanece fijo, no se comprime */
+  padding-top: 1.8rem; /* Separación de los botones respecto a la línea */
+  margin-top: 1.2rem;   /* Separación de la línea respecto al contenido */
+  flex-shrink: 0;
 }
 
-[data-theme="dark"] .modal-form__footer {
-  border-top-color: rgba(148, 163, 184, 0.25);
+.modal-form__footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 2rem;  /* Separación del frame izquierdo */
+  right: 2rem; /* Separación del frame derecho */
+  height: 1px;
+  background: rgba(51, 102, 255, 0.18);
+}
+
+[data-theme="dark"] .modal-form__footer::before {
+  background: rgba(148, 163, 184, 0.25);
 }
 
 .modal-form__separator {
@@ -3051,7 +3072,7 @@ table tr[hidden] {
   display: flex;
   flex-wrap: wrap;
   gap: 0.9rem;
-  align-items: flex-end;
+  align-items: flex-start; /* Alineación superior para evitar saltos por meta info */
 }
 
 .invoice-modal__field {
@@ -3092,6 +3113,11 @@ table tr[hidden] {
 [data-theme="dark"] .form-input--readonly {
   background: rgba(30, 41, 59, 0.5);
   border-color: rgba(148, 163, 184, 0.2);
+}
+
+.form-input--centered {
+  text-align: center;
+  justify-content: center;
 }
 
 /* Meta información bajo campos (email, etc) */

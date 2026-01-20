@@ -57,8 +57,16 @@ const statusMap = {
   sent: { label: "Enviada", tone: "sent" },
   pending: { label: "Pendiente", tone: "pending" },
   overdue: { label: "Vencida", tone: "overdue" },
-  draft: { label: "Borrador", tone: "draft" }
+  draft: { label: "Borrador", tone: "draft" },
+  partial: { label: "Cobro Parcial", tone: "pending" }
 };
+
+// Utilidad para centralizar qué facturas son editables
+function isInvoiceEditable(status) {
+  if (!status) return true; // Por seguridad, si no hay estado, permitir
+  const s = String(status).toLowerCase();
+  return s === 'draft' || s === 'borrador' || s === 'partial' || s === 'pending';
+}
 
 // Mapeo de estados de Verifactu
 const verifactuStatusMap = {
@@ -1118,6 +1126,7 @@ async function loadInvoices() {
 
     const response = await window.api.getInvoices();
     invoicesData = response.invoices || response || [];
+    console.log(`Facturas recibidas de la API: ${invoicesData.length}`);
 
     // Mapear datos de API a formato del componente
     // Backend devuelve camelCase después de mapToCamel()
@@ -1151,7 +1160,7 @@ async function loadInvoices() {
   } catch (error) {
     console.error('Error cargando facturas:', error);
     let message = error.message || 'Error al cargar facturas';
-    if (error instanceof window.APIError && error.status === 0) {
+    if (error.status === 0) {
       message = 'No se pudo conectar con el backend (http://localhost:8020). Asegúrate de que el servicio esté activo.';
     }
     renderErrorState(message);
@@ -1548,11 +1557,7 @@ async function viewInvoice(invoiceId) {
                       </label>
                       <label class="form-field invoice-modal__field invoice-modal__field--sm">
                         <span>Estado</span>
-                        <div class="form-input form-input--readonly">
-                          <span class="status-pill status-pill--${statusMap[invoice.status]?.tone || 'draft'}">
-                            ${statusMap[invoice.status]?.label || invoice.status}
-                          </span>
-                        </div>
+                        <input type="text" class="form-input form-input--centered" value="${statusMap[invoice.status]?.label || invoice.status}" disabled />
                       </label>
                       <label class="form-field invoice-modal__field invoice-modal__field--sm">
                         <span>F. Emision</span>
@@ -1739,7 +1744,7 @@ async function editInvoice(invoiceId) {
                       </div>
                     </div>
                   ` : ''}
-                  <div id="edit-lock-message" class="modal-banner" ${invoice.status === 'draft' ? 'hidden' : ''}>
+                  <div id="edit-lock-message" class="modal-banner" ${isInvoiceEditable(invoice.status) ? 'hidden' : ''}>
                     <span class="modal-banner__icon" aria-hidden="true">!</span>
                     <div class="modal-banner__content">
                       <strong>Edicion limitada</strong>
@@ -1759,9 +1764,9 @@ async function editInvoice(invoiceId) {
                       <label class="form-field invoice-modal__field invoice-modal__field--sm">
                         <span>Estado</span>
                         <select id="edit-status" name="status" class="form-input">
-                          <option value="draft" ${invoice.status === 'draft' ? 'selected' : ''}>Borrador</option>
+                          <option value="draft" ${isInvoiceEditable(invoice.status) ? 'selected' : ''}>Borrador</option>
                           <option value="pending" ${invoice.status === 'pending' ? 'selected' : ''}>Pendiente</option>
-                          <option value="sent" ${invoice.status === 'sent' ? 'selected' : ''}>Enviada</option>
+                          <option value="sent" ${invoice.status === 'sent' ? 'selected' : ''}>Enviadas</option>
                           <option value="paid" ${invoice.status === 'paid' ? 'selected' : ''}>Cobrada</option>
                           <option value="overdue" ${invoice.status === 'overdue' ? 'selected' : ''}>Vencida</option>
                         </select>
@@ -2650,28 +2655,28 @@ function renderInvoiceRows() {
 
     if (invoice.verifactuStatus === 'registered') {
       verifactuActions = `
-        <button type="button" class="table-action" title="Ver QR Verifactu" onclick="showVerifactuQRModal('${invoice.id}')">
+        <button type="button" class="btn-ghost btn-sm" title="Ver QR Verifactu" onclick="showVerifactuQRModal('${invoice.id}')">
           <span>🔲</span>
         </button>
-        <button type="button" class="table-action" title="Ver CSV" onclick="showVerifactuCSVModal('${invoice.id}')">
+        <button type="button" class="btn-ghost btn-sm" title="Ver CSV" onclick="showVerifactuCSVModal('${invoice.id}')">
           <span>🔐</span>
         </button>
       `;
     } else if (invoice.verifactuStatus === 'not_registered') {
       verifactuActions = `
-        <button type="button" class="table-action table-action--primary" title="Registrar en Verifactu" onclick="registerInvoiceVerifactu('${invoice.id}')">
+        <button type="button" class="btn-ghost btn-sm" title="Registrar en Verifactu" onclick="registerInvoiceVerifactu('${invoice.id}')">
           <span>📋</span>
         </button>
       `;
     } else if (invoice.verifactuStatus === 'pending') {
       verifactuActions = `
-        <button type="button" class="table-action" disabled title="Registro pendiente">
+        <button type="button" class="btn-ghost btn-sm" disabled title="Registro pendiente">
           <span>⏳</span>
         </button>
       `;
     } else if (invoice.verifactuStatus === 'error') {
       verifactuActions = `
-        <button type="button" class="table-action table-action--retry" title="Reintentar registro - ${invoice.verifactuError || 'Error desconocido'}" onclick="registerInvoiceVerifactu('${invoice.id}')">
+        <button type="button" class="btn-ghost btn-sm" title="Reintentar registro - ${invoice.verifactuError || 'Error desconocido'}" onclick="registerInvoiceVerifactu('${invoice.id}')">
           <span>🔄</span>
         </button>
       `;
@@ -2708,16 +2713,20 @@ function renderInvoiceRows() {
             <span class="status-pill status-pill--${verifactuInfo.tone}" title="${verifactuInfo.label}">
               ${verifactuInfo.label}
             </span>
-            ${verifactuActions}
           </div>
         </td>
         <td data-label="Días" class="hide-mobile" ${visibleColumns.days ? '' : 'hidden'}>
           <span class="invoices-table__days ${invoice.daysLate.includes('tarde') ? 'text-danger' : ''}">${invoice.daysLate}</span>
         </td>
         <td data-label="ACCIONES" class="invoices-table__actions">
-          <button type="button" class="btn-ghost btn-sm" onclick="viewInvoice('${invoice.id}')" title="Ver Detalles">👁️</button>
-          <button type="button" class="btn-ghost btn-sm" onclick="editInvoice('${invoice.id}')" title="Editar Factura" ${invoice.status !== 'draft' ? 'disabled' : ''}>✏️</button>
-          <button type="button" class="btn-ghost btn-sm" onclick="openAddPaymentModal('${invoice.id}')" title="Registrar Pago" ${invoice.status === 'paid' ? 'disabled' : ''}>💰</button>
+          <div style="display: flex; gap: 0.35rem; justify-content: flex-end;">
+            <button type="button" class="btn-ghost btn-sm" onclick="viewInvoice('${invoice.id}')" title="Ver Detalles">👁️</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="editInvoice('${invoice.id}')" title="Editar Factura" ${isInvoiceEditable(invoice.status) ? '' : 'disabled'}>✏️</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="openAddPaymentModal('${invoice.id}')" title="Registrar Pago" ${invoice.status === 'paid' ? 'disabled' : ''}>💰</button>
+            <div class="verifactu-inline-actions" style="display: flex; gap: 0.35rem; margin-left: 0.35rem; padding-left: 0.35rem; border-left: 1px solid rgba(51, 102, 255, 0.15);">
+              ${verifactuActions}
+            </div>
+          </div>
         </td>
       </tr>
     `;
@@ -2731,9 +2740,11 @@ function renderInvoicesTable() {
   // 1. TOOLBAR (Fase 4)
   const toolbarHTML = `
     <div class="table-toolbar">
-      <button class="btn-config-columns" onclick="openColumnConfigModal()" title="Configurar qué columnas mostrar">
-        ⚙️ Columnas
-      </button>
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn-config-columns" onclick="openColumnConfigModal()" title="Configurar qué columnas mostrar">
+          ⚙️ Columnas
+        </button>
+      </div>
       <input 
         type="text" 
         id="table-search"
@@ -2852,6 +2863,35 @@ function updateResultCount() {
   }
 }
 
+function updateSummaryCards() {
+  if (!invoicesData) return;
+  
+  // Calcular estadísticas reales
+  const totalThisMonth = invoicesData
+    .filter(inv => {
+      const issueDate = new Date(inv.issueDate);
+      const now = new Date();
+      return issueDate.getMonth() === now.getMonth() &&
+             issueDate.getFullYear() === now.getFullYear();
+    })
+    .reduce((sum, inv) => sum + inv.total, 0);
+
+  const pendingTotal = invoicesData
+    .filter(inv => inv.status === 'pending' || inv.status === 'sent')
+    .reduce((sum, inv) => sum + inv.total, 0);
+
+  const pendingCount = invoicesData.filter(inv => inv.status === 'pending' || inv.status === 'sent').length;
+  const paidCount = invoicesData.filter(inv => inv.status === 'paid').length;
+  const totalCount = invoicesData.length;
+  
+  // Actualizar el DOM si existen los elementos
+  const totalMonthEl = document.querySelector('[data-summary-total-month]');
+  if (totalMonthEl) totalMonthEl.textContent = formatCurrency(totalThisMonth);
+  
+  const pendingTotalEl = document.querySelector('[data-summary-pending-total]');
+  if (pendingTotalEl) pendingTotalEl.textContent = formatCurrency(pendingTotal);
+}
+
 function handleRowClick(event, invoiceId) {
   // Evitar abrir drawer si se hace clic en botones de acción
   if (event.target.closest('button')) return;
@@ -2949,7 +2989,7 @@ function openColumnConfigModal() {
     const modalHTML = `
       <div class="modal is-open" id="column-config-modal">
         <div class="modal__backdrop" onclick="closeColumnConfigModal()"></div>
-        <div class="modal__panel modal__panel--sm" style="max-height: 80vh;">
+        <div class="modal__panel modal__panel--md modal__panel--flex">
           <header class="modal__head">
             <div>
               <h2 class="modal__title">Configurar Columnas</h2>
@@ -2958,7 +2998,7 @@ function openColumnConfigModal() {
             <button class="modal__close" onclick="closeColumnConfigModal()">&times;</button>
           </header>
           <div class="modal__body">
-            <div class="column-options" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="column-options-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; padding: 0.5rem;">
               ${Object.keys(visibleColumns).map(key => {
                 const labels = {
                   number: 'Número (Fijo)',
@@ -2972,17 +3012,17 @@ function openColumnConfigModal() {
                 };
                 const isFixed = key === 'number' || key === 'total';
                 return `
-                  <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; cursor: ${isFixed ? 'not-allowed' : 'pointer'};">
-                    <input type="checkbox" id="col-${key}" ${visibleColumns[key] ? 'checked' : ''} ${isFixed ? 'disabled' : ''}>
-                    <span>${labels[key]}</span>
+                  <label class="column-option-card" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: rgba(51, 102, 255, 0.05); border: 1px solid rgba(51, 102, 255, 0.15); border-radius: 12px; cursor: ${isFixed ? 'not-allowed' : 'pointer'}; transition: all 0.2s;">
+                    <input type="checkbox" id="col-${key}" ${visibleColumns[key] ? 'checked' : ''} ${isFixed ? 'disabled' : ''} style="width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6;">
+                    <span style="font-weight: 500; font-size: 0.95rem;">${labels[key]}</span>
                   </label>
                 `;
               }).join('')}
             </div>
           </div>
-          <footer class="modal__footer">
-            <button class="btn-secondary" onclick="closeColumnConfigModal()">Cancelar</button>
-            <button class="btn-primary" onclick="applyColumnConfig()">Aplicar cambios</button>
+          <footer class="modal-form__footer" style="padding-top: 1.5rem; margin-top: auto;">
+            <button type="button" class="btn-secondary" onclick="closeColumnConfigModal()">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="applyColumnConfig()">Aplicar cambios</button>
           </footer>
         </div>
       </div>
@@ -3034,6 +3074,24 @@ export function initInvoicesPage() {
   window.openNewInvoiceModal = openNewInvoiceModal;
   window.submitNewInvoice = submitNewInvoice;
   window.closeNewInvoiceModal = closeNewInvoiceModal;
+  
+  // FUNCIONES VERIFACTU
+  window.registerInvoiceVerifactu = registerInvoiceVerifactu;
+  window.showVerifactuQRModal = showVerifactuQRModal;
+  window.showVerifactuCSVModal = showVerifactuCSVModal;
+  window.openVerifactuConfigModal = openVerifactuConfigModal;
+  window.saveVerifactuConfig = saveVerifactuConfig;
+  
+  // FUNCIONES FASE 4 (Tablas Responsivas)
+  window.handleRowClick = handleRowClick;
+  window.openColumnConfigModal = openColumnConfigModal;
+  window.closeColumnConfigModal = closeColumnConfigModal;
+  window.applyColumnConfig = applyColumnConfig;
+  window.handleTableSearch = handleTableSearch;
+  window.changePage = changePage;
+  window.goToPage = goToPage;
+  window.closeInvoiceDrawer = closeInvoiceDrawer;
+  window.loadInvoices = loadInvoices;
 
   // Cargar facturas automáticamente
   loadInvoices();
@@ -3359,71 +3417,21 @@ export function renderInvoices() {
           <h1 id="invoices-title">Ingresos &amp; Facturas</h1>
           <p>Controla facturación, cobros y rendimiento en un panel unificado.</p>
         </div>
-        <div class="invoices__hero-actions">
+        <div class="invoices__hero-actions" style="justify-content: flex-end;">
           <button type="button" class="btn-primary" data-modal-open="invoice">Nueva factura</button>
-          <button type="button" class="btn-ghost" onclick="window.openAddPaymentModal ? window.openAddPaymentModal() : showNotification('Selecciona una factura primero', 'warning')">Añadir cobro</button>
         </div>
       </header>
 
-      <section class="invoices__filters" aria-label="Filtros de facturas">
-        <div class="invoices__filters-group">
-          <label class="visually-hidden" for="invoice-search">Buscar facturas</label>
-          <input
-            type="search"
-            id="invoice-search"
-            class="invoices__search"
-            placeholder="Buscar facturas..."
-            autocomplete="off"
-            data-invoices-search
-          />
-        </div>
-        <div class="invoices__filters-group">
-          <label class="visually-hidden" for="invoice-status">Filtrar por estado</label>
-          <select id="invoice-status" class="invoices__select" data-invoices-filter="status">
-            <option value="all">Todos los estados</option>
-            <option value="paid">Cobradas</option>
-            <option value="sent">Enviadas</option>
-            <option value="pending">Pendientes</option>
-            <option value="overdue">Vencidas</option>
-            <option value="draft">Borradores</option>
-          </select>
-        </div>
-        <div class="invoices__filters-group">
-          <button type="button" class="btn-ghost" onclick="openVerifactuConfigModal()" title="Configuración Verifactu" style="margin-right: 0.5rem;">
-            <span>⚙️</span>
-            Verifactu
-          </button>
-          <button type="button" class="btn-ghost" onclick="loadInvoices()">
-            <span>🔄</span>
-            Recargar
-          </button>
-        </div>
-      </section>
+      <div style="margin-bottom: 2rem;"></div>
 
       <section class="invoices-table" aria-label="Listado de facturas">
-        <div class="invoices-table__surface">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Nº Factura</th>
-                <th scope="col">Cliente</th>
-                <th scope="col">Fecha Emisión</th>
-                <th scope="col">Fecha Vencimiento</th>
-                <th scope="col">Importe Total</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Verifactu</th>
-                <th scope="col">Días</th>
-                <th scope="col">ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Se llenará dinámicamente -->
-            </tbody>
-          </table>
+        <div class="invoices-table-container">
+          <!-- El contenido de la tabla se genera dinámicamente en renderInvoicesTable() -->
+          <div style="text-align: center; padding: 3rem;">
+            <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #4299e1; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <p style="margin-top: 1rem; color: #718096;">Cargando interfaz de facturas...</p>
+          </div>
         </div>
-        <footer class="invoices-table__footer">
-          <p data-result-count>Cargando...</p>
-        </footer>
       </section>
     </section>
   `;
