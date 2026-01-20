@@ -38,6 +38,59 @@ const PAYMENT_METHODS = {
   other: "Otro",
 };
 
+// Límites de deducibilidad por categoría (concordancia con backend)
+const CATEGORY_DEDUCTION_LIMITS = {
+  office: 100,
+  software: 100,
+  hardware: 100,
+  marketing: 100,
+  travel: 100,
+  meals: 50,
+  professional_services: 100,
+  supplies: 100,
+  insurance: 100,
+  other: 50,
+};
+
+// === VALIDADOR DE CLIENTE ===
+const CLIENT_VALIDATOR = {
+  validateExpense: (data) => {
+    const errors = {};
+
+    if (!data.expenseDate) {
+      errors.expenseDate = "La fecha es obligatoria";
+    } else {
+      const date = new Date(data.expenseDate);
+      if (date > new Date()) errors.expenseDate = "La fecha no puede ser futura";
+    }
+
+    if (!data.category) {
+      errors.category = "La categoría es obligatoria";
+    }
+
+    if (!data.description || data.description.trim().length < 5) {
+      errors.description = "La descripción debe tener al menos 5 caracteres";
+    }
+
+    if (!data.amount || parseFloat(data.amount) <= 0) {
+      errors.amount = "El importe debe ser mayor a 0";
+    }
+
+    if (data.isDeductible) {
+      const limit = CATEGORY_DEDUCTION_LIMITS[data.category] || 100;
+      const pct = parseFloat(data.deductiblePercentage);
+      if (isNaN(pct) || pct < 0 || pct > limit) {
+        errors.deductiblePercentage = `El porcentaje máximo para esta categoría es ${limit}%`;
+      }
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors,
+    };
+  },
+};
+
 function normalizeExpense(expense) {
   if (!expense) return null;
 
@@ -611,129 +664,149 @@ function buildExpenseModalHtml(mode, expense) {
   const isEdit = mode === "edit" && expense;
   const title = isEdit ? "Editar gasto" : "Registrar nuevo gasto";
   const actionLabel = isEdit ? "Guardar cambios" : "Crear gasto";
-  const selectedCategory = expense?.category ?? "";
-  const paymentMethodValue =
-    expense?.payment_method ?? expense?.paymentMethod ?? "";
-  const amountValue = expense ? sanitizeNumber(expense.amount, 0) : "";
-  const vatPercentageValue = expense
-    ? sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 21)
-    : 21;
-  const vatAmountValue = expense
-    ? sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0)
-    : 0;
-  const deductiblePercentageValue = expense
-    ? sanitizeNumber(
-        expense.deductible_percentage ?? expense.deductiblePercentage,
-        100
-      )
-    : 100;
-  const isDeductibleChecked = expense
-    ? expense.is_deductible ?? expense.isDeductible ?? true
-      ? "checked"
-      : ""
-    : "checked";
+  
+  // Detectar si el periodo está cerrado (simulado o desde backend)
+  const isLocked = expense?.fiscal_period_closed || expense?.fiscalPeriodClosed || false;
 
-  // Using 800px width and inline grids to ensure compact horizontal layout without scrolling
+  const selectedCategory = expense?.category ?? "";
+  const paymentMethodValue = expense?.payment_method ?? expense?.paymentMethod ?? "";
+  const amountValue = expense ? sanitizeNumber(expense.amount, 0) : "";
+  const vatPercentageValue = expense ? sanitizeNumber(expense.vat_percentage ?? expense.vatPercentage, 21) : 21;
+  const vatAmountValue = expense ? sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0) : 0;
+  const deductiblePercentageValue = expense ? sanitizeNumber(expense.deductible_percentage ?? expense.deductiblePercentage, 100) : 100;
+  const isDeductibleChecked = expense ? (expense.is_deductible ?? expense.isDeductible ?? true ? "checked" : "") : "checked";
+
   return `
     <div class="modal is-open" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
       <div class="modal__backdrop"></div>
-      <div class="modal__panel" style="width: min(95vw, 800px); max-width: 800px; padding: 1.5rem;">
-        <header class="modal__head" style="margin-bottom: 1rem;">
+      <div class="modal__panel" style="width: min(95vw, 850px); max-width: 850px; padding: 0;">
+        <header class="modal__head" style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
           <div>
             <h2 class="modal__title" id="expense-modal-title">${title}</h2>
+            ${isLocked ? '<p style="color: #e53e3e; font-size: 0.8rem; margin: 0;">⚠️ Este gasto pertenece a un periodo cerrado y tiene edición limitada.</p>' : ''}
           </div>
           <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
         </header>
+        
         <form id="expense-form" data-mode="${mode}" class="modal-form" novalidate>
-          <div class="modal__body modal-form__body" style="overflow-y: visible;">
+          <div class="modal__body" style="padding:1.5rem; max-height: 70vh; overflow-y: auto;">
             
-            <!-- Row 1: Date, Category, Subcategory, Payment Method (4 Cols) -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem;">
-              <label class="form-field">
-                <span>Fecha *</span>
-                <input type="date" id="expense-date" name="expenseDate" value="${formatDateForInput(expense?.expense_date)}" required />
-              </label>
-              
-              <label class="form-field">
-                <span>Categoría *</span>
-                <select id="expense-category" name="category" required style="font-size: 0.85rem;">
-                  <option value="" disabled ${!expense ? "selected" : ""}>Elegir...</option>
-                  ${Object.entries(EXPENSE_CATEGORIES)
-                    .map(([key, label]) => `<option value="${key}" ${selectedCategory === key ? "selected" : ""}>${label}</option>`)
-                    .join("")}
-                </select>
-              </label>
-
-              <label class="form-field">
-                <span>Subcategoría</span>
-                <input type="text" id="expense-subcategory" name="subcategory" placeholder="Opcional" value="${escapeHtml(expense?.subcategory || "")}" />
-              </label>
-
-               <label class="form-field">
-                <span>Método Pago</span>
-                <select id="expense-payment-method" name="paymentMethod">
-                  <option value="" disabled ${!paymentMethodValue ? "selected" : ""}>Elegir...</option>
-                  ${Object.entries(PAYMENT_METHODS)
-                    .map(([key, label]) => `<option value="${key}" ${paymentMethodValue === key ? "selected" : ""}>${label}</option>`)
-                    .join("")}
-                </select>
-              </label>
-            </div>
-
-            <!-- Row 2: Description (3 Cols) & Vendor (1 Col) -->
-            <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.75rem; margin-top: 0.75rem;">
-               <label class="form-field">
-                <span>Descripción *</span>
-                <input type="text" id="expense-description" name="description" placeholder="Descripción del gasto" value="${escapeHtml(expense?.description || "")}" required maxlength="200" />
-              </label>
-               <label class="form-field">
-                <span>Proveedor</span>
-                <input type="text" id="expense-vendor" name="vendor" placeholder="Nombre" value="${escapeHtml(expense?.vendor || "")}" />
-              </label>
-            </div>
-
-            <!-- Row 3: Financials (Amount, VAT, Calculate, Deductible) (4 Cols) -->
-            <div style="display: grid; grid-template-columns: 1fr 0.8fr 1fr 1.2fr; gap: 0.75rem; margin-top: 0.75rem;">
-               <label class="form-field">
-                <span>Importe (€) *</span>
-                <input type="number" step="0.01" min="0" id="expense-amount" name="amount" value="${amountValue}" required />
-              </label>
-              
-              <label class="form-field">
-                <span>IVA %</span>
-                <input type="number" step="0.1" min="0" id="expense-vat-percentage" name="vatPercentage" value="${vatPercentageValue}" />
-              </label>
-              
-              <label class="form-field">
-                <span>IVA (€)</span>
-                <input type="number" step="0.01" min="0" id="expense-vat-amount" name="vatAmount" value="${vatAmountValue}" />
-              </label>
-
-              <div class="form-field form-field--inline" style="justify-content: flex-start; padding-top: 1.2rem; padding-left: 0.5rem;">
-                 <label class="toggle" style="outline: none;">
-                    <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} style="outline: none; box-shadow: none;" />
-                    <span class="toggle__slider"></span>
-                    <span class="toggle__label">Deducible</span>
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem;">
+              <!-- Columna Izquierda: Datos principales -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <label class="form-field" id="field-date">
+                    <span>Fecha *</span>
+                    <input type="date" id="expense-date" name="expenseDate" 
+                      value="${formatDateForInput(expense?.expense_date || expense?.expenseDate)}" 
+                      ${isLocked ? 'readonly' : 'required'} />
                   </label>
+                  
+                  <label class="form-field" id="field-category">
+                    <span>Categoría *</span>
+                    <select id="expense-category" name="category" required ${isLocked ? 'disabled' : ''}>
+                      <option value="" disabled ${!expense ? "selected" : ""}>Elegir...</option>
+                      ${Object.entries(EXPENSE_CATEGORIES)
+                        .map(([key, label]) => `<option value="${key}" ${selectedCategory === key ? "selected" : ""}>${label}</option>`)
+                        .join("")}
+                    </select>
+                  </label>
+                </div>
+
+                <label class="form-field" id="field-description">
+                  <span>Descripción *</span>
+                  <input type="text" id="expense-description" name="description" 
+                    placeholder="Ej: Suscripción mensual software CRM" 
+                    value="${escapeHtml(expense?.description || "")}" 
+                    required maxlength="500" />
+                </label>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <label class="form-field" id="field-amount">
+                    <span>Importe Base (€) *</span>
+                    <input type="number" step="0.01" min="0.01" id="expense-amount" name="amount" 
+                      value="${amountValue}" ${isLocked ? 'readonly' : 'required'} />
+                  </label>
+                  
+                  <label class="form-field" id="field-payment-method">
+                    <span>Método de Pago</span>
+                    <select id="expense-payment-method" name="paymentMethod">
+                      <option value="" disabled ${!paymentMethodValue ? "selected" : ""}>Elegir...</option>
+                      ${Object.entries(PAYMENT_METHODS)
+                        .map(([key, label]) => `<option value="${key}" ${paymentMethodValue === key ? "selected" : ""}>${label}</option>`)
+                        .join("")}
+                    </select>
+                  </label>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <label class="form-field" id="field-vat-percentage">
+                    <span>IVA (%)</span>
+                    <input type="number" step="1" min="0" max="100" id="expense-vat-percentage" name="vatPercentage" 
+                      value="${vatPercentageValue}" />
+                  </label>
+                  
+                  <label class="form-field" id="field-vat-amount">
+                    <span>Cuota IVA (€)</span>
+                    <input type="number" step="0.01" id="expense-vat-amount" name="vatAmount" 
+                      value="${vatAmountValue}" readonly style="background: var(--bg-secondary);" />
+                  </label>
+                </div>
+
+                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <label class="toggle" style="margin:0;">
+                      <input type="checkbox" id="expense-deductible" name="isDeductible" ${isDeductibleChecked} />
+                      <span class="toggle__slider"></span>
+                      <span class="toggle__label" style="font-weight: 600;">Gasto Deducible</span>
+                    </label>
+                  </div>
+                  <div id="deductible-percentage-group" style="${isDeductibleChecked ? 'display: flex;' : 'display: none;'} flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+                    <label class="form-field" id="field-deductible-percentage">
+                      <span>% de Deducibilidad</span>
+                      <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" value="${deductiblePercentageValue}" />
+                      <small style="color: var(--text-secondary); font-size: 0.7rem;">Depende de la categoría y uso profesional.</small>
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Columna Derecha: Archivo y Extras -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                
+                <div class="form-field" id="field-receipt">
+                  <span>Comprobante / Justificante</span>
+                  <div id="receipt-dropzone" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem 1rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg-secondary);">
+                    <div id="dropzone-empty">
+                      <span style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">📄</span>
+                      <p style="margin: 0; font-size: 0.85rem; font-weight: 500;">Arrastra aquí o haz clic para subir</p>
+                      <p style="margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--text-secondary);">PDF, JPG o PNG (máx. 10MB)</p>
+                    </div>
+                    <div id="dropzone-preview" style="display: none;">
+                      <p id="file-info" style="margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--color-primary);"></p>
+                      <button type="button" id="remove-file" style="background: none; border: none; color: #e53e3e; font-size: 0.75rem; text-decoration: underline; margin-top: 0.5rem; cursor: pointer;">Quitar archivo</button>
+                    </div>
+                    <input type="file" id="expense-receipt-file" style="display: none;" accept=".pdf,.jpg,.jpeg,.png" />
+                  </div>
+                </div>
+
+                <label class="form-field" id="field-vendor">
+                  <span>Proveedor / Establecimiento</span>
+                  <input type="text" id="expense-vendor" name="vendor" placeholder="Ej: Amazon, Gasolinera Repsol..." value="${escapeHtml(expense?.vendor || "")}" />
+                </label>
+
+                <label class="form-field" id="field-notes">
+                  <span>Notas adicionales</span>
+                  <textarea id="expense-notes" name="notes" rows="4" placeholder="Cualquier aclaración relevante..." style="resize: vertical; min-height: 100px;">${escapeHtml(expense?.notes || "")}</textarea>
+                </label>
+
               </div>
             </div>
 
-            <!-- Row 4: Notes & Receipt URL (Full Width / Grid) -->
-             <div id="row-notes" style="display: grid; grid-template-columns: ${isDeductibleChecked ? '1fr 3fr' : '1fr'}; gap: 0.75rem; margin-top: 0.75rem;">
-               <label class="form-field" id="deductible-percentage-group" style="${isDeductibleChecked ? '' : 'display: none;'}">
-                 <span>% Deducible</span>
-                 <input type="number" step="1" min="0" max="100" id="expense-deductible-percentage" name="deductiblePercentage" value="${deductiblePercentageValue}" />
-              </label>
-
-              <label class="form-field">
-                <span>Notas / URL</span>
-                <textarea id="expense-notes" name="notes" rows="1" placeholder="Notas adicionales o URL del recibo" style="min-height: 2.2rem; height: 38px; resize: none;">${escapeHtml(expense?.notes || "")}</textarea>
-              </label>
-             </div>
-
-
           </div>
-          <footer class="modal__footer modal-form__footer" style="margin-top: 1.5rem;">
+          <footer class="modal__footer" style="padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 1rem; background: var(--bg-secondary);">
             <button type="button" class="btn-secondary" data-modal-close>Cancelar</button>
             <button type="submit" class="btn-primary">${actionLabel}</button>
           </footer>
@@ -743,160 +816,284 @@ function buildExpenseModalHtml(mode, expense) {
   `;
 }
 
+/**
+ * Muestra error de validación en el campo
+ */
+function setFieldError(fieldId, message) {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
 
+  const container = field.closest(".form-field");
+  if (!container) return;
+
+  // Limpiar error previo
+  removeFieldError(fieldId);
+
+  if (message) {
+    container.classList.add("has-error");
+    const errorMsg = document.createElement("span");
+    errorMsg.className = "field-error-text";
+    errorMsg.textContent = message;
+    errorMsg.style.cssText = "color: #e53e3e; font-size: 0.75rem; margin-top: 0.25rem; display: block;";
+    container.appendChild(errorMsg);
+    field.style.borderColor = "#e53e3e";
+  }
+}
+
+/**
+ * Limpia error de validación en el campo
+ */
+function removeFieldError(fieldId) {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  const container = field.closest(".form-field");
+  if (!container) return;
+
+  container.classList.remove("has-error");
+  const errorMsg = container.querySelector(".field-error-text");
+  if (errorMsg) errorMsg.remove();
+  field.style.borderColor = "";
+}
 
 function setupExpenseForm(form, expense) {
+  const mode = form.dataset.mode || 'create';
   const amountInput = form.querySelector("#expense-amount");
   const vatPercentageInput = form.querySelector("#expense-vat-percentage");
   const vatAmountInput = form.querySelector("#expense-vat-amount");
   const deductibleToggle = form.querySelector("#expense-deductible");
   const deductibleGroup = form.querySelector("#deductible-percentage-group");
-  const rowNotes = form.querySelector("#row-notes");
+  const descriptionInput = form.querySelector("#expense-description");
+  const dateInput = form.querySelector("#expense-date");
+  const categorySelect = form.querySelector("#expense-category");
+  const fileDropzone = form.querySelector("#receipt-dropzone");
+  const fileInput = form.querySelector("#expense-receipt-file");
+  const dropzoneEmpty = form.querySelector("#dropzone-empty");
+  const dropzonePreview = form.querySelector("#dropzone-preview");
+  const fileInfo = form.querySelector("#file-info");
+  const removeFileBtn = form.querySelector("#remove-file");
 
+  // ✅ Sincronizar IVA automático
   const syncVatAmount = () => {
-    const amount = sanitizeNumber(amountInput.value, 0);
-    const vatPercentage = sanitizeNumber(vatPercentageInput.value, 0);
-    vatAmountInput.value = calculateVatAmount(amount, vatPercentage);
+    const amount = sanitizeNumber(amountInput?.value, 0);
+    const vatPercentage = sanitizeNumber(vatPercentageInput?.value, 0);
+    const calculated = calculateVatAmount(amount, vatPercentage);
+    if (vatAmountInput) {
+      vatAmountInput.value = calculated.toFixed(2);
+    }
+    removeFieldError("expense-amount");
   };
 
   amountInput?.addEventListener("input", syncVatAmount);
   vatPercentageInput?.addEventListener("input", syncVatAmount);
 
+  // ✅ Toggle deducible
   const toggleDeductibleFields = () => {
     const isChecked = deductibleToggle.checked;
     if (isChecked) {
-        deductibleGroup.style.display = "flex";
-        rowNotes.style.gridTemplateColumns = "1fr 3fr";
+      deductibleGroup.style.display = "flex";
     } else {
-        deductibleGroup.style.display = "none";
-        rowNotes.style.gridTemplateColumns = "1fr";
+      deductibleGroup.style.display = "none";
     }
   };
 
   deductibleToggle?.addEventListener("change", toggleDeductibleFields);
-  // Initial call handled by HTML rendering logic, but good to ensure
 
+  // ✅ GESTIÓN DE ARCHIVOS: Dropzone
+  if (fileDropzone) {
+    fileDropzone.addEventListener('click', () => fileInput?.click());
+
+    fileDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fileDropzone.style.borderColor = "var(--color-primary)";
+      fileDropzone.style.background = "var(--bg-tertiary)";
+    });
+
+    fileDropzone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      fileDropzone.style.borderColor = "var(--border-color)";
+      fileDropzone.style.background = "var(--bg-secondary)";
+    });
+
+    fileDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fileDropzone.style.borderColor = "var(--border-color)";
+      fileDropzone.style.background = "var(--bg-secondary)";
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        updateFilePreview(files[0]);
+      }
+    });
+
+    removeFileBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.value = "";
+      dropzonePreview.style.display = "none";
+      dropzoneEmpty.style.display = "block";
+    });
+  }
+
+  fileInput?.addEventListener('change', (e) => {
+    if (e.target.files?.length > 0) {
+      updateFilePreview(e.target.files[0]);
+    }
+  });
+
+  function updateFilePreview(file) {
+    if (fileInfo) fileInfo.textContent = `📄 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
+    dropzoneEmpty.style.display = "none";
+    dropzonePreview.style.display = "block";
+  }
+
+  // Validación en tiempo real
+  form.querySelectorAll("input, select, textarea").forEach((input) => {
+    input.addEventListener("blur", () => {
+      validateField(input.id, form);
+    });
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await handleExpenseSubmit(form);
+    await handleExpenseSubmitWithValidation(form);
   });
 }
 
-async function handleExpenseSubmit(form) {
+/**
+ * Valida un campo individual
+ */
+function validateField(fieldId, form) {
   const formData = new FormData(form);
-  const mode = form.dataset.mode || "create";
-
-  const payload = {
+  const data = {
     expenseDate: formData.get("expenseDate"),
     category: formData.get("category"),
-    description: (formData.get("description") || "").trim(),
-    amount: sanitizeNumber(formData.get("amount"), 0),
-    vatPercentage: sanitizeNumber(formData.get("vatPercentage"), 0),
-    vatAmount: sanitizeNumber(formData.get("vatAmount"), 0),
+    description: formData.get("description"),
+    amount: formData.get("amount"),
     isDeductible: formData.get("isDeductible") === "on",
+    deductiblePercentage: formData.get("deductiblePercentage"),
   };
 
-  if (payload.isDeductible) {
-    payload.deductiblePercentage = sanitizeNumber(
-      formData.get("deductiblePercentage"),
-      0
-    );
+  const validation = CLIENT_VALIDATOR.validateExpense(data);
+  const field = document.getElementById(fieldId);
+  const fieldName = field?.name;
+
+  if (fieldName && validation.errors[fieldName]) {
+    setFieldError(fieldId, validation.errors[fieldName]);
+    return false;
   } else {
-    payload.deductiblePercentage = 0;
+    removeFieldError(fieldId);
+    return true;
   }
+}
 
-  const subcategory = (formData.get("subcategory") || "").trim();
-  if (subcategory) payload.subcategory = subcategory;
+async function handleExpenseSubmitWithValidation(form) {
+  const mode = form.dataset.mode || "create";
+  const formData = new FormData(form);
+  
+  const data = {
+    expenseDate: formData.get("expenseDate"),
+    category: formData.get("category"),
+    subcategory: formData.get("subcategory"),
+    description: (formData.get("description") || "").trim(),
+    amount: sanitizeNumber(formData.get("amount"), 0),
+    vatPercentage: sanitizeNumber(formData.get("vatPercentage"), 21),
+    vatAmount: sanitizeNumber(formData.get("vatAmount"), 0),
+    isDeductible: formData.get("isDeductible") === "on",
+    deductiblePercentage: sanitizeNumber(formData.get("deductiblePercentage"), 100),
+    paymentMethod: formData.get("paymentMethod"),
+    vendor: formData.get("vendor"),
+    notes: formData.get("notes"),
+  };
 
-  const paymentMethod = formData.get("paymentMethod");
-  if (paymentMethod) payload.paymentMethod = paymentMethod;
-
-  const vendor = (formData.get("vendor") || "").trim();
-  if (vendor) payload.vendor = vendor;
-
-  const receiptUrl = (formData.get("receiptUrl") || "").trim();
-  if (receiptUrl) payload.receiptUrl = receiptUrl;
-
-  const notes = (formData.get("notes") || "").trim();
-  if (notes) payload.notes = notes;
-
-  if (!payload.expenseDate) {
-    showNotification("Selecciona la fecha del gasto", "warning");
+  // Validar antes de enviar
+  const validation = CLIENT_VALIDATOR.validateExpense(data);
+  if (!validation.isValid) {
+    Object.entries(validation.errors).forEach(([field, message]) => {
+      const input = form.querySelector(`[name="${field}"]`);
+      if (input) setFieldError(input.id, message);
+    });
+    showNotification("Por favor, corrige los errores en el formulario", "warning");
     return;
   }
 
-  if (!payload.category) {
-    showNotification("Selecciona una categoría", "warning");
-    return;
-  }
-
-  if (!payload.description) {
-    showNotification("Añade una descripción del gasto", "warning");
-    return;
-  }
-
-  if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
-    showNotification("Introduce un importe mayor que 0", "warning");
-    return;
-  }
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
 
   try {
-    if (mode === "edit" && activeExpenseId) {
-      const updatedExpense = await window.api.updateExpense(
-        activeExpenseId,
-        payload
-      );
-      const normalized = normalizeExpense(
-        updatedExpense?.expense ?? updatedExpense
-      );
-      if (normalized) {
-        expensesData = expensesData.filter(
-          (expense) => expense.id !== normalized.id
-        );
-        expensesData.unshift(normalized);
-        expensesData.sort((a, b) => {
-          const dateA = new Date(a.expenseDate || 0).getTime();
-          const dateB = new Date(b.expenseDate || 0).getTime();
-          return dateB - dateA;
-        });
-        selectedExpenseId = String(normalized.id);
-        currentPage = 1;
-        renderExpensesTable();
-        updateSummaryCards();
-      }
-      showNotification("Gasto actualizado correctamente", "success");
-    } else {
-      const createdExpense = await window.api.createExpense(payload);
-      const normalized = normalizeExpense(
-        createdExpense?.expense ?? createdExpense
-      );
-      if (normalized) {
-        expensesData = expensesData.filter(
-          (expense) => expense.id !== normalized.id
-        );
-        expensesData.unshift(normalized);
-        expensesData.sort((a, b) => {
-          const dateA = new Date(a.expenseDate || 0).getTime();
-          const dateB = new Date(b.expenseDate || 0).getTime();
-          return dateB - dateA;
-        });
-        selectedExpenseId = String(normalized.id);
-        currentPage = 1;
-        renderExpensesTable();
-        updateSummaryCards();
-      }
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Procesando...";
+
+    let result;
+    if (mode === "create") {
+      result = await window.api.createExpense(data);
       showNotification("Gasto registrado correctamente", "success");
+    } else {
+      result = await window.api.updateExpense(activeExpenseId, data);
+      showNotification("Gasto actualizado correctamente", "success");
+    }
+
+    // Gestionar subida de archivo si existe
+    const fileInput = form.querySelector("#expense-receipt-file");
+    if (fileInput?.files?.length > 0) {
+      const expenseId = result.id || activeExpenseId;
+      await uploadExpenseReceipt(expenseId, fileInput.files[0]);
     }
 
     closeExpenseModal();
-    // Sincroniza con backend pero sin bloquear el feedback inmediato
     loadExpenses();
   } catch (error) {
-    console.error("Error guardando gasto:", error);
-    showNotification(error?.message || "No se pudo guardar el gasto", "error");
+    console.error("Error al guardar gasto:", error);
+    showNotification(error.message || "Error al guardar el gasto", "error");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 }
+
+async function uploadExpenseReceipt(expenseId, file) {
+  try {
+    const formData = new FormData();
+    formData.append('receipt', file);
+
+    const response = await fetch(`${window.api.getBaseUrl()}/expenses/${expenseId}/receipt`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${window.api.getAuthToken()}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Error subiendo comprobante');
+    }
+
+    showNotification("Comprobante subido correctamente", "success");
+  } catch (error) {
+    console.error("Error uploading receipt:", error);
+    showNotification("El gasto se guardó pero falló la subida del comprobante", "warning");
+  }
+}
+
+async function buildReceiptPreviewHtml(receiptUrl) {
+  if (!receiptUrl) return null;
+  const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(receiptUrl);
+  const isPdf = /\.pdf$/i.test(receiptUrl);
+
+  if (isImage) {
+    return `<img src="${escapeHtml(receiptUrl)}" alt="Justificante" style="max-width: 100%; border-radius: 8px;" />`;
+  } else if (isPdf) {
+    return `<div style="padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; text-align: center;">
+      <p>Vista previa no disponible para PDF</p>
+      <a href="${escapeHtml(receiptUrl)}" target="_blank" class="btn btn-secondary">Ver PDF completo</a>
+    </div>`;
+  }
+  return `<a href="${escapeHtml(receiptUrl)}" target="_blank">Ver justificante</a>`;
+}
+
+
 
 async function viewExpense(expenseId) {
   try {
@@ -906,91 +1103,94 @@ async function viewExpense(expenseId) {
       return;
     }
 
-    const formattedDate = formatDate(expense.expense_date);
-    const categoryLabel =
-      EXPENSE_CATEGORIES[expense.category] ||
-      expense.category ||
-      "Sin categoría";
-    const subcategoryLabel = expense.subcategory || "-";
-    const paymentMethodLabel =
-      PAYMENT_METHODS[expense.payment_method] || expense.payment_method || "-";
-    const projectLabel = expense.project_name || "-";
-    const vatPercentageDisplay = sanitizeNumber(
-      expense.vat_percentage ?? expense.vatPercentage,
-      0
-    );
-    const deductiblePercentageDisplay = sanitizeNumber(
-      expense.deductible_percentage ?? expense.deductiblePercentage,
-      0
-    );
-    const isDeductibleText =
-      expense.is_deductible ?? expense.isDeductible ?? true
-        ? `Sí, ${deductiblePercentageDisplay}%`
-        : "No deducible";
-    const receiptLink = expense.receipt_url
-      ? `<a href="${escapeHtml(
-          expense.receipt_url
-        )}" target="_blank" rel="noopener">Abrir justificante</a>`
-      : "No adjuntado";
+    const formattedDate = formatDate(expense.expense_date || expense.expenseDate);
+    const categoryLabel = EXPENSE_CATEGORIES[expense.category] || expense.category || "Sin categoría";
+    const paymentMethodLabel = PAYMENT_METHODS[expense.paymentMethod] || expense.paymentMethod || "-";
+    const receiptHtml = await buildReceiptPreviewHtml(expense.receiptUrl || expense.receipt_url);
 
     const modalHtml = `
       <div class="modal is-open" id="expense-view-modal" role="dialog" aria-modal="true">
         <div class="modal__backdrop"></div>
-        <div class="modal__panel">
-          <header class="modal__head">
+        <div class="modal__panel" style="width: min(95vw, 900px); max-width: 900px; padding: 0;">
+          <header class="modal__head" style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
             <div>
-              <h2 class="modal__title">Detalle del gasto</h2>
-              <p class="modal__subtitle">${formattedDate} - ${escapeHtml(
-      categoryLabel
-    )}</p>
+              <h2 class="modal__title">Detalle del Gasto</h2>
+              <p class="modal__subtitle">${formattedDate} • ${escapeHtml(categoryLabel)}</p>
             </div>
             <button type="button" class="modal__close" data-modal-close aria-label="Cerrar modal">×</button>
           </header>
-          <div class="modal__body" style="padding: 1.75rem;">
-            <div style="display: flex; flex-direction: column; gap: 1.5rem; height: 100%; min-height: 0;">
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
-                ${[
-                  { label: "Descripción", value: escapeHtml(expense.description || "-") },
-                  { label: "Fecha del gasto", value: formattedDate },
-                  { label: "Categoría", value: escapeHtml(categoryLabel) },
-                  { label: "Subcategoría", value: escapeHtml(subcategoryLabel) },
-                  { label: "Método de pago", value: escapeHtml(paymentMethodLabel) },
-                  { label: "Proveedor", value: escapeHtml(expense.vendor || "-") },
-                  { label: "Importe base", value: formatCurrency(expense.amount) },
-                  {
-                    label: "IVA",
-                    value: `${formatCurrency(expense.vat_amount)} (${vatPercentageDisplay}%)`,
-                  },
-                  { label: "Tratamiento fiscal", value: escapeHtml(isDeductibleText) },
-                  { label: "Proyecto", value: escapeHtml(projectLabel) },
-                ]
-                  .map(
-                    ({ label, value }) => `
-                      <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary);">
-                        <h3 style="margin: 0 0 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-weight: 600;">${label}</h3>
-                        <p style="margin: 0; font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">${value}</p>
-                      </div>
-                    `
-                  )
-                  .join("")}
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
-                <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary);">
-                  <h3 style="margin: 0 0 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-weight: 600;">Justificante</h3>
-                  <p style="margin: 0; font-size: 0.95rem; color: var(--text-primary); font-weight: 500;">${receiptLink}</p>
+          
+          <div class="modal__body" style="padding: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem;">
+              
+              <!-- Detalles -->
+              <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div>
+                  <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Información</h3>
+                  <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div>
+                      <small style="display: block; color: var(--text-secondary); font-size: 0.7rem;">Descripción</small>
+                      <span style="font-weight: 500;">${escapeHtml(expense.description)}</span>
+                    </div>
+                    <div>
+                      <small style="display: block; color: var(--text-secondary); font-size: 0.7rem;">Proveedor</small>
+                      <span>${escapeHtml(expense.vendor || "-")}</span>
+                    </div>
+                    <div>
+                      <small style="display: block; color: var(--text-secondary); font-size: 0.7rem;">Método de Pago</small>
+                      <span>${escapeHtml(paymentMethodLabel)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; background: var(--bg-secondary);">
-                  <h3 style="margin: 0 0 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); font-weight: 600;">Notas</h3>
-                  <p style="margin: 0; font-size: 0.95rem; color: var(--text-primary); font-weight: 500; white-space: pre-wrap;">${escapeHtml(expense.notes || "-")}</p>
+
+                <div>
+                  <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Contabilidad</h3>
+                  <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <small style="color: var(--text-secondary); font-size: 0.7rem;">Importe Base</small>
+                      <span style="font-weight: 600;">${formatCurrency(expense.amount)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <small style="color: var(--text-secondary); font-size: 0.7rem;">IVA (${expense.vatPercentage}%)</small>
+                      <span>${formatCurrency(expense.vatAmount)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); pt: 0.5rem; mt: 0.25rem;">
+                      <small style="font-weight: 600;">Total</small>
+                      <span style="font-weight: 700; color: var(--color-primary);">${formatCurrency(sanitizeNumber(expense.amount, 0) + sanitizeNumber(expense.vatAmount, 0))}</span>
+                    </div>
+                  </div>
                 </div>
+
+                <button type="button" class="btn-ghost" style="justify-content: center; width: 100%; border: 1px solid var(--border-color);" onclick="viewExpenseAuditLog('${expense.id}')">
+                   📜 Ver historial de cambios
+                </button>
               </div>
+
+              <!-- Justificante y Notas -->
+              <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div>
+                   <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Justificante</h3>
+                   <div style="background: var(--bg-secondary); border-radius: 12px; border: 1px dashed var(--border-color); overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 200px;">
+                      ${receiptHtml || '<p style="color: var(--text-secondary); font-size: 0.85rem;">No hay archivo adjunto</p>'}
+                   </div>
+                </div>
+
+                ${expense.notes ? `
+                  <div>
+                    <h3 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Notas</h3>
+                    <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+                      <p style="margin: 0; font-size: 0.85rem; white-space: pre-wrap;">${escapeHtml(expense.notes)}</p>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+
             </div>
           </div>
-          <footer class="modal__footer modal-form__footer" style="margin-top: 0.75rem;">
+
+          <footer class="modal__footer" style="padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 1rem; background: var(--bg-secondary);">
             <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
-            <button type="button" class="btn-primary" data-expense-edit="${
-              expense.id
-            }">Editar gasto</button>
+            <button type="button" class="btn-primary" data-expense-edit="${expense.id}">Editar gasto</button>
           </footer>
         </div>
       </div>
@@ -1001,18 +1201,76 @@ async function viewExpense(expenseId) {
     modal?.querySelectorAll("[data-modal-close]").forEach((btn) => {
       btn.addEventListener("click", () => modal.remove());
     });
-    modal
-      ?.querySelector(".modal__backdrop")
-      ?.addEventListener("click", () => modal.remove());
-    modal
-      ?.querySelector("[data-expense-edit]")
-      ?.addEventListener("click", () => {
-        modal.remove();
-        openExpenseModal("edit", String(expense.id));
-      });
+    modal?.querySelector(".modal__backdrop")?.addEventListener("click", () => modal.remove());
+    modal?.querySelector("[data-expense-edit]")?.addEventListener("click", () => {
+      modal.remove();
+      openExpenseModal("edit", String(expense.id));
+    });
+
   } catch (error) {
     console.error("Error mostrando gasto:", error);
     showNotification("No se pudo mostrar el detalle del gasto", "error");
+  }
+}
+
+async function viewExpenseAuditLog(expenseId) {
+  try {
+    const response = await fetch(`${window.api.getBaseUrl()}/expenses/${expenseId}/audit-log`, {
+      headers: {
+        'Authorization': `Bearer ${window.api.getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('No se pudo obtener el historial');
+    }
+
+    const data = await response.json();
+    const auditLog = data.auditLog || [];
+
+    const modalHtml = `
+      <div class="modal is-open" id="audit-modal" role="dialog" aria-modal="true" style="z-index: 10001;">
+        <div class="modal__backdrop"></div>
+        <div class="modal__panel" style="width: min(95vw, 600px); max-width: 600px;">
+          <header class="modal__head">
+            <h2 class="modal__title">Historial de Cambios</h2>
+            <button type="button" class="modal__close" data-modal-close>×</button>
+          </header>
+          <div class="modal__body" style="max-height: 60vh; overflow-y: auto; padding: 1.5rem;">
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              ${auditLog.length === 0 ? '<p>No hay cambios registrados</p>' : auditLog.map((log) => `
+                <div style="border-left: 3px solid var(--color-primary); padding: 0 0 1rem 1rem; border-bottom: 1px solid var(--border-color);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <span style="font-weight: 600; font-size: 0.9rem;">
+                      ${log.action === 'created' ? '✨ Creado' : '✏️ Actualizado'}
+                    </span>
+                    <small style="color: var(--text-secondary);">${new Date(log.created_at).toLocaleString()}</small>
+                  </div>
+                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">
+                    Usuario ID: ${log.user_id}
+                  </p>
+                  ${log.change_reason ? `<p style="margin-top: 0.5rem; font-size: 0.85rem; font-style: italic;">Motivo: ${escapeHtml(log.change_reason)}</p>` : ''}
+                </div>
+              `).join("")}
+            </div>
+          </div>
+          <footer class="modal__footer">
+            <button type="button" class="btn-secondary" data-modal-close>Cerrar</button>
+          </footer>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+    const modal = document.getElementById("audit-modal");
+    modal?.querySelectorAll("[data-modal-close]").forEach((btn) => {
+      btn.addEventListener("click", () => modal.remove());
+    });
+    modal?.querySelector(".modal__backdrop")?.addEventListener("click", () => modal.remove());
+
+  } catch (error) {
+    console.error("Error al obtener historial:", error);
+    showNotification("No se pudo cargar el historial", "error");
   }
 }
 

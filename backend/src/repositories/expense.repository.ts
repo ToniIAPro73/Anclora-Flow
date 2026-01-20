@@ -1,5 +1,7 @@
 import { BaseRepository } from './base.repository.js';
 import { IExpense, IExpenseCreate, IExpenseUpdate, IExpenseSummary, IExpenseByCategory } from '../types/expense.js';
+import { validateExpenseCreate, validateExpenseUpdate } from '../validators/expenseValidator.js';
+import { v4 as uuid_generate_v4 } from 'uuid';
 
 export class ExpenseRepository extends BaseRepository<IExpense> {
   protected tableName = 'expenses';
@@ -91,6 +93,12 @@ export class ExpenseRepository extends BaseRepository<IExpense> {
   }
 
   async create(userId: string, expenseData: IExpenseCreate): Promise<IExpense> {
+    // ✅ VALIDAR entrada
+    const validation = validateExpenseCreate(expenseData);
+    if (!validation.isValid) {
+      throw new Error(`Validación fallida: ${validation.errors.join(', ')}`);
+    }
+
     const {
       projectId, category, subcategory, description, amount,
       vatAmount = 0, vatPercentage = 21.00, isDeductible = true,
@@ -102,31 +110,80 @@ export class ExpenseRepository extends BaseRepository<IExpense> {
       INSERT INTO expenses (
         user_id, project_id, category, subcategory, description, amount,
         vat_amount, vat_percentage, is_deductible, deductible_percentage,
-        expense_date, payment_method, vendor, receipt_url, notes
+        expense_date, payment_method, vendor, receipt_url, notes, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
 
     const result = await this.executeQuery(sql, [
       userId, projectId, category, subcategory, description, amount,
       vatAmount, vatPercentage, isDeductible, deductiblePercentage,
-      expenseDate, paymentMethod, vendor, receiptUrl, notes
+      expenseDate, paymentMethod, vendor, receiptUrl, notes, userId
     ]);
+
+    if (result.rowCount === 0) {
+      throw new Error('Error creando gasto');
+    }
 
     const row = result.rows[0];
 
-    // Log activity
+    // ✅ AUDITORÍA: Registrar creación
     await this.executeQuery(
-      `INSERT INTO activity_log (user_id, action_type, entity_type, entity_id, description)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, 'expense_added', 'expense', row.id, `Gasto ${category} añadido: ${amount}€`]
+      `INSERT INTO expense_audit_log (
+        expense_id, user_id, action, old_value, new_value, created_at
+      ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+      [
+        row.id,
+        userId,
+        'created',
+        null,
+        JSON.stringify({
+          category,
+          amount,
+          description,
+          isDeductible,
+          expenseDate
+        })
+      ]
+    );
+
+    // Log actividad
+    await this.executeQuery(
+      `INSERT INTO activity_log (user_id, action_type, entity_type, entity_id, description, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        userId,
+        'expense_created',
+        'expense',
+        row.id,
+        `Gasto ${category} creado: ${amount}€`,
+        JSON.stringify({ category, amount, vendor })
+      ]
     );
 
     return this.mapToCamel(row);
   }
 
   async update(id: string, userId: string, updates: IExpenseUpdate): Promise<IExpense | null> {
+    // 1. Obtener expense original
+    const originalResult = await this.executeQuery(
+      'SELECT * FROM expenses WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+
+    if (originalResult.rowCount === 0) {
+      return null;
+    }
+
+    const originalExpense = originalResult.rows[0];
+
+    // ✅ VALIDAR actualización
+    const validation = validateExpenseUpdate(updates, originalExpense);
+    if (!validation.isValid) {
+      throw new Error(`Validación fallida: ${validation.errors.join(', ')}`);
+    }
+
     const allowedFields: Record<string, string> = {
       projectId: 'project_id',
       category: 'category',
@@ -150,25 +207,62 @@ export class ExpenseRepository extends BaseRepository<IExpense> {
 
     Object.entries(updates).forEach(([key, value]) => {
       const column = allowedFields[key];
-      if (column) {
+      if (column && value !== undefined) {
         fields.push(`${column} = $${paramCount}`);
         values.push(value);
         paramCount++;
       }
     });
 
-    if (fields.length === 0) return null;
+    if (fields.length === 0) {
+      return this.mapToCamel(originalExpense);
+    }
 
-    values.push(id, userId);
+    values.push(id, userId, userId); // id, user_id (for WHERE), updated_by (for SET)
+
     const sql = `
       UPDATE expenses
-      SET ${fields.join(', ')}
+      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP, updated_by = $${paramCount + 2}
       WHERE id = $${paramCount} AND user_id = $${paramCount + 1}
       RETURNING *
     `;
 
     const result = await this.executeQuery(sql, values);
-    return this.mapToCamel(result.rows[0]);
+    const row = result.rows[0];
+
+    // ✅ AUDITORÍA: Registrar cambios
+    await this.executeQuery(
+      `INSERT INTO expense_audit_log (
+        expense_id, user_id, action, old_value, new_value, created_at
+      ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+      [
+        id,
+        userId,
+        'updated',
+        JSON.stringify(originalExpense),
+        JSON.stringify(row)
+      ]
+    );
+
+    // Log actividad
+    await this.executeQuery(
+      `INSERT INTO activity_log (user_id, action_type, entity_type, entity_id, description, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        userId,
+        'expense_updated',
+        'expense',
+        id,
+        `Gasto ${row.category} actualizado: ${row.amount}€`,
+        JSON.stringify({ 
+          oldAmount: originalExpense.amount, 
+          newAmount: row.amount,
+          category: row.category 
+        })
+      ]
+    );
+
+    return this.mapToCamel(row);
   }
 
   async delete(id: string, userId: string): Promise<boolean> {
@@ -303,6 +397,16 @@ export class ExpenseRepository extends BaseRepository<IExpense> {
         totalAmount: parseFloat(mapped.totalAmount || 0)
       };
     });
+  }
+
+  async getAuditLog(expenseId: string, userId: string): Promise<any[]> {
+    const sql = `
+      SELECT * FROM expense_audit_log
+      WHERE expense_id = $1 AND user_id = $2
+      ORDER BY created_at DESC
+    `;
+    const result = await this.executeQuery(sql, [expenseId, userId]);
+    return result.rows.map((row: any) => this.mapToCamel(row));
   }
 }
 

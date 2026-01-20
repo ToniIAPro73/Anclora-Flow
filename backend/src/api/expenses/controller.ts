@@ -3,7 +3,9 @@ import { Request, Response, NextFunction } from 'express';
 import pkg from 'express-validator';
 const { validationResult } = pkg as any;
 import { expenseRepository } from '../../repositories/expense.repository.js';
+import { expenseFileService } from '../../services/expenseFileService.js';
 import Expense from '../../models/Expense.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export const validate = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
@@ -148,5 +150,56 @@ export const getTopVendors = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching top vendors:', error);
     res.status(500).json({ error: 'Error al obtener los proveedores principales' });
+  }
+};
+
+export const uploadReceipt = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as any).id as string;
+    const { id } = req.params;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No se proporcionó ningún archivo' });
+    }
+
+    // Verificar existencia del gasto
+    const expense = await expenseRepository.findById(id as string, userId);
+    if (!expense) {
+      return res.status(404).json({ error: 'Gasto no encontrado' });
+    }
+
+    // Subir a S3
+    const uploadResult = await expenseFileService.uploadReceipt(file as Express.Multer.File, userId, id as string);
+
+    // Actualizar gasto con la URL
+    await expenseRepository.update(id as string, userId, { receiptUrl: uploadResult.url });
+
+    res.json({
+      message: 'Comprobante subido correctamente',
+      url: uploadResult.url
+    });
+  } catch (error: any) {
+    console.error('Error uploading receipt:', error);
+    res.status(500).json({ error: error.message || 'Error al subir el comprobante' });
+  }
+};
+
+export const getAuditLog = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as any).id as string;
+    const { id } = req.params;
+
+    // Verificar existencia del gasto
+    const expense = await expenseRepository.findById(id as string, userId);
+    if (!expense) {
+      return res.status(404).json({ error: 'Gasto no encontrado' });
+    }
+
+    const auditLog = await expenseRepository.getAuditLog(id as string, userId);
+    res.json({ auditLog });
+  } catch (error) {
+    console.error('Error fetching audit log:', error);
+    res.status(500).json({ error: 'Error al obtener el historial de cambios' });
   }
 };

@@ -242,6 +242,30 @@ CREATE TABLE IF NOT EXISTS invoice_audit_log (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Expense Audit Log (for detailed history of changes)
+CREATE TABLE IF NOT EXISTS expense_audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    expense_id UUID NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action VARCHAR(50) NOT NULL, -- 'created', 'updated', 'deleted'
+    old_value JSONB,
+    new_value JSONB,
+    change_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add audit columns to expenses if they don't exist
+ALTER TABLE expenses 
+    ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id),
+    ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES users(id);
+
+-- Add CHECK constraints for data integrity
+ALTER TABLE expenses
+    DROP CONSTRAINT IF EXISTS check_expense_amount_positive,
+    ADD CONSTRAINT check_expense_amount_positive CHECK (amount >= 0),
+    DROP CONSTRAINT IF EXISTS check_expense_vat_percentage_range,
+    ADD CONSTRAINT check_expense_vat_percentage_range CHECK (vat_percentage >= 0 AND vat_percentage <= 100);
+
 -- Add paid_amount to invoices if it doesn't exist
 DO $$
 BEGIN

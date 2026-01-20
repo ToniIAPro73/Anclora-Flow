@@ -3,6 +3,7 @@ import express from 'express';
 import { body, query, param } from 'express-validator';
 import { authenticateToken } from '../../middleware/auth.js';
 import * as expenseController from './controller.js';
+import { uploadReceipt } from '../../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
@@ -91,6 +92,17 @@ router.delete('/:id',
   [param('id').isInt()],
   expenseController.validate,
   expenseController.deleteExpense
+);
+
+router.post('/:id/receipt',
+  uploadReceipt,
+  expenseController.uploadReceipt
+);
+
+router.get('/:id/audit-log',
+  [param('id').isInt()],
+  expenseController.validate,
+  expenseController.getAuditLog
 );
 
 export default router;

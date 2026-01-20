@@ -11,17 +11,21 @@
     "kill-port": "powershell -ExecutionPolicy Bypass -File ./kill-port.ps1 -Port 8020"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.971.0",
+    "@aws-sdk/s3-request-presigner": "^3.971.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.10",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -29,6 +33,7 @@
     "@types/express": "^5.0.6",
     "@types/express-validator": "^2.20.33",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^25.0.9",
     "@types/nodemailer": "^7.0.5",
     "@types/passport": "^1.0.17",
@@ -36,6 +41,7 @@
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/passport-local": "^1.0.38",
     "@types/pg": "^8.16.0",
+    "@types/uuid": "^10.0.0",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
