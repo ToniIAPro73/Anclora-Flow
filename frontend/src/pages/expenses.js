@@ -305,8 +305,11 @@ async function loadExpenses() {
       .filter((expense) => expense !== null);
 
     if (expensesData.length > 0) {
-      // Remover selección por defecto para evitar "aspecto extraño" detectado por usuario
-      // selectedExpenseId = null; 
+      // Marcar primer registro por defecto si no hay selección válida (obligatorio por política UI)
+      const currentExists = expensesData.some(ex => String(ex.id) === String(selectedExpenseId));
+      if (!selectedExpenseId || !currentExists) {
+        selectedExpenseId = String(expensesData[0].id);
+      }
     }
 
     currentPage = 1;
@@ -365,9 +368,10 @@ function renderExpensesTable() {
   // 1. TOOLBAR
   const toolbarHTML = `
     <div class="table-toolbar">
-      <div style="display: flex; gap: 0.75rem;">
+      <div class="table-toolbar__actions">
         <button class="btn-config-columns" onclick="openExpenseColumnConfigModal()" title="Configurar qué columnas mostrar">
-          ⚙️ Columnas
+          <span class="icon">⚙️</span>
+          <span>Columnas</span>
         </button>
       </div>
       <input 
@@ -434,7 +438,15 @@ function renderExpensesTable() {
     </div>
   `;
 
-  container.innerHTML = toolbarHTML + tableHTML + paginationHTML;
+  container.innerHTML = `
+    <div class="table-toolbar-frame">
+      ${toolbarHTML}
+    </div>
+    <div class="table-card-frame">
+      ${tableHTML}
+      ${paginationHTML}
+    </div>
+  `;
 }
 
 function renderExpenseRows() {
@@ -1460,143 +1472,162 @@ async function confirmDeleteExpense(expenseId) {
 export default function renderExpenses() {
   return `
     <style>
-      /* Fix para tabla y toolbar */
+      /* --- ARQUITECTURA DE FRAMES INDEPENDIENTES --- */
       .expenses {
         max-width: 100%;
         overflow-x: hidden;
       }
-      
-      .expenses-table-container {
-        width: 100%;
-        overflow-x: auto;
-        border-radius: 12px;
+
+      .table-toolbar-frame {
         background: var(--bg-surface);
         border: 1px solid var(--border-color);
-        margin-top: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem; /* Gap de separación física */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
       }
-
+      
       .table-toolbar {
         padding: 1.25rem 1.5rem !important;
         display: flex !important;
         align-items: center !important;
         gap: 1.5rem !important;
-        border-bottom: 1px solid var(--border-color) !important;
-        background: var(--bg-surface) !important;
-      }
-      
-      .table-toolbar .search-input {
-        max-width: 400px !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0.6rem 1rem !important;
-        background: var(--bg-secondary) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 8px !important;
       }
 
-      /* Fix para que quepan las columnas */
+      .table-card-frame {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+
+      .table-toolbar .search-input {
+        max-width: 500px !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0.75rem 1.25rem !important;
+        background: var(--bg-secondary) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 10px !important;
+        font-size: 0.95rem !important;
+      }
+
+      .btn-config-columns {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.7rem 1.2rem;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        color: var(--text-primary);
+      }
+      
+      .btn-config-columns:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--color-primary);
+        transform: translateY(-1px);
+      }
+
+      /* --- TABLA: OPTIMIZACIÓN DE ESPACIO Y COLUMNAS --- */
       .data-table {
         width: 100%;
         border-collapse: collapse;
+        table-layout: fixed;
       }
       
-      .data-table th {
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
-        color: var(--text-secondary);
-        padding: 1rem 0.75rem !important;
-        background: var(--bg-secondary);
-        border-bottom: 1px solid var(--border-color);
-      }
-      
-      .data-table td {
-        padding: 1rem 0.75rem !important;
+      .data-table th, .data-table td {
+        padding: 1.25rem 1rem !important;
         font-size: 0.875rem !important;
         border-bottom: 1px solid var(--border-color);
-      }
-
-      .table-description {
-        max-width: 250px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
-      /* Estilo para Drawer */
-      .expense-drawer {
-        position: fixed;
-        top: 0;
-        right: -500px;
-        width: min(500px, 100vw);
-        height: 100vh;
-        background-color: var(--bg-surface) !important;
-        box-shadow: -10px 0 40px rgba(0,0,0,0.5);
-        z-index: 11000;
-        transition: right 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-        display: flex;
-        flex-direction: column;
-        border-left: 1px solid var(--border-color);
-      }
-      
-      .expense-drawer.is-open {
-        right: 0;
+      .data-table th {
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-secondary);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.75rem !important;
       }
 
-      .drawer-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.6);
-        backdrop-filter: blur(4px);
-        opacity: 0;
-        visibility: hidden;
-        z-index: 10999;
-        transition: all 0.3s;
+      /* Anchos controlados */
+      .data-table th[data-column="date"], .data-table td[data-label="Fecha"] { width: 120px; }
+      .data-table th[data-column="category"], .data-table td[data-label="Categoría"] { width: 160px; }
+      .data-table th[data-column="amount"], .data-table td[data-label="Importe"] { width: 120px; text-align: right; }
+      .data-table th[data-column="isDeductible"], .data-table td[data-label="Deducible"] { width: 100px; text-align: center; }
+      .data-table th:last-child, .data-table td:last-child { width: 130px; text-align: right; }
+
+      .table-description {
+        font-weight: 600;
+        color: var(--text-primary);
       }
 
-      .drawer-overlay.is-open {
-        opacity: 1;
-        visibility: visible;
-      }
-
-      /* Selección de fila (Match Invoices color) */
+      /* --- SELECCIÓN DE FILA: ESTILO NAVY (MATCH INVOICES) --- */
       .data-table tr.is-selected {
-        background-color: rgba(37, 99, 235, 0.12) !important;
-        border-left: 4px solid var(--color-primary) !important;
+        background-color: #1e3a8a !important; /* Navy Blue sólido del pantallazo */
+        position: relative;
       }
       
+      .data-table tr.is-selected td {
+        color: #ffffff !important;
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      .data-table tr.is-selected::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #3b82f6; /* Acento azul brillante */
+      }
+      
+      .data-table tr.is-selected .table-amount {
+        color: #ffffff !important;
+        font-weight: 800;
+      }
+      
+      .data-table tr.is-selected .category-pill, 
+      .data-table tr.is-selected .status-pill {
+        background: rgba(255, 255, 255, 0.2) !important;
+        color: #ffffff !important;
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+
       .data-table tr:hover:not(.is-selected) {
         background-color: var(--bg-secondary);
       }
 
-      /* Modal Layout Fixes */
-      .expense-modal .modal__panel--xl {
-        width: min(calc(100vw - 40px), 1100px);
-        max-height: calc(100vh - 40px);
-      }
-      
+      /* --- MODAL SPLIT FIX --- */
       .modal-form__body--split {
         display: grid;
         grid-template-columns: 1fr 340px;
-        gap: 2rem;
-        padding: 2rem;
+        gap: 2.5rem;
+        padding: 2.5rem;
         overflow-y: auto;
       }
       
-      /* Fix solapamiento Side Column */
       .modal-form__column--side {
-        display: block !important; /* Force block flow */
-        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1.5rem !important;
       }
       
       .modal-section--totals {
-        position: relative !important;
-        display: block !important;
-        width: 100% !important;
-        margin: 0 !important;
+        margin-top: auto;
+        border-top: 1px solid var(--border-color);
+        padding-top: 1.5rem;
       }
 
-      @media (max-width: 1024px) {
+      @media (max-width: 1100px) {
         .modal-form__body--split {
           grid-template-columns: 1fr;
         }
