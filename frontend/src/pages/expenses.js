@@ -611,7 +611,7 @@ async function openExpenseDrawer(expense) {
   if (!drawer) {
     const drawerHTML = `
       <div class="drawer-overlay" id="expense-drawer-overlay" onclick="window.closeExpenseDrawer()"></div>
-      <div class="expense-drawer" id="expense-drawer">
+      <div class="drawer expense-drawer" id="expense-drawer">
         <header class="drawer__header">
           <h2 class="drawer__title">Detalles del Gasto</h2>
           <button class="drawer__close" onclick="window.closeExpenseDrawer()">&times;</button>
@@ -1129,6 +1129,7 @@ function setupExpenseForm(form, expense) {
   const vatAmountInput = form.querySelector("#expense-vat-amount");
   const deductibleToggle = form.querySelector("#expense-deductible");
   const deductibleGroup = form.querySelector("#deductible-percentage-group");
+  const deductiblePercentageInput = form.querySelector("#expense-deductible-percentage");
   const descriptionInput = form.querySelector("#expense-description");
   const dateInput = form.querySelector("#expense-date");
   const categorySelect = form.querySelector("#expense-category");
@@ -1169,16 +1170,31 @@ function setupExpenseForm(form, expense) {
   syncTotals();
 
   // ✅ Toggle deducible
+  let lastDeductiblePercentage = deductiblePercentageInput?.value || "100";
   const toggleDeductibleFields = () => {
-    const isChecked = deductibleToggle.checked;
+    const isChecked = deductibleToggle?.checked;
     if (isChecked) {
       deductibleGroup.style.display = "flex";
+      if (deductiblePercentageInput) {
+        deductiblePercentageInput.disabled = false;
+        if (!deductiblePercentageInput.value || deductiblePercentageInput.value === "0") {
+          deductiblePercentageInput.value = lastDeductiblePercentage || "100";
+        }
+      }
     } else {
       deductibleGroup.style.display = "none";
+      if (deductiblePercentageInput) {
+        if (deductiblePercentageInput.value && deductiblePercentageInput.value !== "0") {
+          lastDeductiblePercentage = deductiblePercentageInput.value;
+        }
+        deductiblePercentageInput.value = "0";
+        deductiblePercentageInput.disabled = true;
+      }
     }
   };
 
   deductibleToggle?.addEventListener("change", toggleDeductibleFields);
+  toggleDeductibleFields();
 
   // ✅ GESTIÓN DE ARCHIVOS: Dropzone
   if (fileDropzone) {
@@ -1273,6 +1289,7 @@ function validateField(fieldId, form) {
 async function handleExpenseSubmitWithValidation(form) {
   const mode = form.dataset.mode || "create";
   const formData = new FormData(form);
+  const isDeductible = formData.get("isDeductible") === "on";
   
   const data = {
     expenseDate: formData.get("expenseDate"),
@@ -1282,8 +1299,10 @@ async function handleExpenseSubmitWithValidation(form) {
     amount: sanitizeNumber(formData.get("amount"), 0),
     vatPercentage: sanitizeNumber(formData.get("vatPercentage"), 21),
     vatAmount: sanitizeNumber(formData.get("vatAmount"), 0),
-    isDeductible: formData.get("isDeductible") === "on",
-    deductiblePercentage: sanitizeNumber(formData.get("deductiblePercentage"), 100),
+    isDeductible,
+    deductiblePercentage: isDeductible
+      ? sanitizeNumber(formData.get("deductiblePercentage"), 100)
+      : 0,
     paymentMethod: formData.get("paymentMethod"),
     vendor: formData.get("vendor"),
     notes: formData.get("notes"),
@@ -1327,7 +1346,8 @@ async function handleExpenseSubmitWithValidation(form) {
     loadExpenses();
   } catch (error) {
     console.error("Error al guardar gasto:", error);
-    showNotification(error.message || "Error al guardar el gasto", "error");
+    const errorMessage = error?.data?.error || error?.message || "Error al guardar el gasto";
+    showNotification(errorMessage, "error");
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = originalText;
@@ -1536,16 +1556,14 @@ export default function renderExpenses() {
       .data-table {
         width: 100%;
         border-collapse: collapse;
-        table-layout: fixed;
+        table-layout: auto;
       }
       
       .data-table th, .data-table td {
-        padding: 1.25rem 1rem !important;
+        padding: 1.1rem 1rem !important;
         font-size: 0.875rem !important;
         border-bottom: 1px solid var(--border-color);
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
       }
 
       .data-table th {
@@ -1557,16 +1575,24 @@ export default function renderExpenses() {
         font-size: 0.75rem !important;
       }
 
-      /* Anchos controlados */
-      .data-table th[data-column="date"], .data-table td[data-label="Fecha"] { width: 120px; }
-      .data-table th[data-column="category"], .data-table td[data-label="Categoría"] { width: 160px; }
-      .data-table th[data-column="amount"], .data-table td[data-label="Importe"] { width: 120px; text-align: right; }
-      .data-table th[data-column="isDeductible"], .data-table td[data-label="Deducible"] { width: 100px; text-align: center; }
-      .data-table th:last-child, .data-table td:last-child { width: 130px; text-align: right; }
+      .data-table th[data-column="amount"],
+      .data-table td[data-label="Importe"] {
+        text-align: right;
+      }
+
+      .data-table th:last-child,
+      .data-table td.table-actions {
+        text-align: right;
+        white-space: nowrap;
+      }
 
       .table-description {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
         font-weight: 600;
         color: var(--text-primary);
+        white-space: normal;
       }
 
       /* --- SELECCIÓN DE FILA: ESTILO NAVY (MATCH INVOICES) --- */
