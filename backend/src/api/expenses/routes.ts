@@ -82,7 +82,8 @@ router.put('/:id',
   [
     param('id').notEmpty(),
     body('amount').optional().isFloat({ min: 0 }),
-    body('expenseDate').optional().isISO8601()
+    body('expenseDate').optional().isISO8601(),
+    body('changeReason').notEmpty().isString().trim()
   ],
   expenseController.validate,
   expenseController.updateExpense

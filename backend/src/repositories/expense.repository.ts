@@ -179,7 +179,8 @@ export class ExpenseRepository extends BaseRepository<IExpense> {
     const originalExpense = originalResult.rows[0];
 
     // ✅ VALIDAR actualización
-    const validation = validateExpenseUpdate(updates, originalExpense);
+    const { changeReason, ...updateFields } = updates;
+    const validation = validateExpenseUpdate(updateFields, originalExpense);
     if (!validation.isValid) {
       throw new Error(`Validación fallida: ${validation.errors.join(', ')}`);
     }
@@ -205,7 +206,7 @@ export class ExpenseRepository extends BaseRepository<IExpense> {
     const values: any[] = [];
     let paramCount = 1;
 
-    Object.entries(updates).forEach(([key, value]) => {
+    Object.entries(updateFields).forEach(([key, value]) => {
       const column = allowedFields[key];
       if (column && value !== undefined) {
         fields.push(`${column} = $${paramCount}`);
@@ -233,14 +234,15 @@ export class ExpenseRepository extends BaseRepository<IExpense> {
     // ✅ AUDITORÍA: Registrar cambios
     await this.executeQuery(
       `INSERT INTO expense_audit_log (
-        expense_id, user_id, action, old_value, new_value, created_at
-      ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+        expense_id, user_id, action, old_value, new_value, change_reason, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
       [
         id,
         userId,
         'updated',
         JSON.stringify(originalExpense),
-        JSON.stringify(row)
+        JSON.stringify(row),
+        changeReason || 'Actualizaci¢n de gasto'
       ]
     );
 

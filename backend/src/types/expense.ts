@@ -54,4 +54,6 @@ export interface IExpenseCreate {
   notes?: string | null;
 }
 
-export interface IExpenseUpdate extends Partial<IExpenseCreate> {}
+export interface IExpenseUpdate extends Partial<IExpenseCreate> {
+  changeReason?: string | null;
+}

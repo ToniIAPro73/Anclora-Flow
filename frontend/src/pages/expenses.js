@@ -481,13 +481,13 @@ function renderExpenseRows() {
     
     return `
       <tr data-expense-id="${expense.id}" 
-          class="table-row-clickable ${isSelected ? 'is-selected' : ''}"
+          class="expenses-table__row table-row-clickable${isSelected ? ' is-selected' : ''}"
           onclick="handleExpenseRowClick(event, '${expense.id}')">
         <td data-label="Fecha" ${visibleColumns.date ? '' : 'hidden'}>
           <time datetime="${expense.expenseDate || expense.expense_date}">${formatDate(expense.expenseDate || expense.expense_date)}</time>
         </td>
         <td data-label="Categoría" ${visibleColumns.category ? '' : 'hidden'}>
-          <span class="category-pill">${EXPENSE_CATEGORIES[expense.category] || expense.category}</span>
+          <span class="category-text">${EXPENSE_CATEGORIES[expense.category] || expense.category}</span>
         </td>
         <td data-label="Descripción" ${visibleColumns.description ? '' : 'hidden'}>
           <div class="table-description">
@@ -496,11 +496,10 @@ function renderExpenseRows() {
           </div>
         </td>
         <td data-label="Importe" ${visibleColumns.amount ? '' : 'hidden'}>
-          <span class="table-amount">${formatCurrency(expense.amount)}</span>
+          <span class="expenses-table__amount">${formatCurrency(expense.amount)}</span>
         </td>
         <td data-label="Deducible" ${visibleColumns.isDeductible ? '' : 'hidden'}>
-          <span class="status-pill status-pill--${isDeductible ? 'success' : 'neutral'}">
-            <span class="status-pill__dot"></span>
+          <span class="deductible-text deductible-text--${isDeductible ? 'yes' : 'no'}">
             ${isDeductible ? 'SÍ' : 'NO'}
           </span>
         </td>
@@ -510,8 +509,8 @@ function renderExpenseRows() {
         <td data-label="Proyecto" class="hide-mobile" ${visibleColumns.projectName ? '' : 'hidden'}>
           ${expense.projectName || '-'}
         </td>
-        <td data-label="ACCIONES" class="table-actions">
-           <div style="display: flex; gap: 0.25rem; justify-content: flex-end;">
+        <td data-label="ACCIONES" class="expenses-table__actions">
+           <div class="table-actions" style="display: flex; gap: 0.35rem; justify-content: flex-end; width: 100%;">
             <button type="button" class="btn-ghost btn-sm" onclick="viewExpense('${expense.id}')" title="Ver detalle">👁️</button>
             <button type="button" class="btn-ghost btn-sm" onclick="openExpenseModal('edit', '${expense.id}')" title="Editar">✏️</button>
             <button type="button" class="btn-ghost btn-sm btn-ghost--danger" onclick="confirmDeleteExpense('${expense.id}')" title="Eliminar">🗑️</button>
@@ -847,6 +846,7 @@ function scheduleExpenseReload() {
 async function openExpenseModal(mode = "create", expenseId = null) {
   activeExpenseId = expenseId;
   let expense = null;
+  let auditLog = [];
 
   if ((mode === "edit" || mode === "view") && expenseId) {
     try {
@@ -858,7 +858,15 @@ async function openExpenseModal(mode = "create", expenseId = null) {
     }
   }
 
-  const modalHtml = buildExpenseModalHtml(mode, expense);
+  if (mode === "view" && expenseId) {
+    try {
+      auditLog = await fetchExpenseAuditLog(expenseId);
+    } catch (error) {
+      console.error("Error obteniendo historial de gasto:", error);
+    }
+  }
+
+  const modalHtml = buildExpenseModalHtml(mode, expense, auditLog);
   document.body.insertAdjacentHTML("beforeend", modalHtml);
 
   const modal = document.getElementById("expense-modal");
@@ -890,7 +898,7 @@ function closeExpenseModal() {
   activeExpenseId = null;
 }
 
-function buildExpenseModalHtml(mode, expense) {
+function buildExpenseModalHtml(mode, expense, auditLog = []) {
   const isEdit = mode === "edit" && expense;
   const isView = mode === "view" && expense;
   const title = isEdit ? "Editar gasto" : "Registrar nuevo gasto";
@@ -907,6 +915,8 @@ function buildExpenseModalHtml(mode, expense) {
   const vatAmountValue = expense ? sanitizeNumber(expense.vat_amount ?? expense.vatAmount, 0) : 0;
   const deductiblePercentageValue = expense ? sanitizeNumber(expense.deductible_percentage ?? expense.deductiblePercentage, 100) : 100;
   const isDeductibleChecked = expense ? (expense.is_deductible ?? expense.isDeductible ?? true ? "checked" : "") : "checked";
+
+  const normalizedAuditLog = Array.isArray(auditLog) ? auditLog : [];
 
   return `
     <div class="modal is-open expense-modal invoice-modal" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
@@ -1007,6 +1017,12 @@ function buildExpenseModalHtml(mode, expense) {
                       <small style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.25rem;">Depende de la categoría y uso profesional.</small>
                     </label>
                   </div>
+                  ${isEdit ? `
+                    <label class="form-field">
+                      <span>Motivo del cambio (Obligatorio)</span>
+                      <input type="text" id="expense-change-reason" name="changeReason" class="form-input" placeholder="Ej: Error en el importe, cambio de proveedor..." ${isReadOnly ? 'readonly' : 'required'} />
+                    </label>
+                  ` : ''}
                 </div>
               </section>
 
@@ -1067,6 +1083,29 @@ function buildExpenseModalHtml(mode, expense) {
                   </div>
                 </div>
               </section>
+              ${isView ? `
+                <section class="modal-section modal-section--card">
+                  <div class="modal-section__header">
+                    <h3 class="modal-section__title">Registro de actividad</h3>
+                  </div>
+                  <div class="invoice-activity">
+                    ${normalizedAuditLog.length > 0 ? normalizedAuditLog.map((log) => `
+                      <div class="activity-log-item">
+                        <div class="activity-log-item__dot"></div>
+                        <div class="activity-log-item__content">
+                          <div class="activity-log-item__action">
+                            <strong>${String(log.action || '').toLowerCase() === 'updated' ? 'Actualizaci¢n' : String(log.action || '').toLowerCase() === 'created' ? 'Creaci¢n' : (log.action || 'Actualizaci¢n')}</strong>
+                          </div>
+                          ${(log.change_reason || log.changeReason) ? `<div class="activity-log-item__reason">${escapeHtml(log.change_reason || log.changeReason)}</div>` : ''}
+                          <div class="activity-log-item__footer">
+                            <span>${formatDate(log.created_at || log.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    `).join('') : '<p class="empty-state">Sin actividad registrada.</p>'}
+                  </div>
+                </section>
+              ` : ''}
             </div>
           </div>
           
@@ -1320,6 +1359,7 @@ async function handleExpenseSubmitWithValidation(form) {
   const mode = form.dataset.mode || "create";
   const formData = new FormData(form);
   const isDeductible = formData.get("isDeductible") === "on";
+  const changeReason = (formData.get("changeReason") || "").trim();
   
   const data = {
     expenseDate: formData.get("expenseDate"),
@@ -1349,6 +1389,12 @@ async function handleExpenseSubmitWithValidation(form) {
     return;
   }
 
+  if (mode !== "create" && !changeReason) {
+    setFieldError("expense-change-reason", "El motivo del cambio es obligatorio");
+    showNotification("El motivo del cambio es obligatorio para editar el gasto", "warning");
+    return;
+  }
+
   const submitBtn = form.querySelector('button[type="submit"]');
   const originalText = submitBtn.textContent;
 
@@ -1361,6 +1407,7 @@ async function handleExpenseSubmitWithValidation(form) {
       result = await window.api.createExpense(data);
       showNotification("Gasto registrado correctamente", "success");
     } else {
+      data.changeReason = changeReason;
       result = await window.api.updateExpense(activeExpenseId, data);
       showNotification("Gasto actualizado correctamente", "success");
     }
@@ -1439,6 +1486,21 @@ async function viewExpense(expenseId) {
     console.error("Error mostrando gasto:", error);
     showNotification("No se pudo mostrar el detalle del gasto", "error");
   }
+}
+
+async function fetchExpenseAuditLog(expenseId) {
+  const response = await fetch(`${window.api.getBaseUrl()}/expenses/${expenseId}/audit-log`, {
+    headers: {
+      'Authorization': `Bearer ${window.api.getAuthToken()}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo obtener el historial');
+  }
+
+  const data = await response.json();
+  return data.auditLog || [];
 }
 
 async function viewExpenseAuditLog(expenseId) {
@@ -1563,7 +1625,7 @@ export default function renderExpenses() {
       }
 
       .expenses-table table {
-        min-width: 0;
+        min-width: 780px;
       }
 
       .btn-config-columns {
@@ -1690,6 +1752,14 @@ export default function renderExpenses() {
       .expenses .data-table tr.is-selected td {
         color: var(--text-primary) !important;
         border-bottom-color: var(--border-color);
+        box-shadow: none !important;
+      }
+
+      .expenses .data-table tr.is-selected .table-amount,
+      .expenses .data-table tr.is-selected .table-description,
+      .expenses .data-table tr.is-selected .table-description strong,
+      .expenses .data-table tr.is-selected .table-vendor {
+        color: var(--text-primary) !important;
       }
 
       .expenses .data-table tr.is-selected::before {
@@ -1698,9 +1768,10 @@ export default function renderExpenses() {
 
       .expenses .data-table tr.is-selected .category-pill,
       .expenses .data-table tr.is-selected .status-pill {
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-        border-color: var(--border-color);
+        background: transparent !important;
+        color: var(--text-primary) !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
       }
 
       [data-theme="dark"] .expenses .data-table tr.is-selected {
@@ -1710,10 +1781,60 @@ export default function renderExpenses() {
       [data-theme="dark"] .expenses .data-table tr.is-selected td {
         color: var(--text-primary) !important;
         border-bottom-color: rgba(255, 255, 255, 0.1);
+        box-shadow: none !important;
+      }
+
+      .expenses .data-table th:last-child,
+      .expenses .data-table td.table-actions {
+        padding-right: 1.5rem;
+      }
+
+      .expenses .table-actions > div {
+        margin-right: 0.25rem;
+      }
+
+      .expenses .data-table th,
+      .expenses .data-table td {
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+      }
+
+      .expenses .data-table th:last-child {
+        white-space: normal;
+      }
+
+      .expenses-table tbody td:last-child {
+        border-bottom: none !important;
+      }
+
+      .expenses .table-container {
+        overflow: visible;
       }
 
       .expense-modal .modal__panel {
-        background: var(--bg-surface);
+        background: linear-gradient(
+          160deg,
+          rgba(255, 255, 255, 0.98) 0%,
+          rgba(241, 245, 255, 0.96) 100%
+        ) !important;
+      }
+
+      .expense-modal .modal-section--card {
+        background: var(--bg-secondary) !important;
+        border-color: var(--border-color) !important;
+      }
+
+      [data-theme="dark"] .expense-modal .modal__panel {
+        background: linear-gradient(
+          160deg,
+          rgba(15, 23, 42, 0.98) 0%,
+          rgba(2, 6, 23, 0.99) 100%
+        ) !important;
+      }
+
+      [data-theme="dark"] .expense-modal .modal-section--card {
+        background: rgba(15, 23, 42, 0.9) !important;
+        border-color: rgba(148, 163, 184, 0.2) !important;
       }
 
       /* --- MODAL SPLIT FIX --- */
@@ -1741,6 +1862,274 @@ export default function renderExpenses() {
         .modal-form__body--split {
           grid-template-columns: 1fr;
         }
+      }
+      /* Table alignment fixes to match base tables */
+      .expenses .table-container {
+        overflow: visible !important;
+      }
+
+      .expenses .table-toolbar {
+        padding: 1rem !important;
+        gap: 12px !important;
+      }
+
+      .expenses .table-toolbar .search-input {
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px !important;
+        max-width: none !important;
+      }
+
+      .expenses .data-table th,
+      .expenses .data-table td {
+        padding: 1.05rem 1.5rem !important;
+        font-size: 0.9rem !important;
+        white-space: normal !important;
+      }
+
+      .expenses .data-table th {
+        font-size: 0.8rem !important;
+      }
+
+      .expenses .data-table th[data-column="amount"],
+      .expenses .data-table td[data-label="Importe"],
+      .expenses .data-table td.expenses-table__actions {
+        white-space: nowrap !important;
+      }
+
+      .expenses .data-table thead th {
+        background: rgba(51, 102, 255, 0.06) !important;
+        color: rgba(30, 41, 59, 0.65) !important;
+        letter-spacing: 0.08em !important;
+        text-transform: uppercase !important;
+        font-weight: 700 !important;
+      }
+
+      [data-theme="dark"] .expenses .data-table thead th {
+        background: rgba(15, 23, 42, 0.65) !important;
+        color: rgba(226, 232, 240, 0.65) !important;
+      }
+
+      .expenses .data-table tbody td {
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15) !important;
+        border-right: 1px solid rgba(148, 163, 184, 0.15) !important;
+        font-weight: 500 !important;
+      }
+
+      [data-theme="dark"] .expenses .data-table tbody td {
+        border-bottom-color: rgba(71, 85, 105, 0.35) !important;
+        border-right-color: rgba(71, 85, 105, 0.35) !important;
+      }
+
+      .expenses .data-table tbody td.expenses-table__actions {
+        border-bottom: none !important;
+        border-right: none !important;
+      }
+
+      .expenses .expenses-table__row:hover {
+        background: rgba(51, 102, 255, 0.05) !important;
+      }
+
+      [data-theme="dark"] .expenses .expenses-table__row:hover {
+        background: rgba(51, 102, 255, 0.16) !important;
+      }
+
+      .expenses .data-table tr.is-selected {
+        background: rgba(59, 130, 246, 0.15) !important;
+      }
+
+      [data-theme="dark"] .expenses .data-table tr.is-selected {
+        background: rgba(37, 99, 235, 0.35) !important;
+      }
+
+      .expenses .data-table tr.is-selected td {
+        color: var(--text-primary) !important;
+        box-shadow: inset 0 0 0 1px rgba(51, 102, 255, 0.16) !important;
+      }
+
+      [data-theme="dark"] .expenses .data-table tr.is-selected td {
+        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25) !important;
+      }
+
+      .expenses .data-table tr.is-selected td.expenses-table__actions {
+        box-shadow: none !important;
+      }
+
+      .expenses .data-table tr.is-selected::before {
+        display: none !important;
+      }
+
+      .expenses .category-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        background: rgba(51, 102, 255, 0.08);
+        border: 1px solid rgba(51, 102, 255, 0.18);
+      }
+
+      [data-theme="dark"] .expenses .category-pill {
+        background: rgba(51, 102, 255, 0.18);
+        border-color: rgba(148, 163, 184, 0.2);
+      }
+
+      .expenses .status-pill--success {
+        color: #16a34a;
+        background: rgba(34, 197, 94, 0.12);
+      }
+
+      .expenses .status-pill--neutral {
+        color: #64748b;
+        background: rgba(100, 116, 139, 0.12);
+      }
+
+      [data-theme="dark"] .expenses .status-pill--success {
+        color: #22c55e;
+        background: rgba(34, 197, 94, 0.2);
+      }
+
+      [data-theme="dark"] .expenses .status-pill--neutral {
+        color: #94a3b8;
+        background: rgba(148, 163, 184, 0.15);
+      }
+
+      .expenses .data-table tr.is-selected .category-pill {
+        color: var(--text-primary) !important;
+        background: rgba(51, 102, 255, 0.08) !important;
+        border-color: rgba(51, 102, 255, 0.18) !important;
+      }
+
+      [data-theme="dark"] .expenses .data-table tr.is-selected .category-pill {
+        background: rgba(51, 102, 255, 0.18) !important;
+        border-color: rgba(148, 163, 184, 0.2) !important;
+      }
+
+      .expenses .data-table tr.is-selected .status-pill--success {
+        color: #16a34a !important;
+        background: rgba(34, 197, 94, 0.12) !important;
+      }
+
+      .expenses .data-table tr.is-selected .status-pill--neutral {
+        color: #64748b !important;
+        background: rgba(100, 116, 139, 0.12) !important;
+      }
+
+      [data-theme="dark"] .expenses .data-table tr.is-selected .status-pill--success {
+        color: #22c55e !important;
+        background: rgba(34, 197, 94, 0.2) !important;
+      }
+
+      [data-theme="dark"] .expenses .data-table tr.is-selected .status-pill--neutral {
+        color: #94a3b8 !important;
+        background: rgba(148, 163, 184, 0.15) !important;
+      }
+
+      .expenses .data-table .category-pill,
+      .expenses .data-table .status-pill {
+        display: inline !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        font-weight: 600 !important;
+      }
+
+      .expenses .data-table .status-pill__dot {
+        display: none !important;
+      }
+
+      .expenses .data-table th:last-child {
+        text-align: left !important;
+        padding-left: 1rem !important;
+        padding-right: 1.5rem !important;
+        min-width: 220px;
+      }
+
+      .expenses .data-table td.expenses-table__actions {
+        text-align: left !important;
+        padding-left: 1rem !important;
+        padding-right: 1.5rem !important;
+        min-width: 220px;
+      }
+
+      .expenses .table-container {
+        padding-right: 0 !important;
+        box-sizing: border-box;
+      }
+
+      .expenses .expenses-table-container {
+        width: 100%;
+      }
+
+      .expenses .data-table td.expenses-table__actions .table-actions {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        column-gap: 0.35rem;
+        row-gap: 0.35rem;
+        padding-left: 0.5rem;
+        padding-right: 0.25rem;
+      }
+
+      .app-shell:not(.is-collapsed) .expenses .data-table td.expenses-table__actions .table-actions {
+        transform: translateX(-8px);
+      }
+
+      .app-shell.is-collapsed .expenses .data-table td.expenses-table__actions .table-actions {
+        flex-wrap: nowrap;
+        max-width: none;
+      }
+
+      .app-shell:not(.is-collapsed) .expenses .data-table td.expenses-table__actions .table-actions {
+        max-width: 128px;
+      }
+
+      .expenses .table-container {
+        overflow: visible !important;
+      }
+
+      .expenses .data-table {
+        table-layout: auto;
+      }
+
+      .expenses .data-table td .category-pill,
+      .expenses .data-table td .status-pill {
+        background-color: transparent !important;
+        border-color: transparent !important;
+        border-width: 0 !important;
+        outline: none !important;
+      }
+
+      .expenses .category-text {
+        font-weight: 600;
+        color: var(--text-primary);
+        background: transparent;
+        border: 0;
+      }
+
+      .expenses .deductible-text {
+        font-weight: 600;
+        background: transparent;
+        border: 0;
+      }
+
+      .expenses .deductible-text--yes {
+        color: #16a34a;
+      }
+
+      .expenses .deductible-text--no {
+        color: #64748b;
+      }
+
+      [data-theme="dark"] .expenses .deductible-text--yes {
+        color: #22c55e;
+      }
+
+      [data-theme="dark"] .expenses .deductible-text--no {
+        color: #94a3b8;
       }
     </style>
 

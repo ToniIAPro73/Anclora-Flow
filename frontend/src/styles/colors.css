@@ -4585,6 +4585,20 @@ table tr[hidden] {
   color: var(--text-secondary);
 }
 
+[data-theme="dark"] .history-item {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme="dark"] .history-item__title {
+  color: var(--text-dark-primary);
+}
+
+[data-theme="dark"] .history-item__date,
+[data-theme="dark"] .history-item__meta {
+  color: var(--text-dark-secondary);
+}
+
 /* Registro de Actividad (Timeline) */
 .invoice-activity {
   display: flex;
