@@ -25,16 +25,16 @@ const clientsState = {
   clients: [],
   projects: [],
   clientSummary: {
-    total_clients: 0,
-    active_clients: 0,
-    total_pending: 0,
-    total_billed: 0,
+    totalClients: 0,
+    activeClients: 0,
+    totalPending: 0,
+    totalBilled: 0,
   },
   projectSummary: {
-    total_projects: 0,
-    active_projects: 0,
-    total_budget: 0,
-    total_invoiced: 0,
+    totalProjects: 0,
+    activeProjects: 0,
+    totalBudget: 0,
+    totalInvoiced: 0,
   },
   recentClients: [],
   upcomingDeadlines: [],
@@ -504,16 +504,16 @@ async function loadClients() {
     name: client.name,
     email: client.email,
     phone: client.phone,
-    nifCif: client.nif_cif,
+    nifCif: client.nifCif,
     city: client.city,
     notes: client.notes,
-    isActive: client.is_active,
-    totalInvoiced: client.total_invoiced ?? 0,
-    totalPending: client.total_pending ?? 0,
-    projectsCount: client.projects_count ?? 0,
-    subscriptionsCount: client.subscriptions_count ?? 0,
-    invoiceCount: client.invoice_count ?? 0,
-    createdAt: client.created_at,
+    isActive: client.isActive,
+    totalInvoiced: client.totalInvoiced ?? 0,
+    totalPending: client.totalPending ?? 0,
+    projectsCount: client.projectsCount ?? 0,
+    subscriptionsCount: client.subscriptionsCount ?? 0,
+    invoiceCount: client.invoiceCount ?? 0,
+    createdAt: client.createdAt,
   }));
 }
 
@@ -522,15 +522,15 @@ async function loadProjects() {
   const { projects = [] } = response || {};
   clientsState.projects = projects.map((project) => ({
     id: String(project.id),
-    clientId: project.client_id ? String(project.client_id) : null,
-    clientName: project.client_name,
+    clientId: project.clientId ? String(project.clientId) : null,
+    clientName: project.clientName,
     name: project.name,
     status: project.status,
     budget: project.budget,
-    totalInvoiced: project.total_invoiced ?? 0,
-    invoiceCount: project.invoice_count ?? 0,
-    startDate: project.start_date,
-    endDate: project.end_date,
+    totalInvoiced: project.totalInvoiced ?? 0,
+    invoiceCount: project.invoiceCount ?? 0,
+    startDate: project.startDate,
+    endDate: project.endDate,
     description: project.description,
     color: project.color,
   }));
@@ -548,30 +548,29 @@ function renderSummaryCards() {
   const projectRevenue = document.getElementById("projects-summary-revenue");
 
   if (clientTotals)
-    clientTotals.textContent = clientsState.clientSummary.total_clients ?? 0;
+    clientTotals.textContent = clientsState.clientSummary.totalClients ?? 0;
   if (clientActive)
-    clientActive.textContent = clientsState.clientSummary.active_clients ?? 0;
+    clientActive.textContent = clientsState.clientSummary.activeClients ?? 0;
   if (clientPending)
     clientPending.textContent = formatCurrency(
-      clientsState.clientSummary.total_pending ?? 0,
+      clientsState.clientSummary.totalPending ?? 0,
     );
   if (clientRevenue)
     clientRevenue.textContent = formatCurrency(
-      clientsState.clientSummary.total_billed ?? 0,
+      clientsState.clientSummary.totalBilled ?? 0,
     );
 
   if (projectTotals)
-    projectTotals.textContent = clientsState.projectSummary.total_projects ?? 0;
+    projectTotals.textContent = clientsState.projectSummary.totalProjects ?? 0;
   if (projectActive)
-    projectActive.textContent =
-      clientsState.projectSummary.active_projects ?? 0;
+    projectActive.textContent = clientsState.projectSummary.activeProjects ?? 0;
   if (projectBudget)
     projectBudget.textContent = formatCurrency(
-      clientsState.projectSummary.total_budget ?? 0,
+      clientsState.projectSummary.totalBudget ?? 0,
     );
   if (projectRevenue)
     projectRevenue.textContent = formatCurrency(
-      clientsState.projectSummary.total_invoiced ?? 0,
+      clientsState.projectSummary.totalInvoiced ?? 0,
     );
 }
 
@@ -587,7 +586,7 @@ function renderClientsTable() {
   // 1. TOOLBAR
   const toolbarHTML = `
     <div class="table-toolbar" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; padding: 1.25rem 1.5rem;">
-      <button class="btn-config-columns" onclick="window.openClientColumnConfigModal()" title="Configurar qué columnas mostrar" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--border-color); border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+      <button class="btn-config-columns" onclick="window.openClientColumnConfigModal()" title="Configurar qué columnas mostrar" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 1.2rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--text-primary);">
         <span>⚙️</span>
         <span>Columnas</span>
       </button>
@@ -598,7 +597,7 @@ function renderClientsTable() {
         placeholder="Buscar clientes..."
         value="${clientsState.clientFilters.search || ""}"
         oninput="window.handleClientsTableSearch(this.value)"
-        style="flex: 1; padding: 0.75rem 1.25rem; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-secondary); font-size: 0.95rem;"
+        style="flex: 1; padding: 0.75rem 1.25rem; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-secondary); font-size: 0.95rem; color: var(--text-primary);"
       >
       <div style="flex: 1;"></div>
     </div>
@@ -1293,24 +1292,24 @@ function openClientColumnConfigModal() {
   let modal = document.getElementById("client-column-config-modal");
   if (!modal) {
     const modalHTML = `
-      <div class="modal is-open" id="client-column-config-modal" style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); z-index: 1000;">
-        <div class="modal__backdrop" onclick="window.closeClientColumnConfigModal()" style="position: absolute; inset: 0;"></div>
-        <div class="modal__panel modal__panel--md" style="position: relative; background: white; border-radius: 12px; box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15); max-width: 500px; max-height: 80vh; display: flex; flex-direction: column;">
-          <header class="modal__head" style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+      <div class="modal is-open" id="client-column-config-modal">
+        <div class="modal__backdrop" onclick="window.closeClientColumnConfigModal()"></div>
+        <div class="modal__panel modal__panel--md modal__panel--flex">
+          <header class="modal__head">
             <div>
-              <h2 class="modal__title" style="font-size: 1.25rem; font-weight: 600; margin: 0;">Configurar Columnas</h2>
-              <p class="modal__subtitle" style="margin: 0.25rem 0 0; font-size: 0.875rem; color: var(--text-secondary);">Selecciona qué columnas mostrar en la tabla</p>
+              <h2 class="modal__title">Configurar Columnas</h2>
+              <p class="modal__subtitle">Selecciona qué columnas mostrar en la tabla</p>
             </div>
-            <button class="modal__close" onclick="window.closeClientColumnConfigModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <button class="modal__close" onclick="window.closeClientColumnConfigModal()">&times;</button>
           </header>
-          <div class="modal__body" style="padding: 1.5rem; overflow-y: auto; flex: 1;">
-            <div class="column-options-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+          <div class="modal__body">
+            <div class="column-options-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; padding: 0.5rem;">
               ${Object.keys(CLIENT_COLUMNS)
                 .map((key) => {
                   const label = CLIENT_COLUMNS[key];
                   const isFixed = key === "name"; // Nombre siempre visible
                   return `
-                  <label class="column-option-card" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(51, 102, 255, 0.05); border: 1px solid rgba(51, 102, 255, 0.15); border-radius: 12px; cursor: ${isFixed ? "not-allowed" : "pointer"}; transition: all 0.2s;" ${isFixed ? 'title="Esta columna es obligatoria"' : ""}>
+                  <label class="column-option-card" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: rgba(51, 102, 255, 0.05); border: 1px solid rgba(51, 102, 255, 0.15); border-radius: 12px; cursor: ${isFixed ? "not-allowed" : "pointer"}; transition: all 0.2s;" ${isFixed ? 'title="Esta columna es obligatoria"' : ""}>
                     <input type="checkbox" id="col-${key}" ${visibleColumnsClients[key] ? "checked" : ""} ${isFixed ? "disabled" : ""} style="width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6;">
                     <span style="font-weight: 500; font-size: 0.95rem; flex: 1;">${label}${isFixed ? " (Obligatoria)" : ""}</span>
                   </label>
@@ -1319,11 +1318,11 @@ function openClientColumnConfigModal() {
                 .join("")}
             </div>
           </div>
-          <footer class="modal-form__footer" style="padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; gap: 1rem;">
-            <button type="button" class="btn-secondary" onclick="window.resetClientColumnConfig()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: transparent; border-radius: 8px; cursor: pointer;">Restablecer</button>
+          <footer class="modal-form__footer" style="padding-top: 1.5rem; margin-top: auto;">
+            <button type="button" class="btn btn-ghost" onclick="window.resetClientColumnConfig()" style="margin-right: auto;">Restablecer</button>
             <div style="display: flex; gap: 0.75rem;">
-              <button type="button" class="btn-secondary" onclick="window.closeClientColumnConfigModal()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: transparent; border-radius: 8px; cursor: pointer;">Cancelar</button>
-              <button type="button" class="btn-primary" onclick="window.applyClientColumnConfig()" style="padding: 0.5rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Aplicar</button>
+              <button type="button" class="btn btn-secondary" onclick="window.closeClientColumnConfigModal()">Cancelar</button>
+              <button type="button" class="btn btn-primary" onclick="window.applyClientColumnConfig()">Aplicar cambios</button>
             </div>
           </footer>
         </div>
@@ -1331,9 +1330,9 @@ function openClientColumnConfigModal() {
     `;
     document.body.insertAdjacentHTML("beforeend", modalHTML);
     modal = document.getElementById("client-column-config-modal");
+  } else {
+    modal.classList.add("is-open");
   }
-  modal.classList.add("is-open");
-  modal.style.display = "flex";
 }
 
 function closeClientColumnConfigModal() {

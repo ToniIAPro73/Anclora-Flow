@@ -17,7 +17,7 @@ const PAGE_SIZE = 10;
 let currentPage = 1;
 let selectedExpenseId = null;
 
-let visibleColumns = {
+const DEFAULT_EXPENSE_COLUMNS = {
   date: true,
   category: true,
   description: true,
@@ -26,6 +26,8 @@ let visibleColumns = {
   paymentMethod: false,
   projectName: false
 };
+
+let visibleColumns = { ...DEFAULT_EXPENSE_COLUMNS };
 
 const EXPENSE_COLUMNS = {
   date: 'Fecha',
@@ -730,6 +732,7 @@ function openExpenseColumnConfigModal() {
             </div>
           </div>
           <footer class="modal-form__footer" style="padding-top: 1.5rem; margin-top: auto;">
+            <button type="button" class="btn btn-ghost" onclick="window.resetExpenseColumnConfig()">Restablecer</button>
             <button type="button" class="btn btn-secondary" onclick="window.closeExpenseColumnConfigModal()">Cancelar</button>
             <button type="button" class="btn btn-primary" onclick="window.applyExpenseColumnConfig()">Aplicar cambios</button>
           </footer>
@@ -757,6 +760,18 @@ function applyExpenseColumnConfig() {
   renderExpensesTable();
   closeExpenseColumnConfigModal();
   showNotification('Columnas actualizadas', 'success');
+}
+
+function resetExpenseColumnConfig() {
+  visibleColumns = { ...DEFAULT_EXPENSE_COLUMNS };
+  Object.keys(visibleColumns).forEach(key => {
+    const input = document.getElementById(`exp-col-${key}`);
+    if (input) {
+      input.checked = visibleColumns[key];
+    }
+  });
+  renderExpensesTable();
+  showNotification('Columnas restablecidas', 'success');
 }
 
 function getCategoryIcon(category) {
@@ -2241,6 +2256,7 @@ export function initExpenses() {
   window.confirmDeleteExpense = confirmDeleteExpense;
   window.viewExpenseAuditLog = viewExpenseAuditLog;
   window.applyExpenseColumnConfig = applyExpenseColumnConfig;
+  window.resetExpenseColumnConfig = resetExpenseColumnConfig;
   window.closeExpenseColumnConfigModal = () => {
     const modal = document.getElementById("expense-column-config-modal");
     if (modal) modal.remove();

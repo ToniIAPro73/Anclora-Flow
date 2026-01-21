@@ -14,7 +14,7 @@ let currentFilters = {
 // --- ESTADO DE PAGINACIÓN Y COLUMNAS (Fase 4) ---
 let currentPage = 1;
 const PAGE_SIZE = 10;
-let visibleColumns = {
+const DEFAULT_INVOICE_COLUMNS = {
   number: true,
   client: true,
   issueDate: false,
@@ -24,6 +24,8 @@ let visibleColumns = {
   verifactu: false,
   days: false
 };
+
+let visibleColumns = { ...DEFAULT_INVOICE_COLUMNS };
 
 // Estado temporal para formularios de edición/creación
 let invoiceEditState = null;
@@ -3021,6 +3023,7 @@ function openColumnConfigModal() {
             </div>
           </div>
           <footer class="modal-form__footer" style="padding-top: 1.5rem; margin-top: auto;">
+            <button type="button" class="btn-ghost" onclick="resetColumnConfig()">Restablecer</button>
             <button type="button" class="btn-secondary" onclick="closeColumnConfigModal()">Cancelar</button>
             <button type="button" class="btn-primary" onclick="applyColumnConfig()">Aplicar cambios</button>
           </footer>
@@ -3055,6 +3058,18 @@ function applyColumnConfig() {
   showNotification('Columnas actualizadas correctamente', 'success');
 }
 
+function resetColumnConfig() {
+  visibleColumns = { ...DEFAULT_INVOICE_COLUMNS };
+  Object.keys(visibleColumns).forEach(key => {
+    const input = document.getElementById(`col-${key}`);
+    if (input) {
+      input.checked = visibleColumns[key];
+    }
+  });
+  renderInvoicesTable();
+  showNotification('Columnas restablecidas', 'success');
+}
+
 // === INICIALIZACIÓN ===
 
 export function initInvoicesPage() {
@@ -3087,6 +3102,7 @@ export function initInvoicesPage() {
   window.openColumnConfigModal = openColumnConfigModal;
   window.closeColumnConfigModal = closeColumnConfigModal;
   window.applyColumnConfig = applyColumnConfig;
+  window.resetColumnConfig = resetColumnConfig;
   window.handleTableSearch = handleTableSearch;
   window.changePage = changePage;
   window.goToPage = goToPage;
