@@ -1,3 +1,25 @@
+const CLIENT_COLUMNS = {
+  name: 'Nombre',
+  email: 'Email',
+  phone: 'Teléfono',
+  nifCif: 'NIF/CIF',
+  totalInvoiced: 'Facturación',
+  projectsCount: 'Proyectos',
+  isActive: 'Estado',
+};
+
+const DEFAULT_VISIBLE_COLUMNS = {
+  name: true,
+  email: false,
+  phone: false,
+  nifCif: false,
+  totalInvoiced: true,
+  projectsCount: true,
+  isActive: true,
+};
+
+let visibleColumnsClients = { ...DEFAULT_VISIBLE_COLUMNS };
+
 const clientsState = {
   activeTab: 'clients',
   clients: [],
@@ -515,27 +537,57 @@ function renderSummaryCards() {
 }
 
 function renderClientsTable() {
-  const tbody = document.querySelector('[data-clients-table]');
-  if (!tbody) return;
+  const container = document.querySelector('.clients-table-container');
+  if (!container) return;
 
   const total = clientsState.clients.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (clientsPage > totalPages) clientsPage = totalPages;
   if (clientsPage < 1) clientsPage = 1;
 
-  const countEl = document.querySelector('[data-clients-count]');
+  // 1. TOOLBAR
+  const toolbarHTML = `
+    <div class="table-toolbar" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 0.5rem 0;">
+      <button class="btn-config-columns" onclick="window.openClientColumnConfigModal()" title="Configurar qué columnas mostrar" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--border-color); border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+        <span>⚙️</span>
+        <span>Columnas</span>
+      </button>
+      <input 
+        type="text" 
+        id="clients-table-search"
+        class="search-input" 
+        placeholder="Buscar clientes..."
+        value="${clientsState.clientFilters.search || ''}"
+        oninput="window.handleClientsTableSearch(this.value)"
+        style="flex: 1; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 8px;"
+      >
+      <div style="flex: 1;"></div>
+    </div>
+  `;
+
+  // 2. TABLA
+  const visibleCols = Object.keys(visibleColumnsClients)
+    .filter(key => visibleColumnsClients[key] && key !== 'actions');
+
+  const headerHTML = `
+    <tr>
+      ${visibleCols.map(col => `<th scope="col">${CLIENT_COLUMNS[col]}</th>`).join('')}
+      <th scope="col">ACCIONES</th>
+    </tr>
+  `;
+
   const start = total === 0 ? 0 : (clientsPage - 1) * PAGE_SIZE + 1;
   const end = Math.min(clientsPage * PAGE_SIZE, total);
-  if (countEl) {
-    countEl.textContent = total
-      ? `Mostrando ${start}-${end} de ${total} ${total === 1 ? 'cliente' : 'clientes'}`
-      : 'Sin clientes disponibles';
-  }
+  const countText = total
+    ? `Mostrando ${start}-${end} de ${total} ${total === 1 ? 'cliente' : 'clientes'}`
+    : 'Sin clientes disponibles';
 
+  let tableBodyHTML = '';
   if (!clientsState.clients.length) {
-    tbody.innerHTML = `
+    const colSpan = visibleCols.length + 1;
+    tableBodyHTML = `
       <tr>
-        <td colspan="8">
+        <td colspan="${colSpan}">
           <div class="empty-state">
             <span class="empty-state__icon">🧾</span>
             <h3>Sin clientes registrados</h3>
@@ -545,53 +597,83 @@ function renderClientsTable() {
         </td>
       </tr>
     `;
-    renderClientsPagination(totalPages);
-    return;
+  } else {
+    const rows = clientsState.clients.slice(start - 1, start - 1 + PAGE_SIZE);
+    tableBodyHTML = rows
+      .map((client) => {
+        const isSelected = client.id === clientsState.selectedClientId;
+        const cells = visibleCols.map(col => {
+          switch(col) {
+            case 'name':
+              return `<td>
+                <div class="table-cell--main">
+                  <strong>${escapeHtml(client.name)}</strong>
+                  ${client.city ? `<span class="meta">${escapeHtml(client.city)}</span>` : ''}
+                </div>
+              </td>`;
+            case 'email':
+              return `<td>${escapeHtml(client.email || 'Sin email')}</td>`;
+            case 'phone':
+              return `<td>${escapeHtml(client.phone || '—')}</td>`;
+            case 'nifCif':
+              return `<td>${escapeHtml(client.nifCif || 'Sin NIF/CIF')}</td>`;
+            case 'totalInvoiced':
+              return `<td>
+                <strong>${formatCurrency(client.totalInvoiced)}</strong>
+                <span class="meta pending">${formatCurrency(client.totalPending)} pendientes</span>
+              </td>`;
+            case 'projectsCount':
+              return `<td>
+                <span>${client.projectsCount}</span>
+                <span class="meta">Proyectos</span>
+              </td>`;
+            case 'isActive':
+              return `<td>
+                <span class="badge badge--${client.isActive ? 'success' : 'neutral'}">
+                  ${client.isActive ? 'Activo' : 'Inactivo'}
+                </span>
+              </td>`;
+            default:
+              return '<td>—</td>';
+          }
+        }).join('');
+
+        return `
+          <tr data-client-row="${client.id}" class="clients-table__row${isSelected ? ' is-selected' : ''}">
+            ${cells}
+            <td>
+              <div class="table-actions">
+                <button type="button" class="table-action" data-client-edit="${client.id}" aria-label="Editar cliente">✏️</button>
+                <button type="button" class="table-action" data-client-delete="${client.id}" aria-label="Eliminar cliente">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      })
+      .join('');
   }
 
-  const rows = clientsState.clients.slice(start - 1, start - 1 + PAGE_SIZE);
+  const tableHTML = `
+    <div class="table-container" style="overflow-x: auto;">
+      <table class="data-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          ${headerHTML}
+        </thead>
+        <tbody data-clients-table>
+          ${tableBodyHTML}
+        </tbody>
+      </table>
+    </div>
+  `;
 
-  tbody.innerHTML = rows
-    .map((client) => {
-      const isSelected = client.id === clientsState.selectedClientId;
-      return `
-        <tr data-client-row="${client.id}" class="clients-table__row${isSelected ? ' is-selected' : ''}">
-          <td>
-            <div class="table-cell--main">
-              <strong>${escapeHtml(client.name)}</strong>
-              ${
-                client.city
-                  ? `<span class="meta">${escapeHtml(client.city)}</span>`
-                  : ''
-              }
-            </div>
-          </td>
-          <td>${escapeHtml(client.email || 'Sin email')}</td>
-          <td>${escapeHtml(client.phone || '—')}</td>
-          <td>${escapeHtml(client.nifCif || 'Sin NIF/CIF')}</td>
-          <td>
-            <strong>${formatCurrency(client.totalInvoiced)}</strong>
-            <span class="meta pending">${formatCurrency(client.totalPending)} pendientes</span>
-          </td>
-          <td>
-            <span>${client.projectsCount}</span>
-            <span class="meta">Proyectos</span>
-          </td>
-          <td>
-            <span class="badge badge--${client.isActive ? 'success' : 'neutral'}">
-              ${client.isActive ? 'Activo' : 'Inactivo'}
-            </span>
-          </td>
-          <td>
-            <div class="table-actions">
-              <button type="button" class="table-action" data-client-edit="${client.id}" aria-label="Editar cliente">✏️</button>
-              <button type="button" class="table-action" data-client-delete="${client.id}" aria-label="Eliminar cliente">🗑️</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    })
-    .join('');
+  const footerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+      <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">${countText}</p>
+      <div class="clients-table__pager" data-pagination="clients"></div>
+    </div>
+  `;
+
+  container.innerHTML = toolbarHTML + tableHTML + footerHTML;
 
   renderClientsPagination(totalPages);
 }
@@ -759,13 +841,17 @@ function renderClientsPagination(totalPages) {
   }
 
   pager.innerHTML = `
-    <button type="button" class="pager-btn" onclick="window.changeClientsPage(-1)" ${clientsPage === 1 ? 'disabled' : ''}>
-      Anterior
-    </button>
-    <span class="pager-status">Página ${clientsPage} de ${totalPages}</span>
-    <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeClientsPage(1)" ${clientsPage === totalPages ? 'disabled' : ''}>
-      Siguiente
-    </button>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <button type="button" class="pager-btn" onclick="window.changeClientsPage(-1)" ${clientsPage === 1 ? 'disabled' : ''} style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
+        Anterior
+      </button>
+      <span class="pager-status" style="font-size: 0.875rem; color: var(--text-secondary); min-width: 120px;">
+        Página ${clientsPage} de ${totalPages}
+      </span>
+      <button type="button" class="pager-btn pager-btn--primary" onclick="window.changeClientsPage(1)" ${clientsPage === totalPages ? 'disabled' : ''} style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); background: #3b82f6; color: white; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
+        Siguiente
+      </button>
+    </div>
   `;
 }
 
@@ -1149,6 +1235,89 @@ function changeProjectsPage(delta) {
   renderProjectsTable();
 }
 
+// ===== FUNCIONES PARA COLUMNAS CONFIGURABLES =====
+
+function openClientColumnConfigModal() {
+  let modal = document.getElementById('client-column-config-modal');
+  if (!modal) {
+    const modalHTML = `
+      <div class="modal is-open" id="client-column-config-modal" style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); z-index: 1000;">
+        <div class="modal__backdrop" onclick="window.closeClientColumnConfigModal()" style="position: absolute; inset: 0;"></div>
+        <div class="modal__panel modal__panel--md" style="position: relative; background: white; border-radius: 12px; box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15); max-width: 500px; max-height: 80vh; display: flex; flex-direction: column;">
+          <header class="modal__head" style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+            <div>
+              <h2 class="modal__title" style="font-size: 1.25rem; font-weight: 600; margin: 0;">Configurar Columnas</h2>
+              <p class="modal__subtitle" style="margin: 0.25rem 0 0; font-size: 0.875rem; color: var(--text-secondary);">Selecciona qué columnas mostrar en la tabla</p>
+            </div>
+            <button class="modal__close" onclick="window.closeClientColumnConfigModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+          </header>
+          <div class="modal__body" style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+            <div class="column-options-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+              ${Object.keys(CLIENT_COLUMNS).map(key => {
+                const label = CLIENT_COLUMNS[key];
+                const isFixed = key === 'name'; // Nombre siempre visible
+                return `
+                  <label class="column-option-card" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(51, 102, 255, 0.05); border: 1px solid rgba(51, 102, 255, 0.15); border-radius: 12px; cursor: ${isFixed ? 'not-allowed' : 'pointer'}; transition: all 0.2s;" ${isFixed ? 'title="Esta columna es obligatoria"' : ''}>
+                    <input type="checkbox" id="col-${key}" ${visibleColumnsClients[key] ? 'checked' : ''} ${isFixed ? 'disabled' : ''} style="width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6;">
+                    <span style="font-weight: 500; font-size: 0.95rem; flex: 1;">${label}${isFixed ? ' (Obligatoria)' : ''}</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <footer class="modal-form__footer" style="padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; gap: 1rem;">
+            <button type="button" class="btn-secondary" onclick="window.resetClientColumnConfig()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: transparent; border-radius: 8px; cursor: pointer;">Restablecer</button>
+            <div style="display: flex; gap: 0.75rem;">
+              <button type="button" class="btn-secondary" onclick="window.closeClientColumnConfigModal()" style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: transparent; border-radius: 8px; cursor: pointer;">Cancelar</button>
+              <button type="button" class="btn-primary" onclick="window.applyClientColumnConfig()" style="padding: 0.5rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Aplicar</button>
+            </div>
+          </footer>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    modal = document.getElementById('client-column-config-modal');
+  }
+  modal.classList.add('is-open');
+  modal.style.display = 'flex';
+}
+
+function closeClientColumnConfigModal() {
+  const modal = document.getElementById('client-column-config-modal');
+  if (modal) {
+    modal.classList.remove('is-open');
+    modal.style.display = 'none';
+  }
+}
+
+function resetClientColumnConfig() {
+  visibleColumnsClients = { ...DEFAULT_VISIBLE_COLUMNS };
+  // Actualizar checkboxes
+  Object.keys(CLIENT_COLUMNS).forEach(key => {
+    const checkbox = document.getElementById(`col-${key}`);
+    if (checkbox) {
+      checkbox.checked = visibleColumnsClients[key];
+    }
+  });
+}
+
+function applyClientColumnConfig() {
+  Object.keys(visibleColumnsClients).forEach(key => {
+    const input = document.getElementById(`col-${key}`);
+    if (input) {
+      visibleColumnsClients[key] = input.checked;
+    }
+  });
+  closeClientColumnConfigModal();
+  renderClientsTable();
+  showToast('Columnas actualizadas correctamente', 'success');
+}
+
+function handleClientsTableSearch(value) {
+  clientsState.clientFilters.search = value;
+  debounce(() => void refreshClientsModule());
+}
+
 
 export function initClients() {
   const module = document.querySelector('.clients');
@@ -1167,6 +1336,13 @@ export function initClients() {
 
   window.changeClientsPage = changeClientsPage;
   window.changeProjectsPage = changeProjectsPage;
+  
+  // Funciones para columnas configurables
+  window.openClientColumnConfigModal = openClientColumnConfigModal;
+  window.closeClientColumnConfigModal = closeClientColumnConfigModal;
+  window.applyClientColumnConfig = applyClientColumnConfig;
+  window.resetClientColumnConfig = resetClientColumnConfig;
+  window.handleClientsTableSearch = handleClientsTableSearch;
 }
 
 export default function renderClients() {
@@ -1247,32 +1423,7 @@ export default function renderClients() {
         </section>
 
         <section class="clients-table" aria-label="Listado de clientes">
-          <div class="clients-table__surface">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Cliente</th>
-                  <th scope="col">Email</th>
-                  <th scope="col">Teléfono</th>
-                  <th scope="col">NIF/CIF</th>
-                  <th scope="col">Facturación</th>
-                  <th scope="col">Proyectos</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col">ACCIONES</th>
-                </tr>
-              </thead>
-              <tbody data-clients-table></tbody>
-            </table>
-          </div>
-          <footer class="clients-table__footer">
-            <p data-clients-count>Sin clientes cargados</p>
-            <div class="clients-table__pager" data-pagination="clients"></div>
-          </footer>
-          <div class="module-loading" data-clients-loading hidden>
-            <span class="spinner"></span>
-            <p>Sincronizando clientes...</p>
-          </div>
-          <div class="module-error" data-clients-error hidden></div>
+          <div class="clients-table-container"></div>
         </section>
       </div>
 
