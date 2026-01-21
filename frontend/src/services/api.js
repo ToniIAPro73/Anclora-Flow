@@ -10,6 +10,20 @@ class APIService {
     return !!this.token;
   }
 
+  setToken(token) {
+    this.token = token;
+    if (token) {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
+  }
+
+  clearToken() {
+    this.token = null;
+    localStorage.removeItem('token');
+  }
+
   async request(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     const headers = {

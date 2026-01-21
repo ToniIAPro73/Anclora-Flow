@@ -68,8 +68,10 @@ async function fetchCurrentUser() {
     const user = await window.api.getCurrentUser();
     return user;
   } catch (error) {
-    if (error instanceof window.APIError && (error.status === 401 || error.status === 403)) {
-      window.api.clearToken();
+    const status = error?.status;
+    if (status === 401 || status === 403) {
+      window.api.token = null;
+      localStorage.removeItem('token');
     }
     return null;
   }
