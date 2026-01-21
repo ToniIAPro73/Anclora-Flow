@@ -272,7 +272,7 @@ CREATE TABLE IF NOT EXISTS budgets (
     category VARCHAR(100),
     description TEXT,
     month DATE,
-    planned_amount DECIMAL(12, 2) NOT NULL,
+    planned_amount DECIMAL(12, 2),
     actual_amount DECIMAL(12, 2) DEFAULT 0,
     subtotal DECIMAL(12, 2),
     total DECIMAL(12, 2),
