@@ -95,9 +95,9 @@ export const seedDatabase = async () => {
     console.log('🌱 INICIANDO CARGA DE DATOS SINTÉTICOS');
     console.log('========================================\n');
     
-    const sqlPath = path.join(__dirname, 'seed-data.sql');
+    const sqlPath = path.join(__dirname, 'seed-data-spanish.sql');
     if (!fs.existsSync(sqlPath)) {
-      console.warn('⚠️ No se encontró seed-data.sql, omitiendo carga de datos sintéticos.');
+      console.warn('⚠️ No se encontró seed-data-spanish.sql, omitiendo carga de datos sintéticos.');
       return;
     }
     

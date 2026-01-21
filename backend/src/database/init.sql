@@ -162,15 +162,15 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
     project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
     service_name VARCHAR(255),
     provider VARCHAR(255),
     description TEXT,
     amount DECIMAL(12, 2) NOT NULL,
     currency VARCHAR(10) DEFAULT 'EUR',
-    billing_cycle VARCHAR(50) NOT NULL, -- 'monthly', 'quarterly', 'yearly'
+    billing_cycle VARCHAR(50), -- 'monthly', 'quarterly', 'yearly'
     billing_frequency VARCHAR(50),
-    start_date DATE NOT NULL,
+    start_date DATE,
     end_date DATE,
     next_billing_date DATE,
     category VARCHAR(50),
