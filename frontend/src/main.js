@@ -788,7 +788,12 @@ async function bootstrap() {
     currentUser = await fetchCurrentUser();
   }
 
-  if (!currentUser && !isProduction) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const allowDevLogin =
+    urlParams.get("devLogin") === "1" ||
+    localStorage.getItem("anclora-dev-login") === "true";
+
+  if (!currentUser && !isProduction && allowDevLogin) {
     currentUser = await attemptDevLogin();
   }
 
