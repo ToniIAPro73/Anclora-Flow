@@ -1093,7 +1093,8 @@ a:hover {
   z-index: 20;
 }
 
-.user-menu:hover .dropdown {
+.user-menu.is-open .dropdown,
+.user-menu:focus-within .dropdown {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
@@ -3729,14 +3730,19 @@ table tr[hidden] {
   padding: 0.65rem 0;
   list-style: none;
   margin: 0;
-  display: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 [data-theme="dark"] .user-menu .dropdown {
   background: var(--bg-dark-secondary);
   border-color: rgba(148, 163, 184, 0.24);
 }
 .user-menu.is-open .dropdown {
-  display: block;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 .user-menu .dropdown a,
 .user-menu .dropdown button {
