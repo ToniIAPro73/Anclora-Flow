@@ -1084,11 +1084,12 @@ function buildExpenseModalHtml(mode, expense, auditLog = []) {
                 </div>
               </section>
               ${isView ? `
-                <section class="modal-section modal-section--card">
-                  <div class="modal-section__header">
-                    <h3 class="modal-section__title">Registro de actividad</h3>
-                  </div>
-                  <div class="invoice-activity">
+                <section class="modal-section">
+                  <div class="modal-section--card expense-activity-card">
+                    <div class="modal-section__header">
+                      <h3 class="modal-section__title">Registro de actividad</h3>
+                    </div>
+                    <div class="invoice-activity">
                     ${normalizedAuditLog.length > 0 ? normalizedAuditLog.map((log) => `
                       <div class="activity-log-item">
                         <div class="activity-log-item__dot"></div>
@@ -1103,6 +1104,7 @@ function buildExpenseModalHtml(mode, expense, auditLog = []) {
                         </div>
                       </div>
                     `).join('') : '<p class="empty-state">Sin actividad registrada.</p>'}
+                    </div>
                   </div>
                 </section>
               ` : ''}
