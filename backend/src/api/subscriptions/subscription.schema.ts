@@ -98,7 +98,14 @@ export const updateSubscriptionSchema = subscriptionBaseSchema
     }
   });
 
+// Esquema para query params en GET (filtros)
+export const querySubscriptionSchema = z.object({
+  status: SubscriptionStatusEnum.optional(),
+  category: z.string().max(100).optional(),
+});
+
 // Tipos inferidos
 export type CreateSubscriptionDTO = z.infer<typeof createSubscriptionSchema>;
 export type UpdateSubscriptionDTO = z.infer<typeof updateSubscriptionSchema>;
+export type QuerySubscriptionDTO = z.infer<typeof querySubscriptionSchema>;
 export type SubscriptionStatus = z.infer<typeof SubscriptionStatusEnum>;
