@@ -37,17 +37,17 @@ El objetivo es proporcionar visibilidad financiera a largo plazo, automatizar al
 
 - **CRUD Completo:** Crear, Leer, Actualizar, Borrar (Soft Delete) suscripciones de gastos.
 
-* **Campos Críticos:** Servicio, Proveedor, Importe, Frecuencia (Mensual, Trimestral, Anual), Estado (Trial, Active, Paused, Cancelled).
-* **Lógica de Trial:** Si `has_trial` es true, debe requerir fecha de fin y días de duración.
-* **Cálculo de Costes:** Normalización de costes a base mensual para métricas agregadas.
+- **Campos Críticos:** Servicio, Proveedor, Importe, Frecuencia (Mensual, Trimestral, Anual), Estado (Trial, Active, Paused, Cancelled).
+- **Lógica de Trial:** Si `has_trial` es true, debe requerir fecha de fin y días de duración.
+- **Cálculo de Costes:** Normalización de costes a base mensual para métricas agregadas.
 
 ### 3.2 Submódulo: Mis Ingresos (`customer_subscriptions`)
 
 - **Vinculación:** Cada suscripción debe estar vinculada obligatoriamente a un `client_id` existente.
 
-* **Ciclo de Vida:** Gestión de estados (Trial -> Active -> Past Due -> Cancelled).
-* **Facturación:** Configuración de `auto_invoice` (generación automática de borrador de factura) y `invoice_day`.
-* **Métricas (KPIs):**
+- **Ciclo de Vida:** Gestión de estados (Trial -> Active -> Past Due -> Cancelled).
+- **Facturación:** Configuración de `auto_invoice` (generación automática de borrador de factura) y `invoice_day`.
+- **Métricas (KPIs):**
   - **MRR (Monthly Recurring Revenue):** Suma de ingresos normalizados a mes.
   - **ARR (Annual Recurring Revenue):** MRR \* 12.
   - **Churn:** Tasa de cancelación mensual.
@@ -63,7 +63,7 @@ El objetivo es proporcionar visibilidad financiera a largo plazo, automatizar al
 
 - **Layout:** Vista principal con pestañas (Tabs): "Mis Gastos" vs "Mis Ingresos".
 
-* **Componentes:**
+- **Componentes:**
   - Panel de métricas (Cards) dinámico según la pestaña activa.
   - Tablas de datos con badges de estado coloreados.
   - Modales/Drawers para creación y edición detallada.
@@ -96,13 +96,13 @@ El objetivo es proporcionar visibilidad financiera a largo plazo, automatizar al
 
 - **Frontend:** React (Vite), CSS Modules. Componentes en `PascalCase`.
 
-* **Backend:** Node.js + Express. Validación con `Zod`.
-* **Base de Datos:** PostgreSQL. Uso de Vistas SQL para cálculos complejos de KPIs.
-* **Seguridad:** Validación estricta de `user_id` en todas las consultas para asegurar aislamiento de datos (Multi-tenancy lógico).
+- **Backend:** Node.js + Express. Validación con `Zod`.
+- **Base de Datos:** PostgreSQL. Uso de Vistas SQL para cálculos complejos de KPIs.
+- **Seguridad:** Validación estricta de `user_id` en todas las consultas para asegurar aislamiento de datos (Multi-tenancy lógico).
 
 ## 6. Casos Borde (Edge Cases)
 
 - **Cambio de Moneda:** El sistema base asume una moneda principal (EUR) o requiere conversión simple. Para v1.0, se asume moneda del usuario o visualización agnóstica si no hay conversor.
 
-* **Eliminación de Cliente:** Si se elimina un cliente en el módulo de Contactos, las suscripciones deben manejarse vía `ON DELETE CASCADE` o bloquear la eliminación (preferido: Cascade).
-* **Años Bisiestos:** El cálculo de "próximo mes" debe manejar correctamente el 29 de febrero.
+- **Eliminación de Cliente:** Si se elimina un cliente en el módulo de Contactos, las suscripciones deben manejarse vía `ON DELETE CASCADE` o bloquear la eliminación (preferido: Cascade).
+- **Años Bisiestos:** El cálculo de "próximo mes" debe manejar correctamente el 29 de febrero.

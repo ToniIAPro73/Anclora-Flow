@@ -1,7 +1,10 @@
 import { describe, it, mock } from "node:test";
 import assert from "node:assert";
 import { SubscriptionService } from "./subscription.service";
-import { createSubscriptionSchema } from "./subscription.schema";
+import { createSubscriptionSchema } from "./subscription.schema.js";
+
+const getCallArgs = (mockQuery: any, index = 0) =>
+  (mockQuery.mock.calls[index]?.arguments ?? []) as any[];
 
 describe("SubscriptionService", () => {
   describe("Validación Zod (Schema)", () => {
@@ -77,7 +80,8 @@ describe("SubscriptionService", () => {
 
       assert.strictEqual(result?.id, "sub-1");
       assert.strictEqual(mockQuery.mock.calls.length, 1);
-      assert.match(String(mockQuery.mock.calls[0].arguments[0]), /INSERT INTO subscriptions/);
+      const args = getCallArgs(mockQuery);
+      assert.match(String(args[0]), /INSERT INTO subscriptions/);
     });
 
     it("findById debe aplicar IDOR con user_id", async () => {
@@ -87,8 +91,9 @@ describe("SubscriptionService", () => {
       await service.findById("sub-2", "user-1");
 
       assert.strictEqual(mockQuery.mock.calls.length, 1);
-      assert.match(String(mockQuery.mock.calls[0].arguments[0]), /user_id = \$2/);
-      assert.deepStrictEqual(mockQuery.mock.calls[0].arguments[1], ["sub-2", "user-1"]);
+      const args = getCallArgs(mockQuery);
+      assert.match(String(args[0]), /user_id = \$2/);
+      assert.deepStrictEqual(args[1], ["sub-2", "user-1"]);
     });
 
     it("update convierte camelCase a snake_case", async () => {
@@ -98,7 +103,8 @@ describe("SubscriptionService", () => {
       await service.update("sub-3", "user-1", { serviceName: "Spotify" });
 
       assert.strictEqual(mockQuery.mock.calls.length, 1);
-      assert.match(String(mockQuery.mock.calls[0].arguments[0]), /service_name/);
+      const args = getCallArgs(mockQuery);
+      assert.match(String(args[0]), /service_name/);
     });
 
     it("update sin campos debe retornar null sin consultar DB", async () => {
@@ -118,10 +124,11 @@ describe("SubscriptionService", () => {
       await service.findAll("user-1", { status: "active", category: "streaming" });
 
       assert.strictEqual(mockQuery.mock.calls.length, 1);
-      const sql = String(mockQuery.mock.calls[0].arguments[0]);
+      const args = getCallArgs(mockQuery);
+      const sql = String(args[0]);
       assert.match(sql, /status = \$2/);
       assert.match(sql, /category = \$3/);
-      assert.deepStrictEqual(mockQuery.mock.calls[0].arguments[1], [
+      assert.deepStrictEqual(args[1], [
         "user-1",
         "active",
         "streaming",
@@ -135,11 +142,12 @@ describe("SubscriptionService", () => {
       await service.cancel("sub-9", "user-1");
 
       assert.strictEqual(mockQuery.mock.calls.length, 1);
-      const sql = String(mockQuery.mock.calls[0].arguments[0]);
+      const args = getCallArgs(mockQuery);
+      const sql = String(args[0]);
       assert.match(sql, /status = 'cancelled'/);
       assert.match(sql, /auto_renew = false/);
       assert.match(sql, /user_id = \$2/);
-      assert.deepStrictEqual(mockQuery.mock.calls[0].arguments[1], [
+      assert.deepStrictEqual(args[1], [
         "sub-9",
         "user-1",
       ]);

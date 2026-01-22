@@ -2,7 +2,7 @@ import { query as defaultQuery } from "../../database/config.js";
 import {
   CreateSubscriptionDTO,
   UpdateSubscriptionDTO,
-} from "./subscription.schema";
+} from "./subscription.schema.js";
 
 type QueryFn = (text: string, params?: any[]) => Promise<{ rows: any[] }>;
 
