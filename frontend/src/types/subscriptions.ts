@@ -59,6 +59,7 @@ export interface CreateSubscriptionDTO {
   startDate: string; // ISO
 
   // Opcionales
+  currency?: string;
   clientId?: string;
   description?: string;
   category?: string;
@@ -66,6 +67,9 @@ export interface CreateSubscriptionDTO {
   trialDays?: number;
   trialStartDate?: string;
   trialEndDate?: string;
+  trialRequiresCard?: boolean;
+  nextBillingDate?: string;
+  status?: ExpenseStatus;
   autoRenew?: boolean;
   cancellationUrl?: string;
   loginUrl?: string;
