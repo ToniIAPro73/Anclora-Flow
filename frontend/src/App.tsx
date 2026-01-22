@@ -5,7 +5,7 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import Clients from './pages/Clients/Clients';
 import Invoices from './pages/Invoices/Invoices';
 import Expenses from './pages/Expenses/Expenses';
-import Subscriptions from './pages/Subscriptions/Subscriptions';
+import { SubscriptionsPage } from './pages/Subscriptions/SubscriptionsPage';
 import Budget from './pages/Budget/Budget';
 import Assistant from './pages/Assistant/Assistant';
 import Settings from './pages/Settings/Settings';
@@ -19,7 +19,7 @@ const App: React.FC = () => {
           <Route path="/clients" element={<Clients />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/expenses" element={<Expenses />} />
-          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/subscriptions" element={<SubscriptionsPage />} />
           <Route path="/budget" element={<Budget />} />
           <Route path="/assistant" element={<Assistant />} />
           <Route path="/settings" element={<Settings />} />
