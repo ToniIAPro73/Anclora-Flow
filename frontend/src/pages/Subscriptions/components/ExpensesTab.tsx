@@ -369,12 +369,20 @@ export const ExpensesTab: React.FC = () => {
               <button className={styles.secondaryButton} onClick={resetColumns}>
                 Restablecer
               </button>
-              <button
-                className={styles.primaryButton}
-                onClick={() => setIsConfigOpen(false)}
-              >
-                Aplicar
-              </button>
+              <div className={styles.columnModalFooterActions}>
+                <button
+                  className={styles.secondaryButton}
+                  onClick={() => setIsConfigOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  onClick={() => setIsConfigOpen(false)}
+                >
+                  Aplicar
+                </button>
+              </div>
             </div>
           </div>
         </div>

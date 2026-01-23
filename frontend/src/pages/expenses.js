@@ -429,13 +429,13 @@ function renderExpensesTable() {
         Siguiente →
       </button>
       <span class="pagination-info">
-        Mostrando ${start}-${end} de ${filteredCount} registros
+        Mostrando ${start}-${end} de ${filteredCount} (página ${currentPage} de ${totalPages})
       </span>
     </div>
   ` : `
     <div class="pagination">
-      <span class="pagination-info" style="margin-left: auto;">
-        Mostrando ${filteredCount} registros
+      <span class="pagination-info">
+        Mostrando ${filteredCount === 0 ? 0 : 1}-${filteredCount} de ${filteredCount} (página 1 de 1)
       </span>
     </div>
   `;
@@ -731,10 +731,12 @@ function openExpenseColumnConfigModal() {
               }).join('')}
             </div>
           </div>
-          <footer class="modal-form__footer" style="padding-top: 1.5rem; margin-top: auto;">
+          <footer class="modal-form__footer modal-form__footer--columns" style="padding-top: 1.5rem; margin-top: auto;">
             <button type="button" class="btn btn-ghost" onclick="window.resetExpenseColumnConfig()">Restablecer</button>
-            <button type="button" class="btn btn-secondary" onclick="window.closeExpenseColumnConfigModal()">Cancelar</button>
-            <button type="button" class="btn btn-primary" onclick="window.applyExpenseColumnConfig()">Aplicar cambios</button>
+            <div class="modal__footer-actions">
+              <button type="button" class="btn btn-secondary" onclick="window.closeExpenseColumnConfigModal()">Cancelar</button>
+              <button type="button" class="btn btn-primary" onclick="window.applyExpenseColumnConfig()">Aplicar cambios</button>
+            </div>
           </footer>
         </div>
       </div>

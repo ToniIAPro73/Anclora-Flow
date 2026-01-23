@@ -541,11 +541,14 @@ function renderSummaryCards() {
   const clientActive = document.getElementById("clients-summary-active");
   const clientPending = document.getElementById("clients-summary-pending");
   const clientRevenue = document.getElementById("clients-summary-revenue");
+  const clientsInfo = document.querySelector("[data-clients-info]");
 
   const projectTotals = document.getElementById("projects-summary-total");
   const projectActive = document.getElementById("projects-summary-active");
   const projectBudget = document.getElementById("projects-summary-budget");
   const projectRevenue = document.getElementById("projects-summary-revenue");
+  const clientsBadge = document.querySelector("[data-clients-count]");
+  const projectsBadge = document.querySelector("[data-projects-count]");
 
   if (clientTotals)
     clientTotals.textContent = clientsState.clientSummary.totalClients ?? 0;
@@ -572,6 +575,26 @@ function renderSummaryCards() {
     projectRevenue.textContent = formatCurrency(
       clientsState.projectSummary.totalInvoiced ?? 0,
     );
+
+  if (clientsBadge) {
+    clientsBadge.textContent = clientsState.clientSummary.totalClients ?? 0;
+  }
+
+  if (clientsInfo) {
+    const total = clientsState.clients.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (clientsPage > totalPages) clientsPage = totalPages;
+    if (clientsPage < 1) clientsPage = 1;
+    const start = total === 0 ? 0 : (clientsPage - 1) * PAGE_SIZE + 1;
+    const end = Math.min(clientsPage * PAGE_SIZE, total);
+    clientsInfo.textContent = total
+      ? `Mostrando ${start}-${end} de ${total} (página ${clientsPage} de ${totalPages})`
+      : "Mostrando 0-0 de 0 (página 1 de 1)";
+  }
+
+  if (projectsBadge) {
+    projectsBadge.textContent = clientsState.projectSummary.totalProjects ?? 0;
+  }
 }
 
 function renderClientsTable() {
@@ -618,8 +641,8 @@ function renderClientsTable() {
   const start = total === 0 ? 0 : (clientsPage - 1) * PAGE_SIZE + 1;
   const end = Math.min(clientsPage * PAGE_SIZE, total);
   const countText = total
-    ? `Mostrando ${start}-${end} de ${total} ${total === 1 ? "cliente" : "clientes"}`
-    : "Sin clientes disponibles";
+    ? `Mostrando ${start}-${end} de ${total} (página ${clientsPage} de ${totalPages})`
+    : "Mostrando 0-0 de 0 (página 1 de 1)";
 
   let tableBodyHTML = "";
   if (!clientsState.clients.length) {
@@ -708,10 +731,10 @@ function renderClientsTable() {
   `;
 
   const footerHTML = `
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 1rem;">
-      <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">${countText}</p>
+    <footer class="clients-table__footer">
       <div class="clients-table__pager" data-pagination="clients"></div>
-    </div>
+      <p class="pagination-info" data-clients-info>${countText}</p>
+    </footer>
   `;
 
   container.innerHTML = toolbarHTML + tableHTML + footerHTML;
@@ -729,12 +752,16 @@ function renderProjectsTable() {
   if (projectsPage < 1) projectsPage = 1;
 
   const countEl = document.querySelector("[data-projects-count]");
+  const infoEl = document.querySelector("[data-projects-info]");
   const start = total === 0 ? 0 : (projectsPage - 1) * PAGE_SIZE + 1;
   const end = Math.min(projectsPage * PAGE_SIZE, total);
   if (countEl) {
-    countEl.textContent = total
-      ? `Mostrando ${start}-${end} de ${total} ${total === 1 ? "proyecto" : "proyectos"}`
-      : "Sin proyectos disponibles";
+    countEl.textContent = total;
+  }
+  if (infoEl) {
+    infoEl.textContent = total
+      ? `Mostrando ${start}-${end} de ${total} (página ${projectsPage} de ${totalPages})`
+      : "Mostrando 0-0 de 0 (página 1 de 1)";
   }
 
   if (!clientsState.projects.length) {
@@ -1318,9 +1345,9 @@ function openClientColumnConfigModal() {
                 .join("")}
             </div>
           </div>
-          <footer class="modal-form__footer" style="padding-top: 1.5rem; margin-top: auto;">
-            <button type="button" class="btn btn-ghost" onclick="window.resetClientColumnConfig()" style="margin-right: auto;">Restablecer</button>
-            <div style="display: flex; gap: 0.75rem;">
+          <footer class="modal-form__footer modal-form__footer--columns" style="padding-top: 1.5rem; margin-top: auto;">
+            <button type="button" class="btn btn-ghost" onclick="window.resetClientColumnConfig()">Restablecer</button>
+            <div class="modal__footer-actions">
               <button type="button" class="btn btn-secondary" onclick="window.closeClientColumnConfigModal()">Cancelar</button>
               <button type="button" class="btn btn-primary" onclick="window.applyClientColumnConfig()">Aplicar cambios</button>
             </div>
@@ -1414,7 +1441,7 @@ export default function renderClients() {
       <div class="clients-tabs" role="tablist" aria-label="Secciones del módulo">
         <button
           type="button"
-          class="btn-ghost clients-tab is-active"
+          class="subscriptions-tab clients-tab is-active"
           data-clients-tab="clients"
           id="clients-tab-clients"
           role="tab"
@@ -1422,11 +1449,12 @@ export default function renderClients() {
           aria-controls="clients-panel-clients"
           tabindex="0"
         >
-          Clientes
+          👥 Clientes
+          <span class="badge badge-success" data-clients-count>0</span>
         </button>
         <button
           type="button"
-          class="btn-ghost clients-tab"
+          class="subscriptions-tab clients-tab"
           data-clients-tab="projects"
           id="clients-tab-projects"
           role="tab"
@@ -1434,7 +1462,8 @@ export default function renderClients() {
           aria-controls="clients-panel-projects"
           tabindex="-1"
         >
-          Proyectos
+          📌 Proyectos
+          <span class="badge badge-warning" data-projects-count>0</span>
         </button>
       </div>
 
@@ -1535,8 +1564,8 @@ export default function renderClients() {
             </table>
           </div>
           <footer class="clients-table__footer">
-            <p data-projects-count>Sin proyectos cargados</p>
             <div class="clients-table__pager" data-pagination="projects"></div>
+            <p class="pagination-info" style="margin-left: auto;" data-projects-info>Sin proyectos disponibles</p>
           </footer>
           <div class="module-loading" data-projects-loading hidden>
             <span class="spinner"></span>

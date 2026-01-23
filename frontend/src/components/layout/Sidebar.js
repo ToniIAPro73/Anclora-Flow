@@ -5,7 +5,7 @@ const sidebarItems = [
   { path: "/invoices", label: "Ingresos & Facturas", icon: "🧾" },
   { path: "/expenses", label: "Gastos & Deducciones", icon: "💸" },
   { path: "/clients", label: "Clientes & Proyectos", icon: "👥" },
-  { path: "/subscriptions", label: "Gestion Suscripciones", icon: "🔁" },
+  { path: "/subscriptions", label: "Suscripciones", icon: "🔁" },
   { path: "/budget", label: "Presupuesto Inteligente", icon: "📊" },
   { path: "/calendar", label: "Calendario & Calc. Fiscal", icon: "📆" },
   { path: "/reports", label: "Informes & Metricas", icon: "📑" },
@@ -51,4 +51,3 @@ export function renderSidebar() {
 }
 
 export default renderSidebar;
-

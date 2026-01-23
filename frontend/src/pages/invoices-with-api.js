@@ -55,12 +55,12 @@ function formatCurrency(value) {
 
 // Mapeo de estados de factura
 const statusMap = {
-  paid: { label: "Cobrada", tone: "paid" },
-  sent: { label: "Enviada", tone: "sent" },
-  pending: { label: "Pendiente", tone: "pending" },
-  overdue: { label: "Vencida", tone: "overdue" },
-  draft: { label: "Borrador", tone: "draft" },
-  partial: { label: "Cobro Parcial", tone: "pending" }
+  paid: { label: "Cobrada", shortLabel: "Cob.", tone: "paid" },
+  sent: { label: "Enviada", shortLabel: "Env.", tone: "sent" },
+  pending: { label: "Pendiente", shortLabel: "Pend.", tone: "pending" },
+  overdue: { label: "Vencida", shortLabel: "Ven.", tone: "overdue" },
+  draft: { label: "Borrador", shortLabel: "Bor.", tone: "draft" },
+  partial: { label: "Cobro Parcial", shortLabel: "Par.", tone: "pending" }
 };
 
 // Utilidad para centralizar qué facturas son editables
@@ -2705,9 +2705,9 @@ function renderInvoiceRows() {
           <span class="invoices-table__amount">${formatCurrency(invoice.total)}</span>
         </td>
         <td data-label="Estado" ${visibleColumns.status ? '' : 'hidden'}>
-          <span class="status-pill status-pill--${statusInfo.tone}">
+          <span class="status-pill status-pill--${statusInfo.tone}" title="${statusInfo.label}">
             <span class="status-pill__dot"></span>
-            ${statusInfo.label}
+            ${statusInfo.shortLabel || statusInfo.label}
           </span>
         </td>
         <td data-label="Verifactu" class="hide-mobile" ${visibleColumns.verifactu ? '' : 'hidden'}>
@@ -2721,11 +2721,13 @@ function renderInvoiceRows() {
           <span class="invoices-table__days ${invoice.daysLate.includes('tarde') ? 'text-danger' : ''}">${invoice.daysLate}</span>
         </td>
         <td data-label="ACCIONES" class="invoices-table__actions">
-          <div style="display: flex; gap: 0.35rem; justify-content: flex-end;">
-            <button type="button" class="btn-ghost btn-sm" onclick="viewInvoice('${invoice.id}')" title="Ver Detalles">👁️</button>
-            <button type="button" class="btn-ghost btn-sm" onclick="editInvoice('${invoice.id}')" title="Editar Factura" ${isInvoiceEditable(invoice.status) ? '' : 'disabled'}>✏️</button>
-            <button type="button" class="btn-ghost btn-sm" onclick="openAddPaymentModal('${invoice.id}')" title="Registrar Pago" ${invoice.status === 'paid' ? 'disabled' : ''}>💰</button>
-            <div class="verifactu-inline-actions" style="display: flex; gap: 0.35rem; margin-left: 0.35rem; padding-left: 0.35rem; border-left: 1px solid rgba(51, 102, 255, 0.15);">
+          <div class="invoice-actions">
+            <div class="invoice-actions__row">
+              <button type="button" class="btn-ghost btn-sm" onclick="viewInvoice('${invoice.id}')" title="Ver Detalles">👁️</button>
+              <button type="button" class="btn-ghost btn-sm" onclick="editInvoice('${invoice.id}')" title="Editar Factura" ${isInvoiceEditable(invoice.status) ? '' : 'disabled'}>✏️</button>
+              <button type="button" class="btn-ghost btn-sm" onclick="openAddPaymentModal('${invoice.id}')" title="Registrar Pago" ${invoice.status === 'paid' ? 'disabled' : ''}>💰</button>
+            </div>
+            <div class="invoice-actions__row invoice-actions__row--secondary">
               ${verifactuActions}
             </div>
           </div>
@@ -3022,10 +3024,12 @@ function openColumnConfigModal() {
               }).join('')}
             </div>
           </div>
-          <footer class="modal-form__footer" style="padding-top: 1.5rem; margin-top: auto;">
+          <footer class="modal-form__footer modal-form__footer--columns" style="padding-top: 1.5rem; margin-top: auto;">
             <button type="button" class="btn-ghost" onclick="resetColumnConfig()">Restablecer</button>
-            <button type="button" class="btn-secondary" onclick="closeColumnConfigModal()">Cancelar</button>
-            <button type="button" class="btn-primary" onclick="applyColumnConfig()">Aplicar cambios</button>
+            <div class="modal__footer-actions">
+              <button type="button" class="btn-secondary" onclick="closeColumnConfigModal()">Cancelar</button>
+              <button type="button" class="btn-primary" onclick="applyColumnConfig()">Aplicar cambios</button>
+            </div>
           </footer>
         </div>
       </div>
